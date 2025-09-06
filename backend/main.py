@@ -89,7 +89,7 @@ async def root():
 async def get_noticias(
     categoria: Optional[str] = Query(None),
     diario: Optional[str] = Query(None),
-    limit: int = Query(50),
+    limit: int = Query(100),
     offset: int = Query(0),
     db: Session = Depends(get_db)
 ):

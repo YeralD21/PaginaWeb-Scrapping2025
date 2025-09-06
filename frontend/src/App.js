@@ -4,10 +4,29 @@ import styled from 'styled-components';
 import { FiFileText, FiBarChart2, FiFilter, FiRefreshCw } from 'react-icons/fi';
 
 const Container = styled.div`
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
+  width: 100%;
+  margin: 0;
+  padding: 20px 80px 20px 40px;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  min-height: 100vh;
+  background-image: url('/images/congreso.jpeg');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  position: relative;
+
+  &::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(3px);
+    z-index: -1;
+  }
 `;
 
 const Header = styled.header`
@@ -18,6 +37,7 @@ const Header = styled.header`
   margin-bottom: 2rem;
   text-align: center;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  width: 100%;
 `;
 
 const Title = styled.h1`
@@ -60,15 +80,18 @@ const NavButton = styled.button`
 `;
 
 const Filters = styled.div`
-  background: white;
+  background: rgba(255, 255, 255, 0.9);
   padding: 1.5rem;
   border-radius: 10px;
   margin-bottom: 2rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   display: flex;
   gap: 1rem;
   align-items: center;
   flex-wrap: wrap;
+  width: 100%;
 `;
 
 const Select = styled.select`
@@ -104,21 +127,64 @@ const Button = styled.button`
 
 const NewsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: ${props => props.singleColumn ? '1fr' : '1fr 1fr 1fr'};
+  gap: 2rem;
   margin-bottom: 2rem;
+  width: 100%;
+  
+  @media (max-width: 1400px) {
+    gap: 1.5rem;
+  }
+  
+  @media (max-width: 1200px) {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+`;
+
+const DiarioColumn = styled.div`
+  background: rgba(248, 249, 250, 0.9);
+  border-radius: 10px;
+  padding: 1rem;
+  min-height: 400px;
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+`;
+
+const DiarioHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e1e5e9;
+`;
+
+const DiarioLogo = styled.img`
+  width: 100%;
+  max-height: 120px;
+  object-fit: contain;
+`;
+
+const DiarioNewsList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 `;
 
 const NewsCard = styled.article`
-  background: white;
+  background: rgba(255, 255, 255, 0.95);
   border-radius: 10px;
   padding: 1.5rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 
   &:hover {
     transform: translateY(-5px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    background: rgba(255, 255, 255, 0.98);
   }
 `;
 
@@ -165,10 +231,12 @@ const StatsGrid = styled.div`
 `;
 
 const StatsCard = styled.div`
-  background: white;
+  background: rgba(255, 255, 255, 0.9);
   padding: 1.5rem;
   border-radius: 10px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 `;
 
 const StatsTitle = styled.h3`
@@ -236,10 +304,14 @@ function App() {
     setError(null);
     try {
       const params = new URLSearchParams();
-      if (filters.categoria) params.append('categoria', filters.categoria);
-      if (filters.diario) params.append('diario', filters.diario);
+      if (filters.categoria && filters.categoria !== '') {
+        params.append('categoria', filters.categoria);
+      }
+      if (filters.diario && filters.diario !== '') {
+        params.append('diario', filters.diario);
+      }
       
-      const response = await axios.get(`${API_BASE_URL}/noticias?${params}`);
+      const response = await axios.get(`${API_BASE_URL}/noticias?${params}&limit=100`);
       setNoticias(response.data);
     } catch (err) {
       setError('Error al cargar las noticias');
@@ -269,6 +341,38 @@ function App() {
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleString('es-ES');
+  };
+
+  const groupNewsByDiario = (noticias) => {
+    const grouped = {
+      'El Comercio': [],
+      'Diario Correo': [],
+      'El Popular': []
+    };
+    
+    noticias.forEach(noticia => {
+      if (grouped[noticia.diario_nombre]) {
+        grouped[noticia.diario_nombre].push(noticia);
+      }
+    });
+    
+    // Si hay un filtro de diario específico, solo mostrar ese diario
+    if (filters.diario && filters.diario !== '') {
+      const filteredGrouped = {};
+      filteredGrouped[filters.diario] = grouped[filters.diario] || [];
+      return filteredGrouped;
+    }
+    
+    return grouped;
+  };
+
+  const getDiarioLogo = (diarioName) => {
+    const logos = {
+      'El Comercio': '/images/logos/comercio.png',
+      'Diario Correo': '/images/logos/correo.png',
+      'El Popular': '/images/logos/popular.png'
+    };
+    return logos[diarioName] || '';
   };
 
   return (
@@ -331,23 +435,47 @@ function App() {
           {loading ? (
             <Loading>Cargando noticias...</Loading>
           ) : (
-            <NewsGrid>
-              {noticias.map((noticia) => (
-                <NewsCard key={noticia.id}>
-                  <NewsTitle>{noticia.titulo}</NewsTitle>
-                  {noticia.contenido && (
-                    <NewsContent>{noticia.contenido}</NewsContent>
-                  )}
-                  <NewsMeta>
-                    <div>
-                      <Category>{noticia.categoria}</Category>
-                      <Diario style={{ marginLeft: '1rem' }}>
-                        {noticia.diario_nombre}
-                      </Diario>
-                    </div>
-                    <div>{formatDate(noticia.fecha_extraccion)}</div>
-                  </NewsMeta>
-                </NewsCard>
+            <NewsGrid singleColumn={filters.diario && filters.diario !== ''}>
+              {Object.entries(groupNewsByDiario(noticias)).map(([diarioName, diarioNoticias]) => (
+                <DiarioColumn key={diarioName}>
+                  <DiarioHeader>
+                    <DiarioLogo 
+                      src={getDiarioLogo(diarioName)} 
+                      alt={`Logo de ${diarioName}`}
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                  </DiarioHeader>
+                  
+                  <DiarioNewsList>
+                    {diarioNoticias.length > 0 ? (
+                      diarioNoticias.map((noticia) => (
+                        <NewsCard key={noticia.id}>
+                          <NewsTitle>{noticia.titulo}</NewsTitle>
+                          {noticia.contenido && (
+                            <NewsContent>{noticia.contenido}</NewsContent>
+                          )}
+                          <NewsMeta>
+                            <div>
+                              <Category>{noticia.categoria}</Category>
+                            </div>
+                            <div>{formatDate(noticia.fecha_extraccion)}</div>
+                          </NewsMeta>
+                        </NewsCard>
+                      ))
+                    ) : (
+                      <div style={{ 
+                        textAlign: 'center', 
+                        color: '#666', 
+                        padding: '2rem',
+                        fontStyle: 'italic'
+                      }}>
+                        No hay noticias disponibles
+                      </div>
+                    )}
+                  </DiarioNewsList>
+                </DiarioColumn>
               ))}
             </NewsGrid>
           )}
