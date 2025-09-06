@@ -1,35 +1,19 @@
 ﻿from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import logging
+from contextlib import asynccontextmanager
 
 from database import get_db, create_tables, test_connection
 from models import Diario, Noticia, EstadisticaScraping
 from pydantic import BaseModel
 
-# Configurar logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Crear aplicación FastAPI
-app = FastAPI(
-    title="API de Scraping de Diarios Peruanos",
-    description="API para gestionar noticias extraídas de diarios peruanos",
-    version="1.0.0"
-)
-
-# Configurar CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Modelos Pydantic
 class NoticiaResponse(BaseModel):
     id: int
     titulo: str
@@ -43,16 +27,6 @@ class NoticiaResponse(BaseModel):
     
     class Config:
         from_attributes = True
-
-@app.on_event("startup")
-async def startup_event():
-    logger.info("Iniciando aplicación...")
-    if not test_connection():
-        logger.error("No se pudo conectar a la base de datos")
-        raise Exception("Error de conexión a la base de datos")
-    create_tables()
-    init_diarios()
-    logger.info("Aplicación iniciada correctamente")
 
 def init_diarios():
     db = next(get_db())
@@ -75,6 +49,37 @@ def init_diarios():
         db.rollback()
     finally:
         db.close()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("Iniciando aplicación...")
+    
+    if not test_connection():
+        logger.error("No se pudo conectar a la base de datos")
+        raise Exception("Error de conexión a la base de datos")
+    
+    create_tables()
+    init_diarios()
+    logger.info("Aplicación iniciada correctamente")
+    
+    yield
+    
+    logger.info("Cerrando aplicación...")
+
+app = FastAPI(
+    title="API de Scraping de Diarios Peruanos",
+    description="API para gestionar noticias extraídas de diarios peruanos",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 async def root():
@@ -115,12 +120,12 @@ async def get_noticias(
 
 @app.get("/comparativa")
 async def get_comparativa(db: Session = Depends(get_db)):
-    fecha_limite = datetime.utcnow() - timedelta(hours=24)
+    fecha_limite = datetime.now(timezone.utc) - timedelta(hours=24)
     
     query = db.query(
         Diario.nombre,
         Noticia.categoria,
-        db.func.count(Noticia.id).label('cantidad')
+        func.count(Noticia.id).label('cantidad')
     ).join(Noticia).filter(
         Noticia.fecha_extraccion >= fecha_limite
     ).group_by(
