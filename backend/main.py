@@ -120,15 +120,12 @@ async def get_noticias(
 
 @app.get("/comparativa")
 async def get_comparativa(db: Session = Depends(get_db)):
-    fecha_limite = datetime.now(timezone.utc) - timedelta(hours=24)
-    
+    # Obtener todas las noticias (sin filtro de tiempo para mostrar totales)
     query = db.query(
         Diario.nombre,
         Noticia.categoria,
         func.count(Noticia.id).label('cantidad')
-    ).join(Noticia).filter(
-        Noticia.fecha_extraccion >= fecha_limite
-    ).group_by(
+    ).join(Noticia).group_by(
         Diario.nombre, Noticia.categoria
     ).order_by(
         Diario.nombre, Noticia.categoria
@@ -136,14 +133,39 @@ async def get_comparativa(db: Session = Depends(get_db)):
     
     resultados = query.all()
     
-    return [
-        {
-            "diario": result.nombre,
-            "categoria": result.categoria,
-            "cantidad": result.cantidad
+    # Obtener información adicional
+    total_noticias = db.query(func.count(Noticia.id)).scalar()
+    fecha_ultima_extraccion = db.query(func.max(Noticia.fecha_extraccion)).scalar()
+    
+    # Obtener todos los diarios para mostrar los que no tienen noticias
+    todos_diarios = db.query(Diario.nombre).all()
+    diarios_con_noticias = set([r.nombre for r in resultados])
+    
+    # Agregar diarios sin noticias
+    for diario in todos_diarios:
+        if diario.nombre not in diarios_con_noticias:
+            resultados.append(type('obj', (object,), {
+                'nombre': diario.nombre,
+                'categoria': 'Sin noticias',
+                'cantidad': 0
+            })())
+    
+    return {
+        "estadisticas": [
+            {
+                "diario": result.nombre,
+                "categoria": result.categoria,
+                "cantidad": result.cantidad,
+                "descripcion": f"{result.cantidad} noticias de {result.categoria}" if result.cantidad > 0 else "Sin noticias extraídas"
+            }
+            for result in resultados
+        ],
+        "resumen": {
+            "total_noticias": total_noticias,
+            "fecha_ultima_extraccion": fecha_ultima_extraccion.isoformat() if fecha_ultima_extraccion else None,
+            "periodo_analisis": "Todas las noticias extraídas hasta la fecha"
         }
-        for result in resultados
-    ]
+    }
 
 if __name__ == "__main__":
     import uvicorn

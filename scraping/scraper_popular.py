@@ -22,35 +22,52 @@ class ScraperPopular:
             soup = BeautifulSoup(response.content, 'html.parser')
             noticias = []
             
-            # Buscar artículos de deportes
-            articles = soup.find_all('article') or soup.find_all('div', class_='story-item')
+            # Buscar enlaces de noticias en la página
+            links = soup.find_all('a', href=True)
             
-            for article in articles[:10]:
+            for link in links[:30]:  # Revisar más enlaces
                 try:
-                    title_elem = article.find('h2') or article.find('h3') or article.find('a')
-                    if not title_elem:
+                    href = link.get('href')
+                    if not href or not href.startswith('/'):
                         continue
-                        
-                    title = title_elem.get_text(strip=True)
-                    link_elem = article.find('a')
-                    link = link_elem.get('href') if link_elem else None
                     
-                    if link and not link.startswith('http'):
-                        link = self.base_url + link
+                    # Construir URL completa
+                    if not href.startswith('http'):
+                        full_url = self.base_url + href
+                    else:
+                        full_url = href
                     
-                    content_elem = article.find('p')
-                    content = content_elem.get_text(strip=True) if content_elem else ""
+                    # Obtener texto del enlace
+                    title = link.get_text(strip=True)
+                    if not title or len(title) < 15:  # Filtrar títulos muy cortos
+                        continue
+                    
+                    # Filtrar enlaces que no son noticias
+                    if any(word in title.lower() for word in ['inicio', 'home', 'menu', 'buscar', 'contacto', 'acerca', 'politica']):
+                        continue
+                    
+                    # Buscar contenido relacionado
+                    content = ""
+                    parent = link.parent
+                    if parent:
+                        content_elem = parent.find('p') or parent.find('span')
+                        if content_elem:
+                            content = content_elem.get_text(strip=True)
                     
                     noticias.append({
                         'titulo': title,
                         'contenido': content,
-                        'enlace': link,
+                        'enlace': full_url,
                         'categoria': 'Deportes',
                         'diario': 'El Popular',
                         'fecha_extraccion': datetime.now().isoformat()
                     })
+                    
+                    if len(noticias) >= 10:  # Limitar a 10 noticias
+                        break
+                        
                 except Exception as e:
-                    logging.warning(f"Error procesando artículo de deportes: {e}")
+                    logging.warning(f"Error procesando enlace de deportes: {e}")
                     continue
                     
             return noticias
@@ -69,34 +86,52 @@ class ScraperPopular:
             soup = BeautifulSoup(response.content, 'html.parser')
             noticias = []
             
-            articles = soup.find_all('article') or soup.find_all('div', class_='story-item')
+            # Buscar enlaces de noticias en la página
+            links = soup.find_all('a', href=True)
             
-            for article in articles[:10]:
+            for link in links[:30]:  # Revisar más enlaces
                 try:
-                    title_elem = article.find('h2') or article.find('h3') or article.find('a')
-                    if not title_elem:
+                    href = link.get('href')
+                    if not href or not href.startswith('/'):
                         continue
-                        
-                    title = title_elem.get_text(strip=True)
-                    link_elem = article.find('a')
-                    link = link_elem.get('href') if link_elem else None
                     
-                    if link and not link.startswith('http'):
-                        link = self.base_url + link
+                    # Construir URL completa
+                    if not href.startswith('http'):
+                        full_url = self.base_url + href
+                    else:
+                        full_url = href
                     
-                    content_elem = article.find('p')
-                    content = content_elem.get_text(strip=True) if content_elem else ""
+                    # Obtener texto del enlace
+                    title = link.get_text(strip=True)
+                    if not title or len(title) < 15:  # Filtrar títulos muy cortos
+                        continue
+                    
+                    # Filtrar enlaces que no son noticias
+                    if any(word in title.lower() for word in ['inicio', 'home', 'menu', 'buscar', 'contacto', 'acerca', 'politica']):
+                        continue
+                    
+                    # Buscar contenido relacionado
+                    content = ""
+                    parent = link.parent
+                    if parent:
+                        content_elem = parent.find('p') or parent.find('span')
+                        if content_elem:
+                            content = content_elem.get_text(strip=True)
                     
                     noticias.append({
                         'titulo': title,
                         'contenido': content,
-                        'enlace': link,
+                        'enlace': full_url,
                         'categoria': 'Espectáculos',
                         'diario': 'El Popular',
                         'fecha_extraccion': datetime.now().isoformat()
                     })
+                    
+                    if len(noticias) >= 10:  # Limitar a 10 noticias
+                        break
+                        
                 except Exception as e:
-                    logging.warning(f"Error procesando artículo de espectáculos: {e}")
+                    logging.warning(f"Error procesando enlace de espectáculos: {e}")
                     continue
                     
             return noticias

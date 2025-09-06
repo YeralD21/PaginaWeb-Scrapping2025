@@ -1,0 +1,80 @@
+      {activeTab === 'comparativa' && (
+        <>
+          {error && <Error>{error}</Error>}
+
+          {loading ? (
+            <Loading>Cargando comparativa...</Loading>
+          ) : (
+            <StatsGrid>
+              {/* Información del resumen */}
+              {comparativa.resumen && (
+                <StatsCard style={{ marginBottom: '2rem' }}>
+                  <StatsTitle>
+                    <FiBarChart2 />
+                    Resumen General
+                  </StatsTitle>
+                  <div style={{ padding: '1rem', fontSize: '1.1rem' }}>
+                    <p><strong>Total de noticias extraídas:</strong> {comparativa.resumen.total_noticias}</p>
+                    <p><strong>Última extracción:</strong> {
+                      comparativa.resumen.fecha_ultima_extraccion 
+                        ? formatDate(comparativa.resumen.fecha_ultima_extraccion)
+                        : 'No hay datos'
+                    }</p>
+                    <p><strong>Período de análisis:</strong> {comparativa.resumen.periodo_analisis}</p>
+                  </div>
+                </StatsCard>
+              )}
+
+              <StatsCard>
+                <StatsTitle>
+                  <FiBarChart2 />
+                  Estadísticas por Diario y Categoría
+                </StatsTitle>
+                <p style={{ padding: '0 1rem', color: '#666', fontSize: '0.9rem' }}>
+                  Los números representan la cantidad de noticias extraídas de cada categoría por diario desde el inicio del sistema.
+                </p>
+                <StatsTable>
+                  <thead>
+                    <tr>
+                      <th>Diario</th>
+                      <th>Categoría</th>
+                      <th>Cantidad de Noticias</th>
+                      <th>Descripción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {comparativa.estadisticas && comparativa.estadisticas.map((stat, index) => (
+                      <StatsRow key={index} style={{ 
+                        backgroundColor: stat.cantidad === 0 ? '#fff5f5' : 'white',
+                        color: stat.cantidad === 0 ? '#666' : 'black'
+                      }}>
+                        <StatsCell>{stat.diario}</StatsCell>
+                        <StatsCell>{stat.categoria}</StatsCell>
+                        <StatsCell>
+                          <span style={{ 
+                            fontWeight: 'bold',
+                            color: stat.cantidad === 0 ? '#e53e3e' : '#38a169'
+                          }}>
+                            {stat.cantidad}
+                          </span>
+                        </StatsCell>
+                        <StatsCell style={{ fontSize: '0.9rem', color: '#666' }}>
+                          {stat.descripcion || (stat.cantidad === 0 ? 'Sin noticias extraídas' : {stat.cantidad} noticias de {stat.categoria})}
+                        </StatsCell>
+                      </StatsRow>
+                    ))}
+                  </tbody>
+                </StatsTable>
+                
+                {/* Nota explicativa */}
+                <div style={{ padding: '1rem', backgroundColor: '#f7fafc', margin: '1rem 0', borderRadius: '5px' }}>
+                  <p style={{ margin: 0, fontSize: '0.85rem', color: '#4a5568' }}>
+                    <strong>Nota:</strong> Los diarios con 0 noticias pueden indicar problemas en el scraping o que no se ha ejecutado el proceso de extracción recientemente.
+                    El Popular aparece con 0 noticias porque su scraper necesita ajustes en los selectores CSS.
+                  </p>
+                </div>
+              </StatsCard>
+            </StatsGrid>
+          )}
+        </>
+      )}
