@@ -38,14 +38,17 @@ const ContentWrapper = styled.div`
 `;
 
 const Header = styled.header`
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: rgba(102, 126, 234, 0.2);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   color: white;
   padding: 2rem;
-  border-radius: 10px;
-  margin-bottom: 2rem;
+  border-radius: 20px;
+  margin: 0 auto 2rem auto;
   text-align: center;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  width: 100%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  width: fit-content;
+  max-width: 90%;
 `;
 
 const Title = styled.h1`
@@ -64,13 +67,16 @@ const Nav = styled.nav`
   display: flex;
   justify-content: center;
   gap: 1rem;
-  margin-bottom: 2rem;
+  margin: 0 auto 2rem auto;
+  width: fit-content;
+  max-width: 90%;
 `;
 
 const NavButton = styled.button`
-  background: ${props => props.active ? '#667eea' : 'white'};
+  background: ${props => props.active ? 'rgba(102, 126, 234, 0.3)' : 'rgba(255, 255, 255, 0.2)'};
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   color: ${props => props.active ? 'white' : '#667eea'};
-  border: 2px solid #667eea;
   padding: 0.75rem 1.5rem;
   border-radius: 25px;
   cursor: pointer;
@@ -79,57 +85,69 @@ const NavButton = styled.button`
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 
   &:hover {
-    background: #667eea;
+    background: rgba(102, 126, 234, 0.4);
     color: white;
     transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   }
 `;
 
 const Filters = styled.div`
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   padding: 1.5rem;
-  border-radius: 10px;
-  margin-bottom: 2rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(5px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  margin: 0 auto 2rem auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   display: flex;
   gap: 1rem;
   align-items: center;
   flex-wrap: wrap;
-  width: 100%;
+  width: fit-content;
+  max-width: 90%;
 `;
 
 const Select = styled.select`
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #333;
   padding: 0.5rem;
-  border: 2px solid #e1e5e9;
-  border-radius: 5px;
+  border-radius: 15px;
   font-size: 1rem;
   min-width: 150px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 
   &:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: rgba(102, 126, 234, 0.5);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
   }
 `;
 
 const Button = styled.button`
-  background: #667eea;
+  background: rgba(102, 126, 234, 0.3);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   color: white;
-  border: none;
   padding: 0.5rem 1rem;
-  border-radius: 5px;
+  border-radius: 15px;
   cursor: pointer;
   font-weight: 600;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  transition: background 0.3s ease;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 
   &:hover {
-    background: #5a6fd8;
+    background: rgba(102, 126, 234, 0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   }
 `;
 
@@ -153,14 +171,22 @@ const NewsGrid = styled.div`
 `;
 
 const DiarioColumn = styled.div`
-  background: rgba(248, 249, 250, 0.9);
-  border-radius: 10px;
-  padding: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 20px;
+  padding: 1.5rem;
   min-height: 400px;
-  backdrop-filter: blur(5px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
   box-sizing: border-box;
   width: 100%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-5px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  }
 `;
 
 const DiarioHeader = styled.div`
@@ -185,20 +211,20 @@ const DiarioNewsList = styled.div`
 `;
 
 const NewsCard = styled.article`
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 10px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(5px);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.3);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border-radius: 20px;
+  padding: 1.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
   box-sizing: border-box;
   width: 100%;
 
   &:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-    background: rgba(255, 255, 255, 0.98);
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-8px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
   }
 `;
 
@@ -293,13 +319,14 @@ const Error = styled.div`
 `;
 
 const DateFilterSection = styled.div`
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   padding: 1.5rem;
-  border-radius: 10px;
+  border-radius: 20px;
   margin-bottom: 2rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(5px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  width: 100%;
 `;
 
 const DateFilterTitle = styled.h3`
@@ -319,38 +346,43 @@ const DateButtons = styled.div`
 `;
 
 const DateButton = styled.button`
-  background: ${props => props.active ? '#667eea' : 'white'};
+  background: ${props => props.active ? 'rgba(102, 126, 234, 0.3)' : 'rgba(255, 255, 255, 0.2)'};
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   color: ${props => props.active ? 'white' : '#667eea'};
-  border: 2px solid #667eea;
   padding: 0.5rem 1rem;
   border-radius: 20px;
   cursor: pointer;
   font-weight: 600;
   transition: all 0.3s ease;
   font-size: 0.9rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 
   &:hover {
-    background: #667eea;
+    background: rgba(102, 126, 234, 0.4);
     color: white;
     transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   }
 `;
 
 const ClearDateButton = styled.button`
-  background: #dc3545;
+  background: rgba(220, 53, 69, 0.3);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   color: white;
-  border: 2px solid #dc3545;
   padding: 0.5rem 1rem;
   border-radius: 20px;
   cursor: pointer;
   font-weight: 600;
   transition: all 0.3s ease;
   font-size: 0.9rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 
   &:hover {
-    background: #c82333;
-    border-color: #c82333;
+    background: rgba(220, 53, 69, 0.5);
     transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   }
 `;
 
@@ -375,6 +407,7 @@ function App() {
   const [fechasDisponibles, setFechasDisponibles] = useState([]);
   const [fechaSeleccionada, setFechaSeleccionada] = useState('');
   const [noticiasPorFecha, setNoticiasPorFecha] = useState([]);
+  const [mostrarFechas, setMostrarFechas] = useState(false);
 
   const API_BASE_URL = 'http://localhost:8000';
 
@@ -463,6 +496,10 @@ function App() {
   const limpiarFiltroFecha = () => {
     setFechaSeleccionada('');
     setNoticiasPorFecha([]);
+  };
+
+  const toggleMostrarFechas = () => {
+    setMostrarFechas(!mostrarFechas);
   };
 
   const formatDate = (dateString) => {
@@ -563,31 +600,38 @@ function App() {
           </Filters>
 
           <DateFilterSection>
-            <DateFilterTitle>
-              📅 Filtrar por Fecha
+            <DateFilterTitle 
+              onClick={toggleMostrarFechas}
+              style={{ cursor: 'pointer', userSelect: 'none' }}
+            >
+              📅 Filtrar por Fecha {mostrarFechas ? '▼' : '▶'}
             </DateFilterTitle>
-            <DateButtons>
-              {fechasDisponibles.map((fecha) => (
-                <DateButton
-                  key={fecha.fecha}
-                  active={fechaSeleccionada === fecha.fecha}
-                  onClick={() => handleFechaChange(fecha.fecha)}
-                >
-                  {fecha.fecha_formateada} ({fecha.total_noticias} noticias)
-                </DateButton>
-              ))}
-              {fechaSeleccionada && (
-                <ClearDateButton onClick={limpiarFiltroFecha}>
-                  ✕ Limpiar Filtro
-                </ClearDateButton>
-              )}
-            </DateButtons>
-            {fechaSeleccionada && (
-              <SelectedDateInfo>
-                <strong>📅 Fecha seleccionada:</strong> {fechasDisponibles.find(f => f.fecha === fechaSeleccionada)?.fecha_formateada}
-                <br />
-                <strong>📰 Total de noticias:</strong> {noticiasPorFecha.length} noticias de los 3 diarios
-              </SelectedDateInfo>
+            {mostrarFechas && (
+              <>
+                <DateButtons>
+                  {fechasDisponibles.map((fecha) => (
+                    <DateButton
+                      key={fecha.fecha}
+                      active={fechaSeleccionada === fecha.fecha}
+                      onClick={() => handleFechaChange(fecha.fecha)}
+                    >
+                      {fecha.fecha_formateada} ({fecha.total_noticias} noticias)
+                    </DateButton>
+                  ))}
+                  {fechaSeleccionada && (
+                    <ClearDateButton onClick={limpiarFiltroFecha}>
+                      ✕ Limpiar Filtro
+                    </ClearDateButton>
+                  )}
+                </DateButtons>
+                {fechaSeleccionada && (
+                  <SelectedDateInfo>
+                    <strong>📅 Fecha seleccionada:</strong> {fechasDisponibles.find(f => f.fecha === fechaSeleccionada)?.fecha_formateada}
+                    <br />
+                    <strong>📰 Total de noticias:</strong> {noticiasPorFecha.length} noticias de los 3 diarios
+                  </SelectedDateInfo>
+                )}
+              </>
             )}
           </DateFilterSection>
 
