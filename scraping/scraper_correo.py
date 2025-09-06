@@ -42,10 +42,19 @@ class ScraperCorreo:
                     content_elem = article.find('p') or article.find('div', class_='summary')
                     content = content_elem.get_text(strip=True) if content_elem else ""
                     
+                    # Buscar imagen
+                    imagen_url = None
+                    img_elem = article.find('img')
+                    if img_elem:
+                        imagen_url = img_elem.get('src') or img_elem.get('data-src')
+                        if imagen_url and not imagen_url.startswith('http'):
+                            imagen_url = self.base_url + imagen_url
+                    
                     noticias.append({
                         'titulo': title,
                         'contenido': content,
                         'enlace': link,
+                        'imagen_url': imagen_url,
                         'categoria': 'Deportes',
                         'diario': 'Diario Correo',
                         'fecha_extraccion': datetime.now().isoformat()
@@ -90,10 +99,19 @@ class ScraperCorreo:
                     content_elem = article.find('p') or article.find('div', class_='summary')
                     content = content_elem.get_text(strip=True) if content_elem else ""
                     
+                    # Buscar imagen
+                    imagen_url = None
+                    img_elem = article.find('img')
+                    if img_elem:
+                        imagen_url = img_elem.get('src') or img_elem.get('data-src')
+                        if imagen_url and not imagen_url.startswith('http'):
+                            imagen_url = self.base_url + imagen_url
+                    
                     noticias.append({
                         'titulo': title,
                         'contenido': content,
                         'enlace': link,
+                        'imagen_url': imagen_url,
                         'categoria': 'Economía',
                         'diario': 'Diario Correo',
                         'fecha_extraccion': datetime.now().isoformat()
@@ -138,10 +156,19 @@ class ScraperCorreo:
                     content_elem = article.find('p') or article.find('div', class_='summary')
                     content = content_elem.get_text(strip=True) if content_elem else ""
                     
+                    # Buscar imagen
+                    imagen_url = None
+                    img_elem = article.find('img')
+                    if img_elem:
+                        imagen_url = img_elem.get('src') or img_elem.get('data-src')
+                        if imagen_url and not imagen_url.startswith('http'):
+                            imagen_url = self.base_url + imagen_url
+                    
                     noticias.append({
                         'titulo': title,
                         'contenido': content,
                         'enlace': link,
+                        'imagen_url': imagen_url,
                         'categoria': 'Espectáculos',
                         'diario': 'Diario Correo',
                         'fecha_extraccion': datetime.now().isoformat()

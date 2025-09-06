@@ -260,12 +260,42 @@ const NewsCard = styled.article`
   transition: all 0.3s ease;
   box-sizing: border-box;
   width: 100%;
+  overflow: hidden;
 
   &:hover {
     background: rgba(255, 255, 255, 0.15);
     transform: translateY(-8px);
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
   }
+`;
+
+const NewsImage = styled.img`
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 15px;
+  margin-bottom: 1rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: scale(1.02);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  }
+`;
+
+const DefaultImage = styled.div`
+  width: 100%;
+  height: 200px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+  border-radius: 15px;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #667eea;
+  font-size: 3rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 `;
 
 const NewsTitle = styled.h3`
@@ -800,6 +830,21 @@ function App() {
                     {diarioNoticias.length > 0 ? (
                       diarioNoticias.map((noticia) => (
                         <NewsCard key={noticia.id}>
+                          {noticia.imagen_url ? (
+                            <NewsImage 
+                              src={noticia.imagen_url} 
+                              alt={noticia.titulo}
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'flex';
+                              }}
+                            />
+                          ) : null}
+                          {!noticia.imagen_url && (
+                            <DefaultImage style={{ display: noticia.imagen_url ? 'none' : 'flex' }}>
+                              📰
+                            </DefaultImage>
+                          )}
                           <NewsTitle>{noticia.titulo}</NewsTitle>
                           {noticia.contenido && (
                             <NewsContent>{noticia.contenido}</NewsContent>

@@ -22,6 +22,7 @@ class Noticia(Base):
     titulo = Column(String(500), nullable=False, index=True)
     contenido = Column(Text)
     enlace = Column(String(1000))
+    imagen_url = Column(String(1000))
     categoria = Column(String(100), nullable=False, index=True)
     fecha_publicacion = Column(DateTime)
     fecha_extraccion = Column(DateTime, default=datetime.utcnow, index=True)

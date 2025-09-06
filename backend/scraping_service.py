@@ -84,6 +84,7 @@ class ScrapingService:
                     titulo=news_item['titulo'],
                     contenido=news_item.get('contenido', ''),
                     enlace=news_item.get('enlace', ''),
+                    imagen_url=news_item.get('imagen_url', ''),
                     categoria=news_item['categoria'],
                     fecha_extraccion=datetime.fromisoformat(news_item['fecha_extraccion']),
                     diario_id=diario.id

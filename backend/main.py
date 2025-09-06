@@ -19,6 +19,7 @@ class NoticiaResponse(BaseModel):
     titulo: str
     contenido: Optional[str]
     enlace: Optional[str]
+    imagen_url: Optional[str]
     categoria: str
     fecha_publicacion: Optional[datetime]
     fecha_extraccion: datetime
@@ -109,6 +110,7 @@ async def get_noticias(
             titulo=noticia.titulo,
             contenido=noticia.contenido,
             enlace=noticia.enlace,
+            imagen_url=noticia.imagen_url,
             categoria=noticia.categoria,
             fecha_publicacion=noticia.fecha_publicacion,
             fecha_extraccion=noticia.fecha_extraccion,
@@ -193,6 +195,7 @@ async def get_noticias_recientes(
             titulo=noticia.titulo,
             contenido=noticia.contenido,
             enlace=noticia.enlace,
+            imagen_url=noticia.imagen_url,
             categoria=noticia.categoria,
             fecha_extraccion=noticia.fecha_extraccion.isoformat(),
             diario_nombre=noticia.diario.nombre
@@ -255,6 +258,7 @@ async def get_noticias_por_fecha(
                 titulo=noticia.titulo,
                 contenido=noticia.contenido,
                 enlace=noticia.enlace,
+                imagen_url=noticia.imagen_url,
                 categoria=noticia.categoria,
                 fecha_extraccion=noticia.fecha_extraccion.isoformat(),
                 diario_nombre=noticia.diario.nombre

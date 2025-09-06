@@ -54,10 +54,20 @@ class ScraperPopular:
                         if content_elem:
                             content = content_elem.get_text(strip=True)
                     
+                    # Buscar imagen
+                    imagen_url = None
+                    if parent:
+                        img_elem = parent.find('img')
+                        if img_elem:
+                            imagen_url = img_elem.get('src') or img_elem.get('data-src')
+                            if imagen_url and not imagen_url.startswith('http'):
+                                imagen_url = self.base_url + imagen_url
+                    
                     noticias.append({
                         'titulo': title,
                         'contenido': content,
                         'enlace': full_url,
+                        'imagen_url': imagen_url,
                         'categoria': 'Deportes',
                         'diario': 'El Popular',
                         'fecha_extraccion': datetime.now().isoformat()
@@ -118,10 +128,20 @@ class ScraperPopular:
                         if content_elem:
                             content = content_elem.get_text(strip=True)
                     
+                    # Buscar imagen
+                    imagen_url = None
+                    if parent:
+                        img_elem = parent.find('img')
+                        if img_elem:
+                            imagen_url = img_elem.get('src') or img_elem.get('data-src')
+                            if imagen_url and not imagen_url.startswith('http'):
+                                imagen_url = self.base_url + imagen_url
+                    
                     noticias.append({
                         'titulo': title,
                         'contenido': content,
                         'enlace': full_url,
+                        'imagen_url': imagen_url,
                         'categoria': 'Espectáculos',
                         'diario': 'El Popular',
                         'fecha_extraccion': datetime.now().isoformat()
