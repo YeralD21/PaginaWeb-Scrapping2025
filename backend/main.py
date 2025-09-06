@@ -167,6 +167,134 @@ async def get_comparativa(db: Session = Depends(get_db)):
         }
     }
 
+@app.get("/noticias/recientes", response_model=List[NoticiaResponse])
+async def get_noticias_recientes(
+    horas: int = Query(1, description="Noticias de las últimas X horas"),
+    limit: int = Query(50, description="Límite de noticias a retornar"),
+    db: Session = Depends(get_db)
+):
+    """Obtener noticias agregadas en las últimas X horas"""
+    from datetime import datetime, timedelta
+    
+    # Calcular fecha límite
+    fecha_limite = datetime.now() - timedelta(hours=horas)
+    
+    # Obtener noticias recientes
+    query = db.query(Noticia).join(Diario).filter(
+        Noticia.fecha_extraccion >= fecha_limite
+    ).order_by(Noticia.fecha_extraccion.desc()).limit(limit)
+    
+    noticias = query.all()
+    
+    result = []
+    for noticia in noticias:
+        result.append(NoticiaResponse(
+            id=noticia.id,
+            titulo=noticia.titulo,
+            contenido=noticia.contenido,
+            enlace=noticia.enlace,
+            categoria=noticia.categoria,
+            fecha_extraccion=noticia.fecha_extraccion.isoformat(),
+            diario_nombre=noticia.diario.nombre
+        ))
+    
+    return result
+
+@app.get("/noticias/ultima-actualizacion")
+async def get_ultima_actualizacion(db: Session = Depends(get_db)):
+    """Obtener información de la última actualización"""
+    from datetime import datetime
+    
+    # Obtener la fecha de la última noticia
+    ultima_noticia = db.query(Noticia).order_by(Noticia.fecha_extraccion.desc()).first()
+    
+    if not ultima_noticia:
+        return {
+            "ultima_actualizacion": None,
+            "total_noticias": 0,
+            "estado": "Sin noticias"
+        }
+    
+    # Calcular tiempo transcurrido
+    ahora = datetime.now()
+    tiempo_transcurrido = ahora - ultima_noticia.fecha_extraccion
+    
+    return {
+        "ultima_actualizacion": ultima_noticia.fecha_extraccion.isoformat(),
+        "tiempo_transcurrido_minutos": int(tiempo_transcurrido.total_seconds() / 60),
+        "total_noticias": db.query(func.count(Noticia.id)).scalar(),
+        "estado": "Actualizado" if tiempo_transcurrido.total_seconds() < 3600 else "Pendiente de actualización"
+    }
+
+@app.get("/noticias/por-fecha", response_model=List[NoticiaResponse])
+async def get_noticias_por_fecha(
+    fecha: str = Query(..., description="Fecha en formato YYYY-MM-DD (ej: 2025-09-07)"),
+    db: Session = Depends(get_db)
+):
+    """Obtener noticias de una fecha específica"""
+    from datetime import datetime, timedelta
+    
+    try:
+        # Parsear la fecha
+        fecha_obj = datetime.strptime(fecha, "%Y-%m-%d").date()
+        fecha_inicio = datetime.combine(fecha_obj, datetime.min.time())
+        fecha_fin = datetime.combine(fecha_obj, datetime.max.time())
+        
+        # Obtener noticias de esa fecha
+        query = db.query(Noticia).join(Diario).filter(
+            Noticia.fecha_extraccion >= fecha_inicio,
+            Noticia.fecha_extraccion <= fecha_fin
+        ).order_by(Noticia.fecha_extraccion.desc())
+        
+        noticias = query.all()
+        
+        result = []
+        for noticia in noticias:
+            result.append(NoticiaResponse(
+                id=noticia.id,
+                titulo=noticia.titulo,
+                contenido=noticia.contenido,
+                enlace=noticia.enlace,
+                categoria=noticia.categoria,
+                fecha_extraccion=noticia.fecha_extraccion.isoformat(),
+                diario_nombre=noticia.diario.nombre
+            ))
+        
+        return result
+        
+    except ValueError:
+        return {"error": "Formato de fecha inválido. Use YYYY-MM-DD"}
+
+@app.get("/noticias/fechas-disponibles")
+async def get_fechas_disponibles(db: Session = Depends(get_db)):
+    """Obtener todas las fechas que tienen noticias"""
+    from datetime import datetime
+    
+    # Obtener fechas únicas de noticias
+    fechas = db.query(
+        func.date(Noticia.fecha_extraccion).label('fecha')
+    ).distinct().order_by(
+        func.date(Noticia.fecha_extraccion).desc()
+    ).all()
+    
+    # Formatear fechas
+    fechas_formateadas = []
+    for fecha in fechas:
+        fecha_obj = fecha.fecha
+        fechas_formateadas.append({
+            "fecha": fecha_obj.strftime("%Y-%m-%d"),
+            "fecha_formateada": fecha_obj.strftime("%d/%m/%Y"),
+            "dia_semana": fecha_obj.strftime("%A"),
+            "total_noticias": db.query(func.count(Noticia.id)).filter(
+                func.date(Noticia.fecha_extraccion) == fecha_obj
+            ).scalar()
+        })
+    
+    return {
+        "fechas": fechas_formateadas,
+        "total_fechas": len(fechas_formateadas)
+    }
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

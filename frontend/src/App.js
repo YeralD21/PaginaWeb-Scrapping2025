@@ -6,7 +6,7 @@ import { FiFileText, FiBarChart2, FiFilter, FiRefreshCw } from 'react-icons/fi';
 const Container = styled.div`
   width: 100%;
   margin: 0;
-  padding: 20px 80px 20px 40px;
+  padding: 0;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   min-height: 100vh;
   background-image: url('/images/congreso.jpeg');
@@ -27,6 +27,14 @@ const Container = styled.div`
     backdrop-filter: blur(3px);
     z-index: -1;
   }
+`;
+
+const ContentWrapper = styled.div`
+  width: 100%;
+  max-width: calc(100% - 75px);
+  margin: 0 0 0 20px;
+  padding: 20px 0;
+  box-sizing: border-box;
 `;
 
 const Header = styled.header`
@@ -131,6 +139,8 @@ const NewsGrid = styled.div`
   gap: 2rem;
   margin-bottom: 2rem;
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   
   @media (max-width: 1400px) {
     gap: 1.5rem;
@@ -149,6 +159,8 @@ const DiarioColumn = styled.div`
   min-height: 400px;
   backdrop-filter: blur(5px);
   border: 1px solid rgba(255, 255, 255, 0.2);
+  box-sizing: border-box;
+  width: 100%;
 `;
 
 const DiarioHeader = styled.div`
@@ -180,6 +192,8 @@ const NewsCard = styled.article`
   backdrop-filter: blur(5px);
   border: 1px solid rgba(255, 255, 255, 0.3);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-sizing: border-box;
+  width: 100%;
 
   &:hover {
     transform: translateY(-5px);
@@ -278,6 +292,76 @@ const Error = styled.div`
   border: 1px solid #fcc;
 `;
 
+const DateFilterSection = styled.div`
+  background: rgba(255, 255, 255, 0.9);
+  padding: 1.5rem;
+  border-radius: 10px;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+`;
+
+const DateFilterTitle = styled.h3`
+  margin: 0 0 1rem 0;
+  color: #333;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const DateButtons = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+`;
+
+const DateButton = styled.button`
+  background: ${props => props.active ? '#667eea' : 'white'};
+  color: ${props => props.active ? 'white' : '#667eea'};
+  border: 2px solid #667eea;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+
+  &:hover {
+    background: #667eea;
+    color: white;
+    transform: translateY(-2px);
+  }
+`;
+
+const ClearDateButton = styled.button`
+  background: #dc3545;
+  color: white;
+  border: 2px solid #dc3545;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+
+  &:hover {
+    background: #c82333;
+    border-color: #c82333;
+    transform: translateY(-2px);
+  }
+`;
+
+const SelectedDateInfo = styled.div`
+  background: rgba(102, 126, 234, 0.1);
+  padding: 1rem;
+  border-radius: 8px;
+  border-left: 4px solid #667eea;
+  margin-top: 1rem;
+`;
+
 function App() {
   const [activeTab, setActiveTab] = useState('noticias');
   const [noticias, setNoticias] = useState([]);
@@ -288,16 +372,26 @@ function App() {
     categoria: '',
     diario: ''
   });
+  const [fechasDisponibles, setFechasDisponibles] = useState([]);
+  const [fechaSeleccionada, setFechaSeleccionada] = useState('');
+  const [noticiasPorFecha, setNoticiasPorFecha] = useState([]);
 
   const API_BASE_URL = 'http://localhost:8000';
 
   useEffect(() => {
     if (activeTab === 'noticias') {
       fetchNoticias();
+      fetchFechasDisponibles();
     } else if (activeTab === 'comparativa') {
       fetchComparativa();
     }
   }, [activeTab, filters]);
+
+  useEffect(() => {
+    if (fechaSeleccionada) {
+      fetchNoticiasPorFecha(fechaSeleccionada);
+    }
+  }, [fechaSeleccionada]);
 
   const fetchNoticias = async () => {
     setLoading(true);
@@ -335,8 +429,40 @@ function App() {
     }
   };
 
+  const fetchFechasDisponibles = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/noticias/fechas-disponibles`);
+      setFechasDisponibles(response.data.fechas);
+    } catch (err) {
+      console.error('Error al cargar fechas disponibles:', err);
+    }
+  };
+
+  const fetchNoticiasPorFecha = async (fecha) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await axios.get(`${API_BASE_URL}/noticias/por-fecha?fecha=${fecha}`);
+      setNoticiasPorFecha(response.data);
+    } catch (err) {
+      setError('Error al cargar noticias por fecha');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleFechaChange = (fecha) => {
+    setFechaSeleccionada(fecha);
+  };
+
+  const limpiarFiltroFecha = () => {
+    setFechaSeleccionada('');
+    setNoticiasPorFecha([]);
   };
 
   const formatDate = (dateString) => {
@@ -366,6 +492,11 @@ function App() {
     return grouped;
   };
 
+  // Función para obtener las noticias a mostrar (todas o filtradas por fecha)
+  const getNoticiasAMostrar = () => {
+    return fechaSeleccionada ? noticiasPorFecha : noticias;
+  };
+
   const getDiarioLogo = (diarioName) => {
     const logos = {
       'El Comercio': '/images/logos/comercio.png',
@@ -377,7 +508,8 @@ function App() {
 
   return (
     <Container>
-      <Header>
+      <ContentWrapper>
+        <Header>
         <Title>
           <FiFileText style={{ marginRight: '0.5rem' }} />
           Diarios Peruanos
@@ -430,13 +562,42 @@ function App() {
             </Button>
           </Filters>
 
+          <DateFilterSection>
+            <DateFilterTitle>
+              📅 Filtrar por Fecha
+            </DateFilterTitle>
+            <DateButtons>
+              {fechasDisponibles.map((fecha) => (
+                <DateButton
+                  key={fecha.fecha}
+                  active={fechaSeleccionada === fecha.fecha}
+                  onClick={() => handleFechaChange(fecha.fecha)}
+                >
+                  {fecha.fecha_formateada} ({fecha.total_noticias} noticias)
+                </DateButton>
+              ))}
+              {fechaSeleccionada && (
+                <ClearDateButton onClick={limpiarFiltroFecha}>
+                  ✕ Limpiar Filtro
+                </ClearDateButton>
+              )}
+            </DateButtons>
+            {fechaSeleccionada && (
+              <SelectedDateInfo>
+                <strong>📅 Fecha seleccionada:</strong> {fechasDisponibles.find(f => f.fecha === fechaSeleccionada)?.fecha_formateada}
+                <br />
+                <strong>📰 Total de noticias:</strong> {noticiasPorFecha.length} noticias de los 3 diarios
+              </SelectedDateInfo>
+            )}
+          </DateFilterSection>
+
           {error && <Error>{error}</Error>}
 
           {loading ? (
             <Loading>Cargando noticias...</Loading>
           ) : (
             <NewsGrid singleColumn={filters.diario && filters.diario !== ''}>
-              {Object.entries(groupNewsByDiario(noticias)).map(([diarioName, diarioNoticias]) => (
+              {Object.entries(groupNewsByDiario(getNoticiasAMostrar())).map(([diarioName, diarioNoticias]) => (
                 <DiarioColumn key={diarioName}>
                   <DiarioHeader>
                     <DiarioLogo 
@@ -518,6 +679,7 @@ function App() {
           )}
         </>
       )}
+      </ContentWrapper>
     </Container>
   );
 }

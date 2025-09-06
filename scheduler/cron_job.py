@@ -28,7 +28,8 @@ logger = logging.getLogger(__name__)
 class ScrapingScheduler:
     def __init__(self):
         self.main_scraper = MainScraper()
-        self.interval_hours = int(os.getenv('SCHEDULE_INTERVAL_HOURS', 12))
+        # Cambiar a intervalos más frecuentes para actualizaciones automáticas
+        self.interval_minutes = int(os.getenv('SCHEDULE_INTERVAL_MINUTES', 15))  # Cada 15 minutos por defecto
         
     def save_news_to_database(self, news: List[Dict]) -> int:
         """Guardar noticias en la base de datos"""
@@ -46,14 +47,15 @@ class ScrapingScheduler:
                     logger.warning(f"Diario no encontrado: {news_item['diario']}")
                     continue
                 
-                # Verificar si la noticia ya existe (por título y fecha)
+                # Verificar si la noticia ya existe (por título y enlace)
                 existing = db.query(Noticia).filter(
                     Noticia.titulo == news_item['titulo'],
                     Noticia.diario_id == diario.id,
-                    Noticia.categoria == news_item['categoria']
+                    Noticia.enlace == news_item.get('enlace', '')
                 ).first()
                 
                 if existing:
+                    logger.debug(f"Noticia ya existe: {news_item['titulo']}")
                     continue  # No duplicar noticias
                 
                 # Crear nueva noticia
@@ -162,10 +164,10 @@ class ScrapingScheduler:
     
     def start_scheduler(self):
         """Iniciar el scheduler"""
-        logger.info(f"Iniciando scheduler con intervalo de {self.interval_hours} horas")
+        logger.info(f"Iniciando scheduler con intervalo de {self.interval_minutes} minutos")
         
         # Programar el trabajo
-        schedule.every(self.interval_hours).hours.do(self.run_scraping_job)
+        schedule.every(self.interval_minutes).minutes.do(self.run_scraping_job)
         
         # Ejecutar una vez al inicio
         logger.info("Ejecutando scraping inicial...")
