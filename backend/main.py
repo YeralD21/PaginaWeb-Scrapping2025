@@ -295,6 +295,83 @@ async def get_fechas_disponibles(db: Session = Depends(get_db)):
         "total_fechas": len(fechas_formateadas)
     }
 
+@app.get("/analisis/por-fechas")
+async def get_analisis_por_fechas(
+    fecha_inicio: str = Query(..., description="Fecha inicio en formato YYYY-MM-DD"),
+    fecha_fin: str = Query(..., description="Fecha fin en formato YYYY-MM-DD"),
+    db: Session = Depends(get_db)
+):
+    """Obtener análisis de publicaciones por diario y categoría en un rango de fechas"""
+    from datetime import datetime
+    
+    try:
+        # Parsear fechas
+        fecha_inicio_obj = datetime.strptime(fecha_inicio, "%Y-%m-%d").date()
+        fecha_fin_obj = datetime.strptime(fecha_fin, "%Y-%m-%d").date()
+        
+        fecha_inicio_datetime = datetime.combine(fecha_inicio_obj, datetime.min.time())
+        fecha_fin_datetime = datetime.combine(fecha_fin_obj, datetime.max.time())
+        
+        # Obtener estadísticas por diario y categoría
+        query = db.query(
+            Diario.nombre,
+            Noticia.categoria,
+            func.count(Noticia.id).label('cantidad')
+        ).join(Noticia).filter(
+            Noticia.fecha_extraccion >= fecha_inicio_datetime,
+            Noticia.fecha_extraccion <= fecha_fin_datetime
+        ).group_by(
+            Diario.nombre, Noticia.categoria
+        ).order_by(
+            Diario.nombre, Noticia.categoria
+        )
+        
+        resultados = query.all()
+        
+        # Organizar datos por diario
+        analisis_por_diario = {}
+        total_por_diario = {}
+        
+        for resultado in resultados:
+            diario = resultado.nombre
+            categoria = resultado.categoria
+            cantidad = resultado.cantidad
+            
+            if diario not in analisis_por_diario:
+                analisis_por_diario[diario] = {}
+                total_por_diario[diario] = 0
+            
+            analisis_por_diario[diario][categoria] = cantidad
+            total_por_diario[diario] += cantidad
+        
+        # Calcular totales generales
+        total_general = sum(total_por_diario.values())
+        
+        # Obtener todas las categorías únicas
+        categorias_unicas = set()
+        for diario_data in analisis_por_diario.values():
+            categorias_unicas.update(diario_data.keys())
+        categorias_unicas = sorted(list(categorias_unicas))
+        
+        return {
+            "periodo": {
+                "fecha_inicio": fecha_inicio,
+                "fecha_fin": fecha_fin,
+                "dias_analizados": (fecha_fin_obj - fecha_inicio_obj).days + 1
+            },
+            "analisis_por_diario": analisis_por_diario,
+            "total_por_diario": total_por_diario,
+            "total_general": total_general,
+            "categorias": categorias_unicas,
+            "resumen": {
+                "diario_mas_activo": max(total_por_diario.items(), key=lambda x: x[1]) if total_por_diario else None,
+                "promedio_por_diario": total_general / len(total_por_diario) if total_por_diario else 0
+            }
+        }
+        
+    except ValueError:
+        return {"error": "Formato de fecha inválido. Use YYYY-MM-DD"}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
