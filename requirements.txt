@@ -1,0 +1,25 @@
+# Dependencias para Web Scraping
+requests==2.31.0
+beautifulsoup4==4.12.2
+lxml==4.9.3
+schedule==1.2.0
+
+# Dependencias para Backend FastAPI
+fastapi==0.104.1
+uvicorn==0.24.0
+pydantic==2.5.0
+python-multipart==0.0.6
+
+# Dependencias para Base de Datos
+psycopg2-binary==2.9.9
+sqlalchemy==2.0.23
+alembic==1.13.1
+
+# Dependencias para variables de entorno
+python-dotenv==1.0.0
+
+# Dependencias para fechas
+python-dateutil==2.8.2
+
+# Dependencias para logging
+loguru==0.7.2
