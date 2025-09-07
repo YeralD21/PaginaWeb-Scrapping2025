@@ -1,10 +1,7 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import styled from 'styled-components';
 import { FiFileText, FiBarChart2, FiFilter, FiRefreshCw, FiCalendar } from 'react-icons/fi';
-import DiarioComercio from './components/DiarioComercio';
-import DiarioCorreo from './components/DiarioCorreo';
-import DiarioPopular from './components/DiarioPopular';
 
 const Container = styled.div`
   width: 100%;
@@ -116,27 +113,6 @@ const FilterButton = styled.button`
   &:hover {
     border-color: #dc3545;
     color: #dc3545;
-  }
-`;
-
-const DiarioFilterButton = styled.button`
-  background: ${props => props.active ? '#dc3545' : 'white'};
-  color: ${props => props.active ? 'white' : '#333'};
-  border: 2px solid ${props => props.active ? '#dc3545' : '#e9ecef'};
-  padding: 0.6rem 1.2rem;
-  border-radius: 20px;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-weight: 600;
-
-  &:hover {
-    background: ${props => props.active ? '#c82333' : '#f8f9fa'};
-    border-color: #dc3545;
-    color: ${props => props.active ? 'white' : '#dc3545'};
   }
 `;
 
@@ -373,8 +349,6 @@ function App() {
   const [fechaSeleccionada, setFechaSeleccionada] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [diarioSeleccionado, setDiarioSeleccionado] = useState(null);
-  const [noticiasFiltradas, setNoticiasFiltradas] = useState([]);
 
   useEffect(() => {
     fetchFechasDisponibles();
@@ -422,27 +396,6 @@ function App() {
     }
   };
 
-  const handleDiarioFilter = (diario) => {
-    if (diario === 'todos') {
-      setDiarioSeleccionado(null);
-      setNoticiasFiltradas([]);
-    } else {
-      setDiarioSeleccionado(diario);
-      // Filtrar noticias por diario seleccionado - probar diferentes campos
-      const filtradas = noticias.filter(noticia => 
-        noticia.diario === diario || 
-        noticia.diario_nombre === diario ||
-        noticia.nombre_diario === diario
-      );
-      setNoticiasFiltradas(filtradas);
-    }
-  };
-
-  const handleBackToGeneral = () => {
-    setDiarioSeleccionado(null);
-    setNoticiasFiltradas([]);
-  };
-
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('es-ES', {
@@ -465,49 +418,6 @@ function App() {
   
   // Obtener noticias secundarias (resto)
   const noticiasSecundarias = noticias.slice(1);
-
-  // Renderizar vista específica del diario si está seleccionado
-  if (diarioSeleccionado) {
-    // Filtrar noticias por el diario seleccionado - probar diferentes campos
-    const noticiasDelDiario = noticias.filter(noticia => 
-      noticia.diario === diarioSeleccionado || 
-      noticia.diario_nombre === diarioSeleccionado ||
-      noticia.nombre_diario === diarioSeleccionado
-    );
-    
-    
-    switch (diarioSeleccionado) {
-      case 'El Comercio':
-        return (
-          <DiarioComercio 
-            noticias={noticiasDelDiario}
-            onBack={handleBackToGeneral}
-            loading={loading}
-            error={error}
-          />
-        );
-      case 'Diario Correo':
-        return (
-          <DiarioCorreo 
-            noticias={noticiasDelDiario}
-            onBack={handleBackToGeneral}
-            loading={loading}
-            error={error}
-          />
-        );
-      case 'El Popular':
-        return (
-          <DiarioPopular 
-            noticias={noticiasDelDiario}
-            onBack={handleBackToGeneral}
-            loading={loading}
-            error={error}
-          />
-        );
-      default:
-        return null;
-    }
-  }
 
   return (
     <Container>
@@ -541,33 +451,9 @@ function App() {
               <FiFilter />
               Todas las categorías
             </FilterButton>
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.9rem', color: '#666', fontWeight: '600' }}>Diarios:</span>
-              <DiarioFilterButton 
-                active={!diarioSeleccionado}
-                onClick={() => handleDiarioFilter('todos')}
-              >
-                Todos
-              </DiarioFilterButton>
-              <DiarioFilterButton 
-                active={diarioSeleccionado === 'El Comercio'}
-                onClick={() => handleDiarioFilter('El Comercio')}
-              >
-                El Comercio
-              </DiarioFilterButton>
-              <DiarioFilterButton 
-                active={diarioSeleccionado === 'Diario Correo'}
-                onClick={() => handleDiarioFilter('Diario Correo')}
-              >
-                Diario Correo
-              </DiarioFilterButton>
-              <DiarioFilterButton 
-                active={diarioSeleccionado === 'El Popular'}
-                onClick={() => handleDiarioFilter('El Popular')}
-              >
-                El Popular
-              </DiarioFilterButton>
-            </div>
+            <FilterButton>
+              Todos los diarios
+            </FilterButton>
           </FilterGroup>
           
           <DateFilter>
