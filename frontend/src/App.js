@@ -6,6 +6,7 @@ import { FiFileText, FiBarChart2, FiFilter, FiRefreshCw, FiCalendar } from 'reac
 import DiarioComercio from './components/DiarioComercio';
 import DiarioCorreo from './components/DiarioCorreo';
 import DiarioPopular from './components/DiarioPopular';
+import Comparativa from './components/Comparativa';
 
 const Container = styled.div`
   width: 100%;
@@ -24,7 +25,7 @@ const Header = styled.header`
   text-align: center;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   position: sticky;
-  top: 0;
+    top: 0;
   z-index: 100;
 `;
 
@@ -298,9 +299,9 @@ const SecondarySection = styled.section`
 
 const SectionTitle = styled.h3`
   font-size: 1.8rem;
-  font-weight: 700;
+    font-weight: 700;
   margin: 0 0 2rem 0;
-  color: #333;
+    color: #333;
   text-transform: uppercase;
   letter-spacing: 1px;
   border-bottom: 3px solid #dc3545;
@@ -321,7 +322,7 @@ const NewsCard = styled.article`
   box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
   cursor: pointer;
-
+  
   &:hover {
     transform: translateY(-5px);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
@@ -429,7 +430,7 @@ function MainView() {
   const [mostrarDiarios, setMostrarDiarios] = useState(false);
 
   useEffect(() => {
-    fetchFechasDisponibles();
+      fetchFechasDisponibles();
   }, []);
 
   // Cerrar dropdown al hacer click fuera
@@ -499,6 +500,10 @@ function MainView() {
       const rutaDiario = diario.toLowerCase().replace(/\s+/g, '-');
       navigate(`/diario/${rutaDiario}`);
     }
+  };
+
+  const handleComparativa = () => {
+    navigate('/comparativa');
   };
 
   const handleBackToGeneral = () => {
@@ -575,25 +580,25 @@ function MainView() {
 
   return (
     <Container>
-      <Header>
+        <Header>
         <HeaderContent>
           <Title>Diarios Peruanos</Title>
-          <Subtitle>Plataforma de noticias con Web Scraping</Subtitle>
+        <Subtitle>Plataforma de noticias con Web Scraping</Subtitle>
           <Navigation>
-            <NavButton 
-              active={activeTab === 'noticias'} 
-              onClick={() => setActiveTab('noticias')}
-            >
-              <FiFileText />
-              Noticias
-            </NavButton>
-            <NavButton 
-              active={activeTab === 'comparativa'} 
-              onClick={() => setActiveTab('comparativa')}
-            >
-              <FiBarChart2 />
-              Comparativa
-            </NavButton>
+        <NavButton 
+          active={activeTab === 'noticias'} 
+          onClick={() => setActiveTab('noticias')}
+        >
+          <FiFileText />
+          Noticias
+        </NavButton>
+        <NavButton 
+              onClick={handleComparativa}
+              style={{ background: '#dc3545', color: 'white' }}
+        >
+          <FiBarChart2 />
+          Comparativa
+        </NavButton>
           </Navigation>
         </HeaderContent>
       </Header>
@@ -696,15 +701,15 @@ function MainView() {
           
           <DateFilter>
             <FiCalendar />
-            {fechasDisponibles.map((fecha) => (
-              <DateButton
-                key={fecha.fecha}
-                active={fechaSeleccionada === fecha.fecha}
+                  {fechasDisponibles.map((fecha) => (
+                    <DateButton
+                      key={fecha.fecha}
+                      active={fechaSeleccionada === fecha.fecha}
                 onClick={() => setFechaSeleccionada(fecha.fecha)}
-              >
+                    >
                 {fecha.fecha_formateada} ({fecha.total_noticias})
-              </DateButton>
-            ))}
+                    </DateButton>
+                  ))}
           </DateFilter>
 
           <FilterButton onClick={handleRefresh}>
@@ -723,7 +728,7 @@ function MainView() {
           <>
             {/* Información de filtros activos */}
             {(categoriaSeleccionada || diarioFiltro) && (
-              <div style={{ 
+                    <div style={{ 
                 background: '#e3f2fd', 
                 padding: '1rem', 
                 borderRadius: '10px', 
@@ -733,32 +738,32 @@ function MainView() {
                 <h4 style={{ margin: '0 0 0.5rem 0', color: '#1976d2' }}>Filtros Activos:</h4>
                 <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                   {categoriaSeleccionada && (
-                    <span style={{ 
+                            <span style={{ 
                       background: '#dc3545', 
                       color: 'white', 
                       padding: '0.3rem 0.8rem', 
-                      borderRadius: '15px',
+                                borderRadius: '15px',
                       fontSize: '0.9rem'
-                    }}>
+                              }}>
                       Categoría: {categoriaSeleccionada}
                     </span>
                   )}
                   {diarioFiltro && (
-                    <span style={{ 
+                                <span style={{ 
                       background: '#28a745', 
-                      color: 'white', 
+                                  color: 'white', 
                       padding: '0.3rem 0.8rem', 
                       borderRadius: '15px',
                       fontSize: '0.9rem'
                     }}>
                       Diario: {diarioFiltro}
-                    </span>
+                                </span>
                   )}
-                </div>
+                              </div>
                 <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: '#666' }}>
                   Mostrando {noticiasAMostrar.length} noticias
-                </div>
-              </div>
+                          </div>
+                        </div>
             )}
 
             {/* Hero Section - Noticia Principal */}
@@ -810,8 +815,8 @@ function MainView() {
                 ))}
               </NewsGrid>
             </SecondarySection>
-          </>
-        )}
+        </>
+      )}
       </MainContent>
     </Container>
   );
@@ -826,6 +831,7 @@ function App() {
         <Route path="/diario/el-comercio" element={<DiarioComercio />} />
         <Route path="/diario/diario-correo" element={<DiarioCorreo />} />
         <Route path="/diario/el-popular" element={<DiarioPopular />} />
+        <Route path="/comparativa" element={<Comparativa />} />
       </Routes>
     </Router>
   );
