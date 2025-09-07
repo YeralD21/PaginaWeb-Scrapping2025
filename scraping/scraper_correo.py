@@ -3,6 +3,10 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 import logging
 from typing import List, Dict, Optional
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'backend'))
+from date_extraction_utils import get_publication_date
 
 class ScraperCorreo:
     def __init__(self):
@@ -50,6 +54,9 @@ class ScraperCorreo:
                         if imagen_url and not imagen_url.startswith('http'):
                             imagen_url = self.base_url + imagen_url
                     
+                    # Extraer fecha de publicación real
+                    fecha_publicacion = get_publication_date(article, 'Diario Correo')
+                    
                     noticias.append({
                         'titulo': title,
                         'contenido': content,
@@ -57,6 +64,7 @@ class ScraperCorreo:
                         'imagen_url': imagen_url,
                         'categoria': 'Deportes',
                         'diario': 'Diario Correo',
+                        'fecha_publicacion': fecha_publicacion.isoformat() if fecha_publicacion else None,
                         'fecha_extraccion': datetime.now().isoformat()
                     })
                 except Exception as e:
@@ -107,6 +115,9 @@ class ScraperCorreo:
                         if imagen_url and not imagen_url.startswith('http'):
                             imagen_url = self.base_url + imagen_url
                     
+                    # Extraer fecha de publicación real
+                    fecha_publicacion = get_publication_date(article, 'Diario Correo')
+                    
                     noticias.append({
                         'titulo': title,
                         'contenido': content,
@@ -114,6 +125,7 @@ class ScraperCorreo:
                         'imagen_url': imagen_url,
                         'categoria': 'Economía',
                         'diario': 'Diario Correo',
+                        'fecha_publicacion': fecha_publicacion.isoformat() if fecha_publicacion else None,
                         'fecha_extraccion': datetime.now().isoformat()
                     })
                 except Exception as e:
@@ -164,6 +176,9 @@ class ScraperCorreo:
                         if imagen_url and not imagen_url.startswith('http'):
                             imagen_url = self.base_url + imagen_url
                     
+                    # Extraer fecha de publicación real
+                    fecha_publicacion = get_publication_date(article, 'Diario Correo')
+                    
                     noticias.append({
                         'titulo': title,
                         'contenido': content,
@@ -171,6 +186,7 @@ class ScraperCorreo:
                         'imagen_url': imagen_url,
                         'categoria': 'Espectáculos',
                         'diario': 'Diario Correo',
+                        'fecha_publicacion': fecha_publicacion.isoformat() if fecha_publicacion else None,
                         'fecha_extraccion': datetime.now().isoformat()
                     })
                 except Exception as e:
@@ -183,6 +199,67 @@ class ScraperCorreo:
             logging.error(f"Error obteniendo espectáculos de Diario Correo: {e}")
             return []
     
+    def get_mundo(self) -> List[Dict]:
+        """Extrae noticias de la sección Mundo"""
+        try:
+            url = f"{self.base_url}/mundo/"
+            response = self.session.get(url)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.content, 'html.parser')
+            noticias = []
+            
+            # Buscar artículos de mundo
+            articles = soup.find_all('article', class_='story-item') or soup.find_all('div', class_='story-item')
+            
+            for article in articles[:10]:  # Limitar a 10 noticias
+                try:
+                    title_elem = article.find('h2') or article.find('h3') or article.find('a', class_='title')
+                    if not title_elem:
+                        continue
+                        
+                    title = title_elem.get_text(strip=True)
+                    link_elem = article.find('a')
+                    link = link_elem.get('href') if link_elem else None
+                    
+                    if link and not link.startswith('http'):
+                        link = self.base_url + link
+                    
+                    # Extraer contenido si es posible
+                    content_elem = article.find('p') or article.find('div', class_='summary')
+                    content = content_elem.get_text(strip=True) if content_elem else ""
+                    
+                    # Buscar imagen
+                    imagen_url = None
+                    img_elem = article.find('img')
+                    if img_elem:
+                        imagen_url = img_elem.get('src') or img_elem.get('data-src')
+                        if imagen_url and not imagen_url.startswith('http'):
+                            imagen_url = self.base_url + imagen_url
+                    
+                    # Extraer fecha de publicación real
+                    fecha_publicacion = get_publication_date(article, 'Diario Correo')
+                    
+                    noticias.append({
+                        'titulo': title,
+                        'contenido': content,
+                        'enlace': link,
+                        'imagen_url': imagen_url,
+                        'categoria': 'Mundo',
+                        'diario': 'Diario Correo',
+                        'fecha_publicacion': fecha_publicacion.isoformat() if fecha_publicacion else None,
+                        'fecha_extraccion': datetime.now().isoformat()
+                    })
+                except Exception as e:
+                    logging.warning(f"Error procesando artículo de mundo: {e}")
+                    continue
+                    
+            return noticias
+            
+        except Exception as e:
+            logging.error(f"Error obteniendo mundo de Diario Correo: {e}")
+            return []
+    
     def get_all_news(self) -> List[Dict]:
         """Obtiene todas las noticias de todas las categorías"""
         all_news = []
@@ -191,6 +268,7 @@ class ScraperCorreo:
         all_news.extend(self.get_deportes())
         all_news.extend(self.get_economia())
         all_news.extend(self.get_espectaculos())
+        all_news.extend(self.get_mundo())
         
         return all_news
 

@@ -69,23 +69,38 @@ class ScrapingService:
                     logger.warning(f"Diario no encontrado: {news_item['diario']}")
                     continue
                 
-                # Verificar si la noticia ya existe
+                # Verificar si la noticia ya existe (por título, diario, categoría y fecha de publicación)
+                fecha_publicacion = None
+                if news_item.get('fecha_publicacion'):
+                    try:
+                        fecha_publicacion = datetime.fromisoformat(news_item['fecha_publicacion'])
+                    except ValueError:
+                        fecha_publicacion = None
+                
                 existing = db.query(Noticia).filter(
                     Noticia.titulo == news_item['titulo'],
                     Noticia.diario_id == diario.id,
                     Noticia.categoria == news_item['categoria']
-                ).first()
+                )
+                
+                # Si tenemos fecha de publicación, también verificar por fecha
+                if fecha_publicacion:
+                    existing = existing.filter(Noticia.fecha_publicacion == fecha_publicacion)
+                
+                existing = existing.first()
                 
                 if existing:
                     continue  # No duplicar
                 
                 # Crear nueva noticia
+                
                 noticia = Noticia(
                     titulo=news_item['titulo'],
                     contenido=news_item.get('contenido', ''),
                     enlace=news_item.get('enlace', ''),
                     imagen_url=news_item.get('imagen_url', ''),
                     categoria=news_item['categoria'],
+                    fecha_publicacion=fecha_publicacion,
                     fecha_extraccion=datetime.fromisoformat(news_item['fecha_extraccion']),
                     diario_id=diario.id
                 )

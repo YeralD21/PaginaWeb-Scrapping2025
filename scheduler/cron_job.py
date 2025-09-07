@@ -47,15 +47,26 @@ class ScrapingScheduler:
                     logger.warning(f"Diario no encontrado: {news_item['diario']}")
                     continue
                 
-                # Verificar si la noticia ya existe (por título y enlace)
+                # Verificar si la noticia ya existe (por título, enlace y categoría)
                 existing = db.query(Noticia).filter(
                     Noticia.titulo == news_item['titulo'],
                     Noticia.diario_id == diario.id,
-                    Noticia.enlace == news_item.get('enlace', '')
+                    Noticia.enlace == news_item.get('enlace', ''),
+                    Noticia.categoria == news_item['categoria']
                 ).first()
                 
                 if existing:
                     logger.debug(f"Noticia ya existe: {news_item['titulo']}")
+                    continue  # No duplicar noticias
+                
+                # Verificar duplicados por título y diario (más estricto)
+                existing_by_title = db.query(Noticia).filter(
+                    Noticia.titulo == news_item['titulo'],
+                    Noticia.diario_id == diario.id
+                ).first()
+                
+                if existing_by_title:
+                    logger.debug(f"Noticia duplicada por título: {news_item['titulo']}")
                     continue  # No duplicar noticias
                 
                 # Crear nueva noticia
@@ -63,6 +74,7 @@ class ScrapingScheduler:
                     titulo=news_item['titulo'],
                     contenido=news_item.get('contenido', ''),
                     enlace=news_item.get('enlace', ''),
+                    imagen_url=news_item.get('imagen_url'),
                     categoria=news_item['categoria'],
                     fecha_extraccion=datetime.fromisoformat(news_item['fecha_extraccion']),
                     diario_id=diario.id

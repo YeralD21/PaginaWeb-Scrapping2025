@@ -316,7 +316,8 @@ const NewsMeta = styled.div`
   justify-content: space-between;
   align-items: center;
   font-size: 0.9rem;
-  color: #888;
+  color: #333;
+  font-weight: 500;
 `;
 
 const Category = styled.span`
@@ -675,7 +676,16 @@ function App() {
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleString('es-ES');
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }) + ', ' + date.toLocaleTimeString('es-ES', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
   };
 
   const groupNewsByDiario = (noticias) => {
@@ -832,16 +842,20 @@ function App() {
                         <NewsCard key={noticia.id}>
                           {noticia.imagen_url ? (
                             <NewsImage 
-                              src={noticia.imagen_url} 
+                              src={`http://localhost:8000/proxy-image?url=${encodeURIComponent(noticia.imagen_url)}`} 
                               alt={noticia.titulo}
+                              onLoad={() => console.log('✅ Imagen cargada:', noticia.titulo, noticia.imagen_url)}
                               onError={(e) => {
+                                console.log('❌ Error cargando imagen:', noticia.titulo, noticia.imagen_url);
                                 e.target.style.display = 'none';
                                 e.target.nextSibling.style.display = 'flex';
                               }}
                             />
-                          ) : null}
+                          ) : (
+                            console.log('⚠️ Sin imagen_url:', noticia.titulo)
+                          )}
                           {!noticia.imagen_url && (
-                            <DefaultImage style={{ display: noticia.imagen_url ? 'none' : 'flex' }}>
+                            <DefaultImage>
                               📰
                             </DefaultImage>
                           )}
@@ -853,7 +867,7 @@ function App() {
                             <div>
                               <Category>{noticia.categoria}</Category>
                             </div>
-                            <div>{formatDate(noticia.fecha_extraccion)}</div>
+                            <div style={{ color: '#2c3e50', fontWeight: '600' }}>{formatDate(noticia.fecha_extraccion)}</div>
                           </NewsMeta>
                         </NewsCard>
                       ))

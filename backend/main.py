@@ -1,10 +1,12 @@
 ﻿from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List, Optional
 from datetime import datetime, timedelta, timezone
 import logging
+import requests
 from contextlib import asynccontextmanager
 
 from database import get_db, create_tables, test_connection
@@ -197,7 +199,9 @@ async def get_noticias_recientes(
             enlace=noticia.enlace,
             imagen_url=noticia.imagen_url,
             categoria=noticia.categoria,
-            fecha_extraccion=noticia.fecha_extraccion.isoformat(),
+            fecha_publicacion=noticia.fecha_publicacion,
+            fecha_extraccion=noticia.fecha_extraccion,
+            diario_id=noticia.diario_id,
             diario_nombre=noticia.diario.nombre
         ))
     
@@ -238,18 +242,23 @@ async def get_noticias_por_fecha(
     from datetime import datetime, timedelta
     
     try:
+        logger.info(f"Buscando noticias para la fecha: {fecha}")
+        
         # Parsear la fecha
         fecha_obj = datetime.strptime(fecha, "%Y-%m-%d").date()
         fecha_inicio = datetime.combine(fecha_obj, datetime.min.time())
         fecha_fin = datetime.combine(fecha_obj, datetime.max.time())
         
-        # Obtener noticias de esa fecha
+        logger.info(f"Fecha inicio: {fecha_inicio}, Fecha fin: {fecha_fin}")
+        
+        # Obtener noticias de esa fecha (filtrar por fecha de publicación)
         query = db.query(Noticia).join(Diario).filter(
-            Noticia.fecha_extraccion >= fecha_inicio,
-            Noticia.fecha_extraccion <= fecha_fin
-        ).order_by(Noticia.fecha_extraccion.desc())
+            Noticia.fecha_publicacion >= fecha_inicio,
+            Noticia.fecha_publicacion <= fecha_fin
+        ).order_by(Noticia.fecha_publicacion.desc())
         
         noticias = query.all()
+        logger.info(f"Encontradas {len(noticias)} noticias")
         
         result = []
         for noticia in noticias:
@@ -260,25 +269,32 @@ async def get_noticias_por_fecha(
                 enlace=noticia.enlace,
                 imagen_url=noticia.imagen_url,
                 categoria=noticia.categoria,
-                fecha_extraccion=noticia.fecha_extraccion.isoformat(),
+                fecha_publicacion=noticia.fecha_publicacion,
+                fecha_extraccion=noticia.fecha_extraccion,
+                diario_id=noticia.diario_id,
                 diario_nombre=noticia.diario.nombre
             ))
         
+        logger.info(f"Retornando {len(result)} noticias")
         return result
         
-    except ValueError:
+    except ValueError as e:
+        logger.error(f"Error de formato de fecha: {e}")
         return {"error": "Formato de fecha inválido. Use YYYY-MM-DD"}
+    except Exception as e:
+        logger.error(f"Error inesperado: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/noticias/fechas-disponibles")
 async def get_fechas_disponibles(db: Session = Depends(get_db)):
     """Obtener todas las fechas que tienen noticias"""
     from datetime import datetime
     
-    # Obtener fechas únicas de noticias
+    # Obtener fechas únicas de noticias (por fecha de publicación)
     fechas = db.query(
-        func.date(Noticia.fecha_extraccion).label('fecha')
+        func.date(Noticia.fecha_publicacion).label('fecha')
     ).distinct().order_by(
-        func.date(Noticia.fecha_extraccion).desc()
+        func.date(Noticia.fecha_publicacion).desc()
     ).all()
     
     # Formatear fechas
@@ -290,13 +306,36 @@ async def get_fechas_disponibles(db: Session = Depends(get_db)):
             "fecha_formateada": fecha_obj.strftime("%d/%m/%Y"),
             "dia_semana": fecha_obj.strftime("%A"),
             "total_noticias": db.query(func.count(Noticia.id)).filter(
-                func.date(Noticia.fecha_extraccion) == fecha_obj
+                func.date(Noticia.fecha_publicacion) == fecha_obj
             ).scalar()
         })
     
     return {
         "fechas": fechas_formateadas,
         "total_fechas": len(fechas_formateadas)
+    }
+
+@app.get("/debug/fechas")
+async def debug_fechas(db: Session = Depends(get_db)):
+    """Endpoint temporal para debuggear fechas"""
+    from datetime import datetime
+    
+    # Obtener algunas noticias para ver sus fechas
+    noticias = db.query(Noticia).limit(5).all()
+    
+    debug_info = []
+    for noticia in noticias:
+        debug_info.append({
+            "id": noticia.id,
+            "titulo": noticia.titulo[:50] + "...",
+            "fecha_publicacion": noticia.fecha_publicacion.isoformat() if noticia.fecha_publicacion else None,
+            "fecha_extraccion": noticia.fecha_extraccion.isoformat() if noticia.fecha_extraccion else None,
+            "diario": noticia.diario.nombre
+        })
+    
+    return {
+        "noticias_debug": debug_info,
+        "total_noticias": db.query(func.count(Noticia.id)).scalar()
     }
 
 @app.get("/analisis/por-fechas")
@@ -375,6 +414,39 @@ async def get_analisis_por_fechas(
         
     except ValueError:
         return {"error": "Formato de fecha inválido. Use YYYY-MM-DD"}
+
+@app.get("/proxy-image")
+async def proxy_image(url: str = Query(..., description="URL de la imagen a servir")):
+    """Endpoint para servir imágenes como proxy, evitando problemas de CORS"""
+    try:
+        # Validar que la URL sea de un diario permitido
+        allowed_domains = ['elcomercio.pe', 'diariocorreo.pe', 'elpopular.pe']
+        if not any(domain in url for domain in allowed_domains):
+            raise HTTPException(status_code=403, detail="Dominio no permitido")
+        
+        # Hacer la petición a la imagen original
+        response = requests.get(url, stream=True, timeout=10)
+        response.raise_for_status()
+        
+        # Determinar el tipo de contenido
+        content_type = response.headers.get('content-type', 'image/jpeg')
+        
+        # Retornar la imagen como streaming response
+        return StreamingResponse(
+            response.iter_content(chunk_size=8192),
+            media_type=content_type,
+            headers={
+                "Cache-Control": "public, max-age=3600",  # Cache por 1 hora
+                "Access-Control-Allow-Origin": "*"
+            }
+        )
+        
+    except requests.RequestException as e:
+        logger.error(f"Error al obtener imagen {url}: {e}")
+        raise HTTPException(status_code=404, detail="Imagen no encontrada")
+    except Exception as e:
+        logger.error(f"Error inesperado al servir imagen {url}: {e}")
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
 
 if __name__ == "__main__":
     import uvicorn

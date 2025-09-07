@@ -15,7 +15,7 @@ from pathlib import Path
 # Configuración
 BACKEND_PORT = 8000
 FRONTEND_PORT = 3000
-SCHEDULE_INTERVAL_MINUTES = 15  # Cambiar este valor para ajustar la frecuencia
+SCHEDULE_INTERVAL_MINUTES = 5  # Cambiar este valor para ajustar la frecuencia (5 minutos)
 
 def start_backend():
     """Iniciar el backend API"""
