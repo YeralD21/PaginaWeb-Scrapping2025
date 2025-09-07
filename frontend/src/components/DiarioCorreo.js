@@ -1,6 +1,8 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { FiArrowLeft, FiCalendar, FiClock } from 'react-icons/fi';
+import { useNoticias } from '../hooks/useNoticias';
 
 const Container = styled.div`
   min-height: 100vh;
@@ -277,9 +279,23 @@ const ErrorMessage = styled.div`
   border: 2px solid #dc3545;
 `;
 
-function DiarioCorreo({ noticias, onBack, loading, error }) {
+function DiarioCorreo() {
+  const navigate = useNavigate();
+  const { noticias: todasNoticias, loading, error } = useNoticias();
+  
+  // Filtrar noticias de Diario Correo
+  const noticias = todasNoticias.filter(noticia => 
+    noticia.diario === 'Diario Correo' || 
+    noticia.diario_nombre === 'Diario Correo' ||
+    noticia.nombre_diario === 'Diario Correo'
+  );
+  
   const noticiaPrincipal = noticias.length > 0 ? noticias[0] : null;
   const noticiasSecundarias = noticias.slice(1);
+
+  const handleBack = () => {
+    navigate('/');
+  };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -302,7 +318,7 @@ function DiarioCorreo({ noticias, onBack, loading, error }) {
     <Container>
       <Header>
         <HeaderContent>
-          <BackButton onClick={onBack}>
+          <BackButton onClick={handleBack}>
             <FiArrowLeft />
             Volver
           </BackButton>

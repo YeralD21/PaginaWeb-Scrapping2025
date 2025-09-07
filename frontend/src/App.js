@@ -1,4 +1,5 @@
 ﻿import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import styled from 'styled-components';
 import { FiFileText, FiBarChart2, FiFilter, FiRefreshCw, FiCalendar } from 'react-icons/fi';
@@ -137,6 +138,52 @@ const DiarioFilterButton = styled.button`
     background: ${props => props.active ? '#c82333' : '#f8f9fa'};
     border-color: #dc3545;
     color: ${props => props.active ? 'white' : '#dc3545'};
+  }
+`;
+
+const CategoriaDropdown = styled.div`
+  position: relative;
+  display: inline-block;
+`;
+
+const CategoriaDropdownContent = styled.div`
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: white;
+  border: 2px solid #e9ecef;
+  border-radius: 15px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 200px;
+  margin-top: 0.5rem;
+  overflow: hidden;
+`;
+
+const CategoriaOption = styled.button`
+  width: 100%;
+  background: white;
+  border: none;
+  padding: 0.8rem 1rem;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+  color: #333;
+  border-bottom: 1px solid #f1f3f4;
+
+  &:hover {
+    background: #f8f9fa;
+    color: #dc3545;
+  }
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &.active {
+    background: #dc3545;
+    color: white;
   }
 `;
 
@@ -366,19 +413,41 @@ const ErrorMessage = styled.div`
   text-align: center;
 `;
 
-function App() {
+// Componente para la vista principal
+function MainView() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState('noticias');
   const [noticias, setNoticias] = useState([]);
   const [fechasDisponibles, setFechasDisponibles] = useState([]);
   const [fechaSeleccionada, setFechaSeleccionada] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [diarioSeleccionado, setDiarioSeleccionado] = useState(null);
-  const [noticiasFiltradas, setNoticiasFiltradas] = useState([]);
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState(null);
+  const [mostrarCategorias, setMostrarCategorias] = useState(false);
+  const [diarioFiltro, setDiarioFiltro] = useState(null);
+  const [mostrarDiarios, setMostrarDiarios] = useState(false);
 
   useEffect(() => {
     fetchFechasDisponibles();
   }, []);
+
+  // Cerrar dropdown al hacer click fuera
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (mostrarCategorias && !event.target.closest('.categoria-dropdown')) {
+        setMostrarCategorias(false);
+      }
+      if (mostrarDiarios && !event.target.closest('.diario-dropdown')) {
+        setMostrarDiarios(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [mostrarCategorias, mostrarDiarios]);
 
   useEffect(() => {
     if (fechasDisponibles.length > 0 && !fechaSeleccionada) {
@@ -424,24 +493,46 @@ function App() {
 
   const handleDiarioFilter = (diario) => {
     if (diario === 'todos') {
-      setDiarioSeleccionado(null);
-      setNoticiasFiltradas([]);
+      navigate('/');
     } else {
-      setDiarioSeleccionado(diario);
-      // Filtrar noticias por diario seleccionado - probar diferentes campos
-      const filtradas = noticias.filter(noticia => 
-        noticia.diario === diario || 
-        noticia.diario_nombre === diario ||
-        noticia.nombre_diario === diario
-      );
-      setNoticiasFiltradas(filtradas);
+      // Navegar a la ruta específica del diario
+      const rutaDiario = diario.toLowerCase().replace(/\s+/g, '-');
+      navigate(`/diario/${rutaDiario}`);
     }
   };
 
   const handleBackToGeneral = () => {
-    setDiarioSeleccionado(null);
-    setNoticiasFiltradas([]);
+    navigate('/');
   };
+
+  const handleCategoriaFilter = (categoria) => {
+    if (categoria === 'todas') {
+      setCategoriaSeleccionada(null);
+    } else {
+      setCategoriaSeleccionada(categoria);
+    }
+    setMostrarCategorias(false);
+  };
+
+  const handleDiarioFiltro = (diario) => {
+    if (diario === 'todos') {
+      setDiarioFiltro(null);
+    } else {
+      setDiarioFiltro(diario);
+    }
+    setMostrarDiarios(false);
+  };
+
+  const toggleMostrarDiarios = () => {
+    setMostrarDiarios(!mostrarDiarios);
+  };
+
+  const toggleMostrarCategorias = () => {
+    setMostrarCategorias(!mostrarCategorias);
+  };
+
+  // Obtener categorías únicas de las noticias
+  const categoriasDisponibles = [...new Set(noticias.map(noticia => noticia.categoria))].filter(Boolean);
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -460,54 +551,27 @@ function App() {
     });
   };
 
+  // Filtrar noticias por categoría y diario si están seleccionados
+  let noticiasAMostrar = noticias;
+  
+  if (categoriaSeleccionada) {
+    noticiasAMostrar = noticiasAMostrar.filter(noticia => noticia.categoria === categoriaSeleccionada);
+  }
+  
+  if (diarioFiltro) {
+    noticiasAMostrar = noticiasAMostrar.filter(noticia => 
+      noticia.diario === diarioFiltro || 
+      noticia.diario_nombre === diarioFiltro ||
+      noticia.nombre_diario === diarioFiltro
+    );
+  }
+
   // Obtener noticia principal (primera noticia)
-  const noticiaPrincipal = noticias.length > 0 ? noticias[0] : null;
+  const noticiaPrincipal = noticiasAMostrar.length > 0 ? noticiasAMostrar[0] : null;
   
   // Obtener noticias secundarias (resto)
-  const noticiasSecundarias = noticias.slice(1);
+  const noticiasSecundarias = noticiasAMostrar.slice(1);
 
-  // Renderizar vista específica del diario si está seleccionado
-  if (diarioSeleccionado) {
-    // Filtrar noticias por el diario seleccionado - probar diferentes campos
-    const noticiasDelDiario = noticias.filter(noticia => 
-      noticia.diario === diarioSeleccionado || 
-      noticia.diario_nombre === diarioSeleccionado ||
-      noticia.nombre_diario === diarioSeleccionado
-    );
-    
-    
-    switch (diarioSeleccionado) {
-      case 'El Comercio':
-        return (
-          <DiarioComercio 
-            noticias={noticiasDelDiario}
-            onBack={handleBackToGeneral}
-            loading={loading}
-            error={error}
-          />
-        );
-      case 'Diario Correo':
-        return (
-          <DiarioCorreo 
-            noticias={noticiasDelDiario}
-            onBack={handleBackToGeneral}
-            loading={loading}
-            error={error}
-          />
-        );
-      case 'El Popular':
-        return (
-          <DiarioPopular 
-            noticias={noticiasDelDiario}
-            onBack={handleBackToGeneral}
-            loading={loading}
-            error={error}
-          />
-        );
-      default:
-        return null;
-    }
-  }
 
   return (
     <Container>
@@ -537,32 +601,92 @@ function App() {
       <FiltersSection>
         <FiltersContent>
           <FilterGroup>
-            <FilterButton>
-              <FiFilter />
-              Todas las categorías
-            </FilterButton>
+            <CategoriaDropdown className="categoria-dropdown">
+              <FilterButton onClick={toggleMostrarCategorias}>
+                <FiFilter />
+                {categoriaSeleccionada || 'Todas las categorías'}
+              </FilterButton>
+              {mostrarCategorias && (
+                <CategoriaDropdownContent>
+                  <CategoriaOption 
+                    className={!categoriaSeleccionada ? 'active' : ''}
+                    onClick={() => handleCategoriaFilter('todas')}
+                  >
+                    Todas las categorías
+                  </CategoriaOption>
+                  {categoriasDisponibles.map((categoria) => (
+                    <CategoriaOption 
+                      key={categoria}
+                      className={categoriaSeleccionada === categoria ? 'active' : ''}
+                      onClick={() => handleCategoriaFilter(categoria)}
+                    >
+                      {categoria}
+                    </CategoriaOption>
+                  ))}
+                </CategoriaDropdownContent>
+              )}
+            </CategoriaDropdown>
+            
+            {/* Dropdown de Diarios para filtro combinado */}
+            {categoriaSeleccionada && (
+              <CategoriaDropdown className="diario-dropdown">
+                <FilterButton onClick={toggleMostrarDiarios}>
+                  <FiFilter />
+                  {diarioFiltro || 'Todos los diarios'}
+                </FilterButton>
+                {mostrarDiarios && (
+                  <CategoriaDropdownContent>
+                    <CategoriaOption 
+                      className={!diarioFiltro ? 'active' : ''}
+                      onClick={() => handleDiarioFiltro('todos')}
+                    >
+                      Todos los diarios
+                    </CategoriaOption>
+                    <CategoriaOption 
+                      className={diarioFiltro === 'El Comercio' ? 'active' : ''}
+                      onClick={() => handleDiarioFiltro('El Comercio')}
+                    >
+                      El Comercio
+                    </CategoriaOption>
+                    <CategoriaOption 
+                      className={diarioFiltro === 'Diario Correo' ? 'active' : ''}
+                      onClick={() => handleDiarioFiltro('Diario Correo')}
+                    >
+                      Diario Correo
+                    </CategoriaOption>
+                    <CategoriaOption 
+                      className={diarioFiltro === 'El Popular' ? 'active' : ''}
+                      onClick={() => handleDiarioFiltro('El Popular')}
+                    >
+                      El Popular
+                    </CategoriaOption>
+                  </CategoriaDropdownContent>
+                )}
+              </CategoriaDropdown>
+            )}
+            
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.9rem', color: '#666', fontWeight: '600' }}>Diarios:</span>
+              <span style={{ fontSize: '0.9rem', color: '#666', fontWeight: '600' }}>Navegar a:</span>
               <DiarioFilterButton 
-                active={!diarioSeleccionado}
+                active={location.pathname === '/'}
                 onClick={() => handleDiarioFilter('todos')}
               >
                 Todos
               </DiarioFilterButton>
               <DiarioFilterButton 
-                active={diarioSeleccionado === 'El Comercio'}
+                active={location.pathname === '/diario/el-comercio'}
                 onClick={() => handleDiarioFilter('El Comercio')}
               >
                 El Comercio
               </DiarioFilterButton>
               <DiarioFilterButton 
-                active={diarioSeleccionado === 'Diario Correo'}
+                active={location.pathname === '/diario/diario-correo'}
                 onClick={() => handleDiarioFilter('Diario Correo')}
               >
                 Diario Correo
               </DiarioFilterButton>
               <DiarioFilterButton 
-                active={diarioSeleccionado === 'El Popular'}
+                active={location.pathname === '/diario/el-popular'}
                 onClick={() => handleDiarioFilter('El Popular')}
               >
                 El Popular
@@ -597,6 +721,46 @@ function App() {
         
         {!loading && !error && noticias.length > 0 && (
           <>
+            {/* Información de filtros activos */}
+            {(categoriaSeleccionada || diarioFiltro) && (
+              <div style={{ 
+                background: '#e3f2fd', 
+                padding: '1rem', 
+                borderRadius: '10px', 
+                marginBottom: '2rem',
+                border: '1px solid #2196f3'
+              }}>
+                <h4 style={{ margin: '0 0 0.5rem 0', color: '#1976d2' }}>Filtros Activos:</h4>
+                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                  {categoriaSeleccionada && (
+                    <span style={{ 
+                      background: '#dc3545', 
+                      color: 'white', 
+                      padding: '0.3rem 0.8rem', 
+                      borderRadius: '15px',
+                      fontSize: '0.9rem'
+                    }}>
+                      Categoría: {categoriaSeleccionada}
+                    </span>
+                  )}
+                  {diarioFiltro && (
+                    <span style={{ 
+                      background: '#28a745', 
+                      color: 'white', 
+                      padding: '0.3rem 0.8rem', 
+                      borderRadius: '15px',
+                      fontSize: '0.9rem'
+                    }}>
+                      Diario: {diarioFiltro}
+                    </span>
+                  )}
+                </div>
+                <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: '#666' }}>
+                  Mostrando {noticiasAMostrar.length} noticias
+                </div>
+              </div>
+            )}
+
             {/* Hero Section - Noticia Principal */}
             <HeroSection>
               {noticiaPrincipal && (
@@ -650,6 +814,20 @@ function App() {
         )}
       </MainContent>
     </Container>
+  );
+}
+
+// Componente principal con rutas
+function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<MainView />} />
+        <Route path="/diario/el-comercio" element={<DiarioComercio />} />
+        <Route path="/diario/diario-correo" element={<DiarioCorreo />} />
+        <Route path="/diario/el-popular" element={<DiarioPopular />} />
+      </Routes>
+    </Router>
   );
 }
 

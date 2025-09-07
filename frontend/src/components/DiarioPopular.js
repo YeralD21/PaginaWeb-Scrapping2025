@@ -1,6 +1,8 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { FiArrowLeft, FiCalendar, FiClock } from 'react-icons/fi';
+import { useNoticias } from '../hooks/useNoticias';
 
 const Container = styled.div`
   min-height: 100vh;
@@ -304,9 +306,23 @@ const ErrorMessage = styled.div`
   border: 2px solid #17a2b8;
 `;
 
-function DiarioPopular({ noticias, onBack, loading, error }) {
+function DiarioPopular() {
+  const navigate = useNavigate();
+  const { noticias: todasNoticias, loading, error } = useNoticias();
+  
+  // Filtrar noticias de El Popular
+  const noticias = todasNoticias.filter(noticia => 
+    noticia.diario === 'El Popular' || 
+    noticia.diario_nombre === 'El Popular' ||
+    noticia.nombre_diario === 'El Popular'
+  );
+  
   const noticiaPrincipal = noticias.length > 0 ? noticias[0] : null;
   const noticiasSecundarias = noticias.slice(1);
+
+  const handleBack = () => {
+    navigate('/');
+  };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -329,7 +345,7 @@ function DiarioPopular({ noticias, onBack, loading, error }) {
     <Container>
       <Header>
         <HeaderContent>
-          <BackButton onClick={onBack}>
+          <BackButton onClick={handleBack}>
             <FiArrowLeft />
             Volver
           </BackButton>

@@ -1,6 +1,8 @@
 import React from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
 import { FiArrowLeft, FiCalendar, FiClock } from 'react-icons/fi';
+import { useNoticias } from '../hooks/useNoticias';
 
 const Container = styled.div`
   min-height: 100vh;
@@ -222,9 +224,23 @@ const ErrorMessage = styled.div`
   text-align: center;
 `;
 
-function DiarioComercio({ noticias, onBack, loading, error }) {
+function DiarioComercio() {
+  const navigate = useNavigate();
+  const { noticias: todasNoticias, loading, error } = useNoticias();
+  
+  // Filtrar noticias de El Comercio
+  const noticias = todasNoticias.filter(noticia => 
+    noticia.diario === 'El Comercio' || 
+    noticia.diario_nombre === 'El Comercio' ||
+    noticia.nombre_diario === 'El Comercio'
+  );
+  
   const noticiaPrincipal = noticias.length > 0 ? noticias[0] : null;
   const noticiasSecundarias = noticias.slice(1);
+
+  const handleBack = () => {
+    navigate('/');
+  };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -247,7 +263,7 @@ function DiarioComercio({ noticias, onBack, loading, error }) {
     <Container>
       <Header>
         <HeaderContent>
-          <BackButton onClick={onBack}>
+          <BackButton onClick={handleBack}>
             <FiArrowLeft />
             Volver
           </BackButton>
