@@ -49,6 +49,10 @@ class ScraperComercio:
                         if imagen_url and not imagen_url.startswith('http'):
                             imagen_url = self.base_url + imagen_url
                     
+                    # Para El Comercio, asumir que las noticias son del día actual
+                    # ya que no tienen fechas específicas en la página principal
+                    fecha_actual = datetime.now().date()
+                    
                     noticias.append({
                         'titulo': title,
                         'contenido': content,
@@ -56,6 +60,7 @@ class ScraperComercio:
                         'imagen_url': imagen_url,
                         'categoria': 'Deportes',
                         'diario': 'El Comercio',
+                        'fecha_publicacion': fecha_actual,
                         'fecha_extraccion': datetime.now().isoformat()
                     })
                 except Exception as e:

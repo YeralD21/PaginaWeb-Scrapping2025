@@ -39,6 +39,7 @@ def save_news_to_database(news_list):
                 titulo=news_item['titulo'],
                 contenido=news_item.get('contenido', ''),
                 enlace=news_item.get('enlace', ''),
+                imagen_url=news_item.get('imagen_url', ''),
                 categoria=news_item['categoria'],
                 fecha_publicacion=news_item.get('fecha_publicacion'),
                 fecha_extraccion=datetime.utcnow(),

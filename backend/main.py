@@ -171,6 +171,21 @@ async def get_comparativa(db: Session = Depends(get_db)):
         }
     }
 
+@app.get("/categorias-disponibles")
+async def get_categorias_disponibles(db: Session = Depends(get_db)):
+    """Obtener todas las categorías disponibles en la base de datos"""
+    # Obtener todas las categorías únicas
+    categorias = db.query(Noticia.categoria).distinct().all()
+    categorias_list = [categoria[0] for categoria in categorias]
+    
+    # Ordenar alfabéticamente
+    categorias_list.sort()
+    
+    return {
+        "categorias": categorias_list,
+        "total": len(categorias_list)
+    }
+
 @app.get("/noticias/recientes", response_model=List[NoticiaResponse])
 async def get_noticias_recientes(
     horas: int = Query(1, description="Noticias de las últimas X horas"),
@@ -297,18 +312,20 @@ async def get_fechas_disponibles(db: Session = Depends(get_db)):
         func.date(Noticia.fecha_publicacion).desc()
     ).all()
     
-    # Formatear fechas
+    # Formatear fechas (filtrar las que son None)
     fechas_formateadas = []
     for fecha in fechas:
         fecha_obj = fecha.fecha
-        fechas_formateadas.append({
-            "fecha": fecha_obj.strftime("%Y-%m-%d"),
-            "fecha_formateada": fecha_obj.strftime("%d/%m/%Y"),
-            "dia_semana": fecha_obj.strftime("%A"),
-            "total_noticias": db.query(func.count(Noticia.id)).filter(
-                func.date(Noticia.fecha_publicacion) == fecha_obj
-            ).scalar()
-        })
+        # Solo procesar fechas que no sean None
+        if fecha_obj is not None:
+            fechas_formateadas.append({
+                "fecha": fecha_obj.strftime("%Y-%m-%d"),
+                "fecha_formateada": fecha_obj.strftime("%d/%m/%Y"),
+                "dia_semana": fecha_obj.strftime("%A"),
+                "total_noticias": db.query(func.count(Noticia.id)).filter(
+                    func.date(Noticia.fecha_publicacion) == fecha_obj
+                ).scalar()
+            })
     
     return {
         "fechas": fechas_formateadas,

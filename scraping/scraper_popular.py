@@ -117,7 +117,7 @@ class ScraperPopular:
                         'imagen_url': imagen_url,
                         'categoria': 'Deportes',
                         'diario': 'El Popular',
-                        'fecha_publicacion': fecha_publicacion.isoformat() if fecha_publicacion else None,
+                        'fecha_publicacion': fecha_publicacion if fecha_publicacion else datetime.now().date(),
                         'fecha_extraccion': datetime.now().isoformat()
                     })
                     
@@ -195,7 +195,7 @@ class ScraperPopular:
                         'imagen_url': imagen_url,
                         'categoria': 'Espectáculos',
                         'diario': 'El Popular',
-                        'fecha_publicacion': fecha_publicacion.isoformat() if fecha_publicacion else None,
+                        'fecha_publicacion': fecha_publicacion if fecha_publicacion else datetime.now().date(),
                         'fecha_extraccion': datetime.now().isoformat()
                     })
                     
@@ -255,7 +255,7 @@ class ScraperPopular:
                         'imagen_url': imagen_url,
                         'categoria': 'Mundo',
                         'diario': 'El Popular',
-                        'fecha_publicacion': fecha_publicacion.isoformat() if fecha_publicacion else None,
+                        'fecha_publicacion': fecha_publicacion if fecha_publicacion else datetime.now().date(),
                         'fecha_extraccion': datetime.now().isoformat()
                     })
                 except Exception as e:

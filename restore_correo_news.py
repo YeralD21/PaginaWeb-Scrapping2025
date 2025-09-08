@@ -68,3 +68,4 @@ db.commit()
 print(f'\n=== RESUMEN ===')
 print(f'Noticias guardadas: {noticias_guardadas}')
 print(f'Total noticias de Diario Correo ahora: {db.query(Noticia).filter(Noticia.diario_id == diario.id).count()}')
+

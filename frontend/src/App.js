@@ -428,9 +428,11 @@ function MainView() {
   const [mostrarCategorias, setMostrarCategorias] = useState(false);
   const [diarioFiltro, setDiarioFiltro] = useState(null);
   const [mostrarDiarios, setMostrarDiarios] = useState(false);
+  const [categoriasDisponibles, setCategoriasDisponibles] = useState([]);
 
   useEffect(() => {
       fetchFechasDisponibles();
+      fetchCategoriasDisponibles();
   }, []);
 
   // Cerrar dropdown al hacer click fuera
@@ -469,6 +471,16 @@ function MainView() {
     } catch (error) {
       console.error('Error fetching fechas:', error);
       setError('Error al cargar las fechas disponibles');
+    }
+  };
+
+  const fetchCategoriasDisponibles = async () => {
+    try {
+      const response = await axios.get('http://localhost:8000/categorias-disponibles');
+      setCategoriasDisponibles(response.data.categorias);
+    } catch (error) {
+      console.error('Error fetching categorias:', error);
+      setError('Error al cargar las categorías disponibles');
     }
   };
 
@@ -536,8 +548,7 @@ function MainView() {
     setMostrarCategorias(!mostrarCategorias);
   };
 
-  // Obtener categorías únicas de las noticias
-  const categoriasDisponibles = [...new Set(noticias.map(noticia => noticia.categoria))].filter(Boolean);
+  // Las categorías se cargan desde el endpoint /categorias-disponibles
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);

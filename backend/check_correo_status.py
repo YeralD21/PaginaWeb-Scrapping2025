@@ -11,3 +11,4 @@ noticias_restantes = db.query(Noticia).filter(Noticia.diario_id == 1).all()
 print(f'\nNoticias restantes:')
 for noticia in noticias_restantes:
     print(f'  - ID: {noticia.id}, Título: {noticia.titulo[:60]}...')
+
