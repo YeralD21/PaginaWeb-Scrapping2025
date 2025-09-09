@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { FiArrowLeft, FiCalendar, FiClock } from 'react-icons/fi';
-import { useNoticias } from '../hooks/useNoticias';
+import { FiArrowLeft, FiCalendar, FiClock, FiFilter } from 'react-icons/fi';
+import { useNoticiasDiario } from '../hooks/useNoticiasDiario';
 
 const Container = styled.div`
   min-height: 100vh;
@@ -279,22 +279,78 @@ const ErrorMessage = styled.div`
   border: 2px solid #dc3545;
 `;
 
+const FilterSection = styled.div`
+  background: white;
+  padding: 1.5rem;
+  border-radius: 10px;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+`;
+
+const FilterTitle = styled.h3`
+  margin: 0 0 1rem 0;
+  color: #dc3545;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const DateFilterContainer = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+`;
+
+const DateButton = styled.button`
+  background: ${props => props.active ? '#dc3545' : 'white'};
+  color: ${props => props.active ? 'white' : '#dc3545'};
+  border: 2px solid #dc3545;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+
+  &:hover {
+    background: #dc3545;
+    color: white;
+    transform: translateY(-1px);
+  }
+`;
+
+const NoNewsMessage = styled.div`
+  text-align: center;
+  padding: 3rem;
+  color: #666;
+  font-size: 1.1rem;
+`;
+
 function DiarioCorreo() {
   const navigate = useNavigate();
-  const { noticias: todasNoticias, loading, error } = useNoticias();
+  const [fechaSeleccionada, setFechaSeleccionada] = useState(null);
   
-  // Filtrar noticias de Diario Correo
-  const noticias = todasNoticias.filter(noticia => 
-    noticia.diario === 'Diario Correo' || 
-    noticia.diario_nombre === 'Diario Correo' ||
-    noticia.nombre_diario === 'Diario Correo'
-  );
+  const { 
+    noticias, 
+    fechasDisponibles, 
+    loading, 
+    error, 
+    fetchNoticiasPorFecha 
+  } = useNoticiasDiario('Diario Correo', fechaSeleccionada);
   
   const noticiaPrincipal = noticias.length > 0 ? noticias[0] : null;
   const noticiasSecundarias = noticias.slice(1);
 
   const handleBack = () => {
     navigate('/');
+  };
+
+  const handleFechaChange = (fecha) => {
+    setFechaSeleccionada(fecha);
+    fetchNoticiasPorFecha(fecha);
   };
 
   const formatDate = (dateString) => {
@@ -333,6 +389,26 @@ function DiarioCorreo() {
         {loading && <LoadingSpinner>Cargando noticias de Diario Correo...</LoadingSpinner>}
         
         {error && <ErrorMessage>{error}</ErrorMessage>}
+        
+        {!loading && !error && fechasDisponibles.length > 0 && (
+          <FilterSection>
+            <FilterTitle>
+              <FiFilter />
+              Filtrar por fecha
+            </FilterTitle>
+            <DateFilterContainer>
+              {fechasDisponibles.map((fecha) => (
+                <DateButton
+                  key={fecha.fecha}
+                  active={fechaSeleccionada === fecha.fecha}
+                  onClick={() => handleFechaChange(fecha.fecha)}
+                >
+                  {fecha.fecha_formateada} ({fecha.total_noticias})
+                </DateButton>
+              ))}
+            </DateFilterContainer>
+          </FilterSection>
+        )}
         
         {!loading && !error && noticias.length > 0 && (
           <>
@@ -385,6 +461,12 @@ function DiarioCorreo() {
               ))}
             </NewsGrid>
           </>
+        )}
+        
+        {!loading && !error && noticias.length === 0 && (
+          <NoNewsMessage>
+            No hay noticias disponibles para la fecha seleccionada.
+          </NoNewsMessage>
         )}
       </MainContent>
     </Container>

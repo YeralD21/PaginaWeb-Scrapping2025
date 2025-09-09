@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
-import { FiArrowLeft, FiCalendar, FiClock } from 'react-icons/fi';
-import { useNoticias } from '../hooks/useNoticias';
+import { FiArrowLeft, FiCalendar, FiClock, FiFilter } from 'react-icons/fi';
+import { useNoticiasDiario } from '../hooks/useNoticiasDiario';
 
 const Container = styled.div`
   min-height: 100vh;
@@ -224,22 +224,78 @@ const ErrorMessage = styled.div`
   text-align: center;
 `;
 
+const FilterSection = styled.div`
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+`;
+
+const FilterTitle = styled.h3`
+  margin: 0 0 1rem 0;
+  color: #1a472a;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const DateFilterContainer = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+`;
+
+const DateButton = styled.button`
+  background: ${props => props.active ? '#1a472a' : 'white'};
+  color: ${props => props.active ? 'white' : '#1a472a'};
+  border: 2px solid #1a472a;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+
+  &:hover {
+    background: #1a472a;
+    color: white;
+    transform: translateY(-1px);
+  }
+`;
+
+const NoNewsMessage = styled.div`
+  text-align: center;
+  padding: 3rem;
+  color: #666;
+  font-size: 1.1rem;
+`;
+
 function DiarioComercio() {
   const navigate = useNavigate();
-  const { noticias: todasNoticias, loading, error } = useNoticias();
+  const [fechaSeleccionada, setFechaSeleccionada] = useState(null);
   
-  // Filtrar noticias de El Comercio
-  const noticias = todasNoticias.filter(noticia => 
-    noticia.diario === 'El Comercio' || 
-    noticia.diario_nombre === 'El Comercio' ||
-    noticia.nombre_diario === 'El Comercio'
-  );
+  const { 
+    noticias, 
+    fechasDisponibles, 
+    loading, 
+    error, 
+    fetchNoticiasPorFecha 
+  } = useNoticiasDiario('El Comercio', fechaSeleccionada);
   
   const noticiaPrincipal = noticias.length > 0 ? noticias[0] : null;
   const noticiasSecundarias = noticias.slice(1);
 
   const handleBack = () => {
     navigate('/');
+  };
+
+  const handleFechaChange = (fecha) => {
+    setFechaSeleccionada(fecha);
+    fetchNoticiasPorFecha(fecha);
   };
 
   const formatDate = (dateString) => {
@@ -278,6 +334,26 @@ function DiarioComercio() {
         {loading && <LoadingSpinner>Cargando noticias de El Comercio...</LoadingSpinner>}
         
         {error && <ErrorMessage>{error}</ErrorMessage>}
+        
+        {!loading && !error && fechasDisponibles.length > 0 && (
+          <FilterSection>
+            <FilterTitle>
+              <FiFilter />
+              Filtrar por fecha
+            </FilterTitle>
+            <DateFilterContainer>
+              {fechasDisponibles.map((fecha) => (
+                <DateButton
+                  key={fecha.fecha}
+                  active={fechaSeleccionada === fecha.fecha}
+                  onClick={() => handleFechaChange(fecha.fecha)}
+                >
+                  {fecha.fecha_formateada} ({fecha.total_noticias})
+                </DateButton>
+              ))}
+            </DateFilterContainer>
+          </FilterSection>
+        )}
         
         {!loading && !error && noticias.length > 0 && (
           <>
@@ -326,6 +402,12 @@ function DiarioComercio() {
               ))}
             </NewsGrid>
           </>
+        )}
+        
+        {!loading && !error && noticias.length === 0 && (
+          <NoNewsMessage>
+            No hay noticias disponibles para la fecha seleccionada.
+          </NoNewsMessage>
         )}
       </MainContent>
     </Container>

@@ -186,6 +186,84 @@ async def get_categorias_disponibles(db: Session = Depends(get_db)):
         "total": len(categorias_list)
     }
 
+@app.get("/noticias/por-diario/{nombre_diario}", response_model=List[NoticiaResponse])
+async def get_noticias_por_diario(
+    nombre_diario: str,
+    fecha: Optional[str] = Query(None, description="Filtrar por fecha específica (YYYY-MM-DD)"),
+    categoria: Optional[str] = Query(None, description="Filtrar por categoría"),
+    limit: int = Query(100, description="Límite de noticias a retornar"),
+    db: Session = Depends(get_db)
+):
+    """Obtener noticias de un diario específico con filtros opcionales"""
+    try:
+        # Primero verificar que el diario existe
+        diario = db.query(Diario).filter(Diario.nombre == nombre_diario).first()
+        if not diario:
+            return []
+        
+        query = db.query(Noticia).filter(Noticia.diario_id == diario.id)
+        
+        if fecha:
+            query = query.filter(func.date(Noticia.fecha_publicacion) == fecha)
+        
+        if categoria:
+            query = query.filter(Noticia.categoria == categoria)
+        
+        noticias = query.order_by(Noticia.fecha_publicacion.desc()).limit(limit).all()
+        
+        result = []
+        for noticia in noticias:
+            result.append(NoticiaResponse(
+                id=noticia.id,
+                titulo=noticia.titulo,
+                contenido=noticia.contenido,
+                enlace=noticia.enlace,
+                imagen_url=noticia.imagen_url,
+                categoria=noticia.categoria,
+                fecha_publicacion=noticia.fecha_publicacion,
+                fecha_extraccion=noticia.fecha_extraccion,
+                diario_id=noticia.diario_id,
+                diario_nombre=diario.nombre
+            ))
+        
+        return result
+    except Exception as e:
+        print(f"Error en get_noticias_por_diario: {e}")
+        return []
+
+@app.get("/noticias/fechas-disponibles/{nombre_diario}")
+async def get_fechas_disponibles_por_diario(
+    nombre_diario: str,
+    db: Session = Depends(get_db)
+):
+    """Obtener fechas disponibles para un diario específico"""
+    # Obtener fechas únicas para el diario específico
+    fechas = db.query(func.date(Noticia.fecha_publicacion).label('fecha')).join(Diario).filter(
+        Diario.nombre == nombre_diario,
+        Noticia.fecha_publicacion.isnot(None)
+    ).distinct().order_by(func.date(Noticia.fecha_publicacion).desc()).all()
+    
+    # Formatear fechas
+    fechas_formateadas = []
+    for fecha in fechas:
+        fecha_obj = fecha.fecha
+        if fecha_obj is not None:
+            fechas_formateadas.append({
+                "fecha": fecha_obj.strftime("%Y-%m-%d"),
+                "fecha_formateada": fecha_obj.strftime("%d/%m/%Y"),
+                "dia_semana": fecha_obj.strftime("%A"),
+                "total_noticias": db.query(func.count(Noticia.id)).join(Diario).filter(
+                    Diario.nombre == nombre_diario,
+                    func.date(Noticia.fecha_publicacion) == fecha_obj
+                ).scalar()
+            })
+    
+    return {
+        "diario": nombre_diario,
+        "fechas": fechas_formateadas,
+        "total_fechas": len(fechas_formateadas)
+    }
+
 @app.get("/noticias/recientes", response_model=List[NoticiaResponse])
 async def get_noticias_recientes(
     horas: int = Query(1, description="Noticias de las últimas X horas"),
