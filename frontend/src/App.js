@@ -212,9 +212,138 @@ const DateButton = styled.button`
 `;
 
 const MainContent = styled.div`
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 2rem 2rem 2rem 1rem;
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 1rem;
+  align-items: start;
+`;
+
+const LeftPanel = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  position: sticky;
+  top: 120px;
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+  
+  &::-webkit-scrollbar {
+    display: none; /* WebKit */
+  }
+`;
+
+const RightPanel = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+`;
+
+// Panel izquierdo - Noticias sin imágenes
+const LeftPanelTitle = styled.h3`
+  color: #dc3545;
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 0 0 1rem 0;
+  text-align: center;
+  border-bottom: 2px solid #dc3545;
+  padding-bottom: 0.5rem;
+`;
+
+const TextNewsCard = styled.article`
+  background: white;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  border-left: 4px solid #dc3545;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    border-left-color: #c82333;
+  }
+`;
+
+const TextNewsCardLarge = styled(TextNewsCard)`
+  padding: 1.5rem;
+  border-left-width: 6px;
+  background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+`;
+
+const TextNewsCardSmall = styled(TextNewsCard)`
+  padding: 0.8rem;
+  border-left-width: 3px;
+  background: linear-gradient(135deg, #fff 0%, #fefefe 100%);
+`;
+
+const TextNewsTitle = styled.h4`
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+`;
+
+const TextNewsTitleLarge = styled(TextNewsTitle)`
+  font-size: 1rem;
+  -webkit-line-clamp: 3;
+`;
+
+const TextNewsTitleSmall = styled(TextNewsTitle)`
+  font-size: 0.8rem;
+  -webkit-line-clamp: 2;
+`;
+
+const TextNewsMeta = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: #6c757d;
+`;
+
+const TextNewsMetaLarge = styled(TextNewsMeta)`
+  font-size: 0.8rem;
+  margin-top: 0.8rem;
+`;
+
+const TextNewsMetaSmall = styled(TextNewsMeta)`
+  font-size: 0.7rem;
+  margin-top: 0.4rem;
+`;
+
+const TextNewsCategory = styled.span`
+  background: #dc3545;
+  color: white;
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+`;
+
+const TextNewsDate = styled.span`
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: #6c757d;
+`;
+
+const TextNewsDiario = styled.span`
+  color: #dc3545;
+  font-weight: 600;
+  font-size: 0.7rem;
 `;
 
 // Hero Section - Noticia Principal
@@ -255,6 +384,21 @@ const HeroOverlay = styled.div`
   background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
   padding: 2rem;
   color: white;
+`;
+
+const HeroTimeBadge = styled.div`
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  background: rgba(220, 53, 69, 0.9);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 25px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.3);
 `;
 
 const HeroCategory = styled.span`
@@ -348,6 +492,21 @@ const NewsOverlay = styled.div`
   background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
   padding: 1.5rem;
   color: white;
+`;
+
+const NewsTimeBadge = styled.div`
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(220, 53, 69, 0.9);
+  color: white;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 `;
 
 const NewsCategory = styled.span`
@@ -561,6 +720,18 @@ function MainView() {
 
   const formatTime = (dateString) => {
     const date = new Date(dateString);
+    // Verificar si la fecha tiene hora válida (no es 00:00:00)
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    
+    // Si la hora es 00:00, puede que no tenga hora específica
+    if (hours === 0 && minutes === 0) {
+      return date.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit'
+      });
+    }
+    
     return date.toLocaleTimeString('es-ES', {
       hour: '2-digit',
       minute: '2-digit'
@@ -582,30 +753,20 @@ function MainView() {
     );
   }
 
-  // Ordenar noticias: primero las que tienen imagen, luego las que no tienen
-  noticiasAMostrar = noticiasAMostrar.sort((a, b) => {
-    const aTieneImagen = a.imagen_url && a.imagen_url.trim() !== '';
-    const bTieneImagen = b.imagen_url && b.imagen_url.trim() !== '';
-    
-    // Si ambas tienen imagen o ambas no tienen imagen, mantener orden original
-    if (aTieneImagen === bTieneImagen) {
-      return 0;
-    }
-    
-    // Si a tiene imagen y b no, a va primero
-    if (aTieneImagen && !bTieneImagen) {
-      return -1;
-    }
-    
-    // Si b tiene imagen y a no, b va primero
-    return 1;
-  });
-
-  // Obtener noticia principal (primera noticia)
-  const noticiaPrincipal = noticiasAMostrar.length > 0 ? noticiasAMostrar[0] : null;
+  // Separar noticias con y sin imágenes
+  const noticiasConImagen = noticiasAMostrar.filter(noticia => 
+    noticia.imagen_url && noticia.imagen_url.trim() !== ''
+  );
   
-  // Obtener noticias secundarias (resto)
-  const noticiasSecundarias = noticiasAMostrar.slice(1);
+  const noticiasSinImagen = noticiasAMostrar.filter(noticia => 
+    !noticia.imagen_url || noticia.imagen_url.trim() === ''
+  );
+
+  // Obtener noticia principal (primera noticia con imagen)
+  const noticiaPrincipal = noticiasConImagen.length > 0 ? noticiasConImagen[0] : null;
+  
+  // Obtener noticias secundarias (resto de noticias con imagen)
+  const noticiasSecundarias = noticiasConImagen.slice(1);
 
 
   return (
@@ -754,6 +915,39 @@ function MainView() {
         
         {!loading && !error && noticias.length > 0 && (
           <>
+            {/* Panel izquierdo - Noticias sin imágenes */}
+            <LeftPanel>
+              <LeftPanelTitle>📰 Más Noticias</LeftPanelTitle>
+              {noticiasSinImagen.map((noticia, index) => {
+                // Alternar entre diferentes tamaños de cards
+                const cardType = index % 3;
+                const CardComponent = cardType === 0 ? TextNewsCardLarge : 
+                                    cardType === 1 ? TextNewsCard : TextNewsCardSmall;
+                const TitleComponent = cardType === 0 ? TextNewsTitleLarge : 
+                                     cardType === 1 ? TextNewsTitle : TextNewsTitleSmall;
+                const MetaComponent = cardType === 0 ? TextNewsMetaLarge : 
+                                    cardType === 1 ? TextNewsMeta : TextNewsMetaSmall;
+                
+                return (
+                  <CardComponent key={index}>
+                    <TitleComponent>{noticia.titulo}</TitleComponent>
+                    <MetaComponent>
+                      <div>
+                        <TextNewsCategory>{noticia.categoria}</TextNewsCategory>
+                        <TextNewsDiario>{noticia.diario}</TextNewsDiario>
+                      </div>
+                      <TextNewsDate>
+                        <FiCalendar />
+                        {formatDate(noticia.fecha_publicacion)}
+                      </TextNewsDate>
+                    </MetaComponent>
+                  </CardComponent>
+                );
+              })}
+            </LeftPanel>
+
+            {/* Panel derecho - Noticias con imágenes */}
+            <RightPanel>
             {/* Información de filtros activos */}
             {(categoriaSeleccionada || diarioFiltro) && (
                     <div style={{ 
@@ -799,6 +993,9 @@ function MainView() {
               {noticiaPrincipal && (
                 <HeroCard>
                   <HeroImage imageUrl={noticiaPrincipal.imagen_url}>
+                    <HeroTimeBadge>
+                      {formatTime(noticiaPrincipal.fecha_publicacion)}
+                    </HeroTimeBadge>
                     <HeroOverlay>
                       <HeroCategory>{noticiaPrincipal.categoria}</HeroCategory>
                       <HeroTitle>{noticiaPrincipal.titulo}</HeroTitle>
@@ -806,7 +1003,7 @@ function MainView() {
                         <span>{noticiaPrincipal.diario}</span>
                         <HeroDate>
                           <FiCalendar />
-                          {formatDate(noticiaPrincipal.fecha_publicacion)} - {formatTime(noticiaPrincipal.fecha_publicacion)}
+                          {formatDate(noticiaPrincipal.fecha_publicacion)}
                         </HeroDate>
                       </HeroMeta>
                     </HeroOverlay>
@@ -822,6 +1019,9 @@ function MainView() {
                 {noticiasSecundarias.map((noticia, index) => (
                   <NewsCard key={index}>
                     <NewsImage imageUrl={noticia.imagen_url}>
+                      <NewsTimeBadge>
+                        {formatTime(noticia.fecha_publicacion)}
+                      </NewsTimeBadge>
                       <NewsOverlay>
                         <NewsCategory>{noticia.categoria}</NewsCategory>
                         <NewsTitle>{noticia.titulo}</NewsTitle>
@@ -843,6 +1043,7 @@ function MainView() {
                 ))}
               </NewsGrid>
             </SecondarySection>
+            </RightPanel>
         </>
       )}
       </MainContent>

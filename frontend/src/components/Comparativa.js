@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { FiArrowLeft, FiBarChart2, FiTrendingUp, FiCalendar, FiRefreshCw } from 'react-icons/fi';
+import { FiArrowLeft, FiBarChart2, FiTrendingUp, FiCalendar, FiRefreshCw, FiHelpCircle, FiTarget, FiAward, FiPercent, FiUsers, FiBookOpen } from 'react-icons/fi';
 import axios from 'axios';
 import { 
   BarChart, 
@@ -89,9 +89,86 @@ const Subtitle = styled.p`
 `;
 
 const MainContent = styled.div`
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 2rem;
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 2rem;
+  align-items: start;
+`;
+
+const LeftPanel = styled.div`
+  background: white;
+  border-radius: 15px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  border: 2px solid #dc3545;
+  position: sticky;
+  top: 120px;
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
+`;
+
+const RightPanel = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+`;
+
+const PanelTitle = styled.h3`
+  color: #dc3545;
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 0 0 1.5rem 0;
+  text-align: center;
+  border-bottom: 2px solid #dc3545;
+  padding-bottom: 0.5rem;
+`;
+
+const QuestionCard = styled.div`
+  background: #fff5f5;
+  border: 2px solid #dc3545;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    background: #dc3545;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(220, 53, 69, 0.3);
+  }
+`;
+
+const QuestionHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+`;
+
+const QuestionIcon = styled.div`
+  font-size: 1.1rem;
+  color: #dc3545;
+`;
+
+const QuestionText = styled.div`
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.4;
+  flex: 1;
+`;
+
+const AnswerText = styled.div`
+  font-size: 0.8rem;
+  opacity: 0.8;
+  font-style: italic;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(220, 53, 69, 0.2);
 `;
 
 const StatsGrid = styled.div`
@@ -291,6 +368,7 @@ function Comparativa() {
     });
   };
 
+
   // Las noticias ya vienen filtradas por fecha desde la API
   const noticiasFiltradas = noticias;
 
@@ -350,6 +428,66 @@ function Comparativa() {
   const categoriaMasPopular = Object.entries(analisisCategoria).sort((a, b) => b[1] - a[1])[0];
   const diarioMasActivo = Object.entries(analisisDiario).sort((a, b) => b[1] - a[1])[0];
 
+  // Preguntas de análisis interactivas
+  const preguntasAnalisis = [
+    {
+      icono: <FiAward />,
+      pregunta: "¿Cuál es el diario que publica más noticias por día?",
+      respuesta: diarioMasActivo ? `${diarioMasActivo[0]} con ${diarioMasActivo[1]} noticias` : "No hay datos disponibles"
+    },
+    {
+      icono: <FiTarget />,
+      pregunta: "¿Qué categoría es la más popular?",
+      respuesta: categoriaMasPopular ? `${categoriaMasPopular[0]} con ${categoriaMasPopular[1]} noticias` : "No hay datos disponibles"
+    },
+    {
+      icono: <FiUsers />,
+      pregunta: "¿Cuál es el diario que más publica en Espectáculos?",
+      respuesta: datosCombinados.length > 0 ? 
+        datosCombinados.reduce((max, diario) => 
+          (diario.Espectáculos || 0) > (max.Espectáculos || 0) ? diario : max
+        ).diario + " en Espectáculos" : "No hay datos disponibles"
+    },
+    {
+      icono: <FiBookOpen />,
+      pregunta: "¿Qué diario tiene más noticias de Deportes?",
+      respuesta: datosCombinados.length > 0 ? 
+        datosCombinados.reduce((max, diario) => 
+          (diario.Deportes || 0) > (max.Deportes || 0) ? diario : max
+        ).diario + " en Deportes" : "No hay datos disponibles"
+    },
+    {
+      icono: <FiHelpCircle />,
+      pregunta: "¿Cuál es la categoría con menos noticias?",
+      respuesta: Object.keys(analisisCategoria).length > 0 ? 
+        Object.keys(analisisCategoria).reduce((min, cat) => 
+          analisisCategoria[cat] < analisisCategoria[min] ? cat : min
+        ) + " es la categoría con menos noticias" : "No hay datos disponibles"
+    },
+    {
+      icono: <FiPercent />,
+      pregunta: "¿Qué porcentaje representa Deportes del total?",
+      respuesta: totalNoticias > 0 ? 
+        `${Math.round((analisisCategoria.Deportes || 0) / totalNoticias * 100)}% del total de noticias` : "No hay datos disponibles"
+    },
+    {
+      icono: <FiBarChart2 />,
+      pregunta: "¿Cuántas noticias más publica El Comercio que Diario Correo?",
+      respuesta: (analisisDiario['El Comercio'] && analisisDiario['Diario Correo']) ? 
+        `${analisisDiario['El Comercio'] - analisisDiario['Diario Correo']} noticias más` : "No hay datos disponibles"
+    },
+    {
+      icono: <FiTrendingUp />,
+      pregunta: "¿Qué diario tiene la mayor diversidad de categorías?",
+      respuesta: datosCombinados.length > 0 ? 
+        datosCombinados.reduce((max, diario) => {
+          const categoriasConNoticias = Object.values(diario).filter(val => val > 0).length;
+          const maxCategorias = Object.values(max).filter(val => val > 0).length;
+          return categoriasConNoticias > maxCategorias ? diario : max;
+        }).diario + " tiene mayor diversidad" : "No hay datos disponibles"
+    }
+  ];
+
   if (loading) {
     return (
       <Container>
@@ -407,19 +545,35 @@ function Comparativa() {
       </Header>
 
       <MainContent>
-        {/* Selector de fechas */}
-        <DateSelector>
-          {fechasDisponibles.map((fechaData) => (
-            <DateButton
-              key={fechaData.fecha}
-              active={fechaData.fecha === fechaSeleccionada}
-              onClick={() => setFechaSeleccionada(fechaData.fecha)}
-            >
-              <FiCalendar />
-              {formatDate(fechaData.fecha)} ({fechaData.total})
-            </DateButton>
+        {/* Panel izquierdo con preguntas de análisis */}
+        <LeftPanel>
+          <PanelTitle>📊 Preguntas de Análisis</PanelTitle>
+          {preguntasAnalisis.map((item, index) => (
+            <QuestionCard key={index}>
+              <QuestionHeader>
+                <QuestionIcon>{item.icono}</QuestionIcon>
+                <QuestionText>{item.pregunta}</QuestionText>
+              </QuestionHeader>
+              <AnswerText>{item.respuesta}</AnswerText>
+            </QuestionCard>
           ))}
-        </DateSelector>
+        </LeftPanel>
+
+        {/* Panel derecho con gráficos y estadísticas */}
+        <RightPanel>
+          {/* Selector de fechas */}
+          <DateSelector>
+            {fechasDisponibles.map((fechaData) => (
+              <DateButton
+                key={fechaData.fecha}
+                active={fechaData.fecha === fechaSeleccionada}
+                onClick={() => setFechaSeleccionada(fechaData.fecha)}
+              >
+                <FiCalendar />
+                {formatDate(fechaData.fecha)} ({fechaData.total})
+              </DateButton>
+            ))}
+          </DateSelector>
 
         {/* Estadísticas generales */}
         <StatsGrid>
@@ -556,6 +710,7 @@ function Comparativa() {
             </PieChart>
           </ResponsiveContainer>
         </ChartContainer>
+        </RightPanel>
       </MainContent>
     </Container>
   );
