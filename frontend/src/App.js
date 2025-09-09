@@ -582,6 +582,25 @@ function MainView() {
     );
   }
 
+  // Ordenar noticias: primero las que tienen imagen, luego las que no tienen
+  noticiasAMostrar = noticiasAMostrar.sort((a, b) => {
+    const aTieneImagen = a.imagen_url && a.imagen_url.trim() !== '';
+    const bTieneImagen = b.imagen_url && b.imagen_url.trim() !== '';
+    
+    // Si ambas tienen imagen o ambas no tienen imagen, mantener orden original
+    if (aTieneImagen === bTieneImagen) {
+      return 0;
+    }
+    
+    // Si a tiene imagen y b no, a va primero
+    if (aTieneImagen && !bTieneImagen) {
+      return -1;
+    }
+    
+    // Si b tiene imagen y a no, b va primero
+    return 1;
+  });
+
   // Obtener noticia principal (primera noticia)
   const noticiaPrincipal = noticiasAMostrar.length > 0 ? noticiasAMostrar[0] : null;
   
@@ -644,42 +663,40 @@ function MainView() {
             </CategoriaDropdown>
             
             {/* Dropdown de Diarios para filtro combinado */}
-            {categoriaSeleccionada && (
-              <CategoriaDropdown className="diario-dropdown">
-                <FilterButton onClick={toggleMostrarDiarios}>
-                  <FiFilter />
-                  {diarioFiltro || 'Todos los diarios'}
-                </FilterButton>
-                {mostrarDiarios && (
-                  <CategoriaDropdownContent>
-                    <CategoriaOption 
-                      className={!diarioFiltro ? 'active' : ''}
-                      onClick={() => handleDiarioFiltro('todos')}
-                    >
-                      Todos los diarios
-                    </CategoriaOption>
-                    <CategoriaOption 
-                      className={diarioFiltro === 'El Comercio' ? 'active' : ''}
-                      onClick={() => handleDiarioFiltro('El Comercio')}
-                    >
-                      El Comercio
-                    </CategoriaOption>
-                    <CategoriaOption 
-                      className={diarioFiltro === 'Diario Correo' ? 'active' : ''}
-                      onClick={() => handleDiarioFiltro('Diario Correo')}
-                    >
-                      Diario Correo
-                    </CategoriaOption>
-                    <CategoriaOption 
-                      className={diarioFiltro === 'El Popular' ? 'active' : ''}
-                      onClick={() => handleDiarioFiltro('El Popular')}
-                    >
-                      El Popular
-                    </CategoriaOption>
-                  </CategoriaDropdownContent>
-                )}
-              </CategoriaDropdown>
-            )}
+            <CategoriaDropdown className="diario-dropdown">
+              <FilterButton onClick={toggleMostrarDiarios}>
+                <FiFilter />
+                {diarioFiltro || 'Todos los diarios'}
+              </FilterButton>
+              {mostrarDiarios && (
+                <CategoriaDropdownContent>
+                  <CategoriaOption 
+                    className={!diarioFiltro ? 'active' : ''}
+                    onClick={() => handleDiarioFiltro('todos')}
+                  >
+                    Todos los diarios
+                  </CategoriaOption>
+                  <CategoriaOption 
+                    className={diarioFiltro === 'El Comercio' ? 'active' : ''}
+                    onClick={() => handleDiarioFiltro('El Comercio')}
+                  >
+                    El Comercio
+                  </CategoriaOption>
+                  <CategoriaOption 
+                    className={diarioFiltro === 'Diario Correo' ? 'active' : ''}
+                    onClick={() => handleDiarioFiltro('Diario Correo')}
+                  >
+                    Diario Correo
+                  </CategoriaOption>
+                  <CategoriaOption 
+                    className={diarioFiltro === 'El Popular' ? 'active' : ''}
+                    onClick={() => handleDiarioFiltro('El Popular')}
+                  >
+                    El Popular
+                  </CategoriaOption>
+                </CategoriaDropdownContent>
+              )}
+            </CategoriaDropdown>
             
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
               <span style={{ fontSize: '0.9rem', color: '#666', fontWeight: '600' }}>Navegar a:</span>
