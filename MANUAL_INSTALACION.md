@@ -321,6 +321,266 @@ python start_system.py
 
 ---
 
+## 🔄 Comandos de Ejecución Detallados
+
+### 1. Ejecutar Scraping Manual
+
+#### Scraping Individual por Diario:
+```bash
+# Activar entorno virtual
+venv\Scripts\activate  # Windows
+# source venv/bin/activate  # macOS/Linux
+
+# Scraping de Diario Correo
+cd scraping
+python scraper_correo.py
+
+# Scraping de El Comercio
+python scraper_comercio.py
+
+# Scraping de El Popular
+python scraper_popular.py
+```
+
+#### Scraping Completo (Todos los Diarios):
+```bash
+# Activar entorno virtual
+venv\Scripts\activate  # Windows
+# source venv/bin/activate  # macOS/Linux
+
+# Ejecutar scraping de todos los diarios
+cd scraping
+python main_scraper.py
+```
+
+#### Scraping con Logs Detallados:
+```bash
+# Scraping con información detallada
+python main_scraper.py --verbose
+
+# Scraping con logs en archivo
+python main_scraper.py > scraping_log.txt 2>&1
+```
+
+### 2. Ejecutar Backend (API)
+
+#### Inicio Básico:
+```bash
+# Activar entorno virtual
+venv\Scripts\activate  # Windows
+# source venv/bin/activate  # macOS/Linux
+
+# Navegar al backend
+cd backend
+
+# Ejecutar servidor
+python main.py
+```
+
+#### Inicio con Configuración Personalizada:
+```bash
+# Ejecutar en puerto específico
+python main.py --port 8001
+
+# Ejecutar con logs detallados
+python main.py --log-level debug
+
+# Ejecutar en modo desarrollo
+python main.py --reload
+```
+
+#### Inicio con Uvicorn (Alternativo):
+```bash
+# Usando uvicorn directamente
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+# Con configuración específica
+uvicorn main:app --host localhost --port 8000 --workers 4
+```
+
+### 3. Ejecutar Frontend (React)
+
+#### Inicio Básico:
+```bash
+# Navegar al frontend
+cd frontend
+
+# Ejecutar aplicación
+npm start
+```
+
+#### Inicio con Configuración Personalizada:
+```bash
+# Ejecutar en puerto específico
+PORT=3001 npm start
+
+# Ejecutar con variables de entorno
+REACT_APP_API_URL=http://localhost:8001 npm start
+
+# Ejecutar en modo producción
+npm run build
+npm run serve
+```
+
+#### Comandos de Desarrollo:
+```bash
+# Instalar dependencias
+npm install
+
+# Actualizar dependencias
+npm update
+
+# Limpiar cache
+npm cache clean --force
+
+# Verificar dependencias
+npm audit
+npm audit fix
+```
+
+### 4. Ejecutar Scheduler (Automatización)
+
+#### Scheduler Básico:
+```bash
+# Activar entorno virtual
+venv\Scripts\activate  # Windows
+# source venv/bin/activate  # macOS/Linux
+
+# Navegar al scheduler
+cd scheduler
+
+# Ejecutar scheduler
+python cron_job.py
+```
+
+#### Scheduler con Configuración:
+```bash
+# Scheduler con intervalo personalizado
+python cron_job.py --interval 6  # Cada 6 horas
+
+# Scheduler con logs
+python cron_job.py --log-file scheduler.log
+
+# Scheduler en segundo plano (Linux/macOS)
+nohup python cron_job.py > scheduler.log 2>&1 &
+```
+
+### 5. Scripts de Inicio Automático
+
+#### Inicio Completo del Sistema:
+```bash
+# Activar entorno virtual
+venv\Scripts\activate  # Windows
+# source venv/bin/activate  # macOS/Linux
+
+# Ejecutar script de inicio completo
+python start_system.py
+```
+
+#### Inicio con Scraping Inicial:
+```bash
+# Ejecutar scraping inicial y luego iniciar sistema
+python start_auto_system.py
+```
+
+### 6. Comandos de Verificación
+
+#### Verificar Estado del Backend:
+```bash
+# Verificar si el backend está ejecutándose
+curl http://localhost:8000
+
+# Verificar endpoints específicos
+curl http://localhost:8000/noticias/ultima-actualizacion
+curl http://localhost:8000/categorias-disponibles
+```
+
+#### Verificar Estado del Frontend:
+```bash
+# Verificar si el frontend está ejecutándose
+curl http://localhost:3000
+
+# Verificar en navegador
+# Abrir: http://localhost:3000
+```
+
+#### Verificar Base de Datos:
+```bash
+# Conectar a PostgreSQL
+psql -U postgres -d diarios_scraping
+
+# Verificar noticias
+SELECT COUNT(*) FROM noticias;
+SELECT * FROM noticias ORDER BY fecha_extraccion DESC LIMIT 5;
+
+# Salir
+\q
+```
+
+### 7. Comandos de Mantenimiento
+
+#### Limpiar Cache y Logs:
+```bash
+# Limpiar logs del scheduler
+del scheduler.log  # Windows
+rm scheduler.log  # macOS/Linux
+
+# Limpiar cache de Node.js
+cd frontend
+npm cache clean --force
+
+# Limpiar cache de Python
+pip cache purge
+```
+
+#### Reiniciar Servicios:
+```bash
+# Detener procesos (Ctrl+C en cada terminal)
+# Luego reiniciar siguiendo los pasos de ejecución
+
+# O usar comandos del sistema:
+# Windows:
+taskkill /f /im python.exe
+taskkill /f /im node.exe
+
+# macOS/Linux:
+pkill -f python
+pkill -f node
+```
+
+### 8. Comandos de Debug
+
+#### Debug del Scraping:
+```bash
+# Scraping con debug
+cd scraping
+python main_scraper.py --debug
+
+# Ver logs en tiempo real
+tail -f scraping.log  # macOS/Linux
+```
+
+#### Debug del Backend:
+```bash
+# Backend con logs detallados
+cd backend
+python main.py --log-level debug
+
+# Ver logs de la API
+tail -f api.log  # macOS/Linux
+```
+
+#### Debug del Frontend:
+```bash
+# Frontend con logs detallados
+cd frontend
+npm start -- --verbose
+
+# Ver logs en consola del navegador (F12)
+```
+
+---
+
 ## ✅ Verificación de Funcionamiento
 
 ### 1. Verificar Backend

@@ -379,7 +379,7 @@ function DiarioComercio() {
             {/* Hero Section */}
             <HeroSection>
               {noticiaPrincipal && (
-                <HeroCard>
+                <HeroCard onClick={() => navigate(`/noticia/${noticiaPrincipal.id}`)}>
                   <HeroImage imageUrl={noticiaPrincipal.imagen_url} />
                   <HeroContent>
                     <HeroCategory>{noticiaPrincipal.categoria}</HeroCategory>
@@ -402,7 +402,7 @@ function DiarioComercio() {
             {/* News Grid */}
             <NewsGrid>
               {noticiasSecundarias.map((noticia, index) => (
-                <NewsCard key={index}>
+                <NewsCard key={index} onClick={() => navigate(`/noticia/${noticia.id}`)}>
                   <NewsImage imageUrl={noticia.imagen_url} />
                   <NewsContent>
                     <NewsCategory>{noticia.categoria}</NewsCategory>

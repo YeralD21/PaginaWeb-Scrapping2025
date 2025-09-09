@@ -7,6 +7,7 @@ import DiarioComercio from './components/DiarioComercio';
 import DiarioCorreo from './components/DiarioCorreo';
 import DiarioPopular from './components/DiarioPopular';
 import Comparativa from './components/Comparativa';
+import NoticiaDetalle from './components/NoticiaDetalle';
 
 const Container = styled.div`
   width: 100%;
@@ -944,7 +945,7 @@ function MainView() {
                                     cardType === 1 ? TextNewsMeta : TextNewsMetaSmall;
                 
                 return (
-                  <CardComponent key={index}>
+                  <CardComponent key={index} onClick={() => navigate(`/noticia/${noticia.id}`)}>
                     <TitleComponent>{noticia.titulo}</TitleComponent>
                     <MetaComponent>
                       <div>
@@ -1006,7 +1007,7 @@ function MainView() {
             {/* Hero Section - Noticia Principal */}
             <HeroSection>
               {noticiaPrincipal && (
-                <HeroCard>
+                <HeroCard onClick={() => navigate(`/noticia/${noticiaPrincipal.id}`)}>
                   <HeroImage imageUrl={noticiaPrincipal.imagen_url}>
                     <HeroTimeBadge>
                       {formatTime(noticiaPrincipal.fecha_publicacion)}
@@ -1032,7 +1033,7 @@ function MainView() {
               <SectionTitle>Más Noticias</SectionTitle>
               <NewsGrid>
                 {noticiasSecundarias.map((noticia, index) => (
-                  <NewsCard key={index}>
+                  <NewsCard key={index} onClick={() => navigate(`/noticia/${noticia.id}`)}>
                     <NewsImage imageUrl={noticia.imagen_url}>
                       <NewsTimeBadge>
                         {formatTime(noticia.fecha_publicacion)}
@@ -1076,6 +1077,7 @@ function App() {
         <Route path="/diario/diario-correo" element={<DiarioCorreo />} />
         <Route path="/diario/el-popular" element={<DiarioPopular />} />
         <Route path="/comparativa" element={<Comparativa />} />
+        <Route path="/noticia/:id" element={<NoticiaDetalle />} />
       </Routes>
     </Router>
   );

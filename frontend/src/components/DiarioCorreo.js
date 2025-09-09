@@ -434,7 +434,7 @@ function DiarioCorreo() {
             {/* Hero Section */}
             <HeroSection>
               {noticiaPrincipal && (
-                <HeroCard>
+                <HeroCard onClick={() => navigate(`/noticia/${noticiaPrincipal.id}`)}>
                   <HeroImage imageUrl={noticiaPrincipal.imagen_url}>
                     <HeroOverlay>
                       <HeroCategory>{noticiaPrincipal.categoria}</HeroCategory>
@@ -458,7 +458,7 @@ function DiarioCorreo() {
             {/* News Grid */}
             <NewsGrid>
               {noticiasSecundarias.map((noticia, index) => (
-                <NewsCard key={index}>
+                <NewsCard key={index} onClick={() => navigate(`/noticia/${noticia.id}`)}>
                   <NewsImage imageUrl={noticia.imagen_url}>
                     <NewsOverlay>
                       <NewsCategory>{noticia.categoria}</NewsCategory>

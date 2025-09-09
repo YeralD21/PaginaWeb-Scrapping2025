@@ -122,6 +122,7 @@ async def get_noticias(
     
     return result
 
+
 @app.get("/comparativa")
 async def get_comparativa(db: Session = Depends(get_db)):
     # Obtener todas las noticias (sin filtro de tiempo para mostrar totales)
@@ -542,6 +543,30 @@ async def proxy_image(url: str = Query(..., description="URL de la imagen a serv
     except Exception as e:
         logger.error(f"Error inesperado al servir imagen {url}: {e}")
         raise HTTPException(status_code=500, detail="Error interno del servidor")
+
+@app.get("/noticias/{noticia_id}", response_model=NoticiaResponse)
+async def get_noticia_by_id(
+    noticia_id: int,
+    db: Session = Depends(get_db)
+):
+    """Obtener una noticia específica por su ID"""
+    noticia = db.query(Noticia).join(Diario).filter(Noticia.id == noticia_id).first()
+    
+    if not noticia:
+        raise HTTPException(status_code=404, detail="Noticia no encontrada")
+    
+    return NoticiaResponse(
+        id=noticia.id,
+        titulo=noticia.titulo,
+        contenido=noticia.contenido,
+        enlace=noticia.enlace,
+        imagen_url=noticia.imagen_url,
+        categoria=noticia.categoria,
+        fecha_publicacion=noticia.fecha_publicacion,
+        fecha_extraccion=noticia.fecha_extraccion,
+        diario_id=noticia.diario_id,
+        diario_nombre=noticia.diario.nombre
+    )
 
 if __name__ == "__main__":
     import uvicorn

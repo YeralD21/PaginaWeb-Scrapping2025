@@ -587,7 +587,7 @@ function DiarioPopular() {
             {/* Layout estilo segunda imagen */}
             <LayoutContainer>
               {/* Main Article */}
-              <MainArticle>
+              <MainArticle onClick={() => navigate(`/noticia/${noticiaPrincipal.id}`)}>
                 {noticiaPrincipal && (
                   <>
                     <MainImage imageUrl={noticiaPrincipal.imagen_url}>
@@ -619,7 +619,7 @@ function DiarioPopular() {
               <Sidebar>
                 <SidebarTitle>Más Noticias</SidebarTitle>
                 {noticiasSecundarias.slice(0, 5).map((noticia, index) => (
-                  <SidebarCard key={index}>
+                  <SidebarCard key={index} onClick={() => navigate(`/noticia/${noticia.id}`)}>
                     <SidebarImage imageUrl={noticia.imagen_url}>
                       <SidebarOverlay>
                         <SidebarCategory>{noticia.categoria}</SidebarCategory>
@@ -655,3 +655,4 @@ function DiarioPopular() {
 }
 
 export default DiarioPopular;
+ 
