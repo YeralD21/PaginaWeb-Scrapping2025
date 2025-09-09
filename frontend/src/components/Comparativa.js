@@ -108,6 +108,12 @@ const LeftPanel = styled.div`
   top: 120px;
   max-height: calc(100vh - 140px);
   overflow-y: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+  
+  &::-webkit-scrollbar {
+    display: none; /* WebKit */
+  }
 `;
 
 const RightPanel = styled.div`
@@ -126,20 +132,63 @@ const PanelTitle = styled.h3`
   padding-bottom: 0.5rem;
 `;
 
+const QuestionIcon = styled.div`
+  font-size: 1.2rem;
+  color: #dc3545;
+  transition: all 0.3s ease;
+`;
+
+const QuestionText = styled.div`
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.4;
+  flex: 1;
+  color: #1a1a1a;
+`;
+
+const AnswerText = styled.div`
+  font-size: 0.85rem;
+  opacity: 0.8;
+  font-style: italic;
+  margin-top: 0.8rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid rgba(220, 53, 69, 0.2);
+  color: #6c757d;
+  transition: all 0.3s ease;
+`;
+
 const QuestionCard = styled.div`
-  background: #fff5f5;
-  border: 2px solid #dc3545;
-  border-radius: 12px;
-  padding: 1rem;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 249, 250, 0.8) 100%);
+  border: 1px solid rgba(220, 53, 69, 0.3);
+  border-left: 3px solid #dc3545;
+  border-radius: 15px;
+  padding: 1.2rem;
   margin-bottom: 1rem;
   cursor: pointer;
   transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  position: relative;
   
   &:hover {
-    background: #dc3545;
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
     color: white;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(220, 53, 69, 0.3);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(220, 53, 69, 0.3);
+    border-left-color: #fff;
+    
+    ${QuestionIcon} {
+      color: white;
+      transform: scale(1.1);
+    }
+    
+    ${QuestionText} {
+      color: white;
+    }
+    
+    ${AnswerText} {
+      color: rgba(255, 255, 255, 0.9);
+      border-top-color: rgba(255, 255, 255, 0.3);
+    }
   }
 `;
 
@@ -148,27 +197,6 @@ const QuestionHeader = styled.div`
   align-items: center;
   gap: 0.5rem;
   margin-bottom: 0.5rem;
-`;
-
-const QuestionIcon = styled.div`
-  font-size: 1.1rem;
-  color: #dc3545;
-`;
-
-const QuestionText = styled.div`
-  font-size: 0.9rem;
-  font-weight: 600;
-  line-height: 1.4;
-  flex: 1;
-`;
-
-const AnswerText = styled.div`
-  font-size: 0.8rem;
-  opacity: 0.8;
-  font-style: italic;
-  margin-top: 0.5rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid rgba(220, 53, 69, 0.2);
 `;
 
 const StatsGrid = styled.div`

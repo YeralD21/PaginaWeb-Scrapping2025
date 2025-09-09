@@ -753,20 +753,35 @@ function MainView() {
     );
   }
 
-  // Separar noticias con y sin imágenes
-  const noticiasConImagen = noticiasAMostrar.filter(noticia => 
-    noticia.imagen_url && noticia.imagen_url.trim() !== ''
-  );
+  // Ordenar noticias: primero las que tienen imagen, luego las que no tienen
+  noticiasAMostrar = noticiasAMostrar.sort((a, b) => {
+    const aTieneImagen = a.imagen_url && a.imagen_url.trim() !== '';
+    const bTieneImagen = b.imagen_url && b.imagen_url.trim() !== '';
+    
+    // Si ambas tienen imagen o ambas no tienen imagen, mantener orden original
+    if (aTieneImagen === bTieneImagen) {
+      return 0;
+    }
+    
+    // Si a tiene imagen y b no, a va primero
+    if (aTieneImagen && !bTieneImagen) {
+      return -1;
+    }
+    
+    // Si b tiene imagen y a no, b va primero
+    return 1;
+  });
+
+  // Obtener noticia principal (primera noticia)
+  const noticiaPrincipal = noticiasAMostrar.length > 0 ? noticiasAMostrar[0] : null;
   
+  // Obtener noticias secundarias (resto)
+  const noticiasSecundarias = noticiasAMostrar.slice(1);
+  
+  // Separar noticias sin imágenes para el panel izquierdo
   const noticiasSinImagen = noticiasAMostrar.filter(noticia => 
     !noticia.imagen_url || noticia.imagen_url.trim() === ''
   );
-
-  // Obtener noticia principal (primera noticia con imagen)
-  const noticiaPrincipal = noticiasConImagen.length > 0 ? noticiasConImagen[0] : null;
-  
-  // Obtener noticias secundarias (resto de noticias con imagen)
-  const noticiasSecundarias = noticiasConImagen.slice(1);
 
 
   return (
