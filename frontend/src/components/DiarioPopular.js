@@ -146,8 +146,8 @@ const MainArticle = styled.article`
 
 const MainImage = styled.div`
   position: relative;
-  height: 500px;
-  background: ${props => props.imageUrl ? `url(${props.imageUrl})` : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'};
+  height: 300px;
+  background: ${props => props.imageUrl ? `url(${props.imageUrl})` : 'linear-gradient(135deg, #17a2b8 0%, #138496 100%)'};
   background-size: cover;
   background-position: center;
   display: flex;
@@ -162,7 +162,7 @@ const MainImage = styled.div`
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.7) 100%);
+    background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.8) 100%);
     z-index: 1;
   }
 `;
@@ -172,36 +172,34 @@ const MainOverlay = styled.div`
   bottom: 0;
   left: 0;
   right: 0;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
-  padding: 3rem;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.9));
+  padding: 2rem;
   color: white;
   z-index: 2;
 `;
 
 const MainCategory = styled.span`
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
   color: white;
-  padding: 0.6rem 1.5rem;
-  border-radius: 30px;
-  font-size: 0.9rem;
+  padding: 0.4rem 1rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 1.5px;
-  margin-bottom: 1.5rem;
+  letter-spacing: 1px;
+  margin-bottom: 1rem;
   display: inline-block;
-  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 15px rgba(23, 162, 184, 0.4);
 `;
 
 const MainTitle = styled.h2`
-  font-size: 3rem;
-  font-weight: 900;
-  margin: 0 0 1.5rem 0;
-  line-height: 1.1;
-  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.8);
+  font-size: 2rem;
+  font-weight: 800;
+  margin: 0 0 1rem 0;
+  line-height: 1.2;
+  text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.8);
   font-family: 'Inter', sans-serif;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.2px;
 `;
 
 const MainMeta = styled.div`
@@ -231,18 +229,24 @@ const MetaItem = styled.span`
 `;
 
 const MainArticleContent = styled.div`
-  padding: 2.5rem;
+  padding: 1.5rem;
   background: white;
+  border-top: 1px solid #e9ecef;
 `;
 
 const MainExcerpt = styled.p`
-  color: #555;
-  line-height: 1.8;
+  color: #666;
+  line-height: 1.6;
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 400;
   font-family: 'Inter', sans-serif;
-  text-align: justify;
+  text-align: left;
+  max-height: 120px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
 `;
 
 const Sidebar = styled.aside`
@@ -252,23 +256,23 @@ const Sidebar = styled.aside`
 `;
 
 const SidebarTitle = styled.h3`
-  font-size: 1.8rem;
+  font-size: 1.6rem;
   font-weight: 800;
   margin: 0 0 1.5rem 0;
-  color: #667eea;
+  color: #17a2b8;
   text-transform: uppercase;
-  letter-spacing: 2px;
-  text-shadow: 1px 1px 3px rgba(102, 126, 234, 0.3);
+  letter-spacing: 1.5px;
+  text-shadow: 1px 1px 3px rgba(23, 162, 184, 0.3);
   font-family: 'Inter', sans-serif;
 `;
 
 const SidebarCard = styled.article`
   background: white;
-  border-radius: 20px;
+  border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 12px 40px rgba(102, 126, 234, 0.1);
-  border: 1px solid rgba(102, 126, 234, 0.1);
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 8px 25px rgba(23, 162, 184, 0.1);
+  border: 1px solid rgba(23, 162, 184, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
 
   &::before {
@@ -277,20 +281,20 @@ const SidebarCard = styled.article`
     top: 0;
     left: 0;
     right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #667eea 100%);
+    height: 3px;
+    background: linear-gradient(90deg, #17a2b8 0%, #138496 50%, #17a2b8 100%);
     z-index: 1;
   }
 
   &:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 20px 60px rgba(102, 126, 234, 0.2);
+    transform: translateY(-4px);
+    box-shadow: 0 15px 40px rgba(23, 162, 184, 0.2);
   }
 `;
 
 const SidebarImage = styled.div`
-  height: 180px;
-  background: ${props => props.imageUrl ? `url(${props.imageUrl})` : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'};
+  height: 140px;
+  background: ${props => props.imageUrl ? `url(${props.imageUrl})` : 'linear-gradient(135deg, #17a2b8 0%, #138496 100%)'};
   background-size: cover;
   background-position: center;
   position: relative;
@@ -306,7 +310,7 @@ const SidebarImage = styled.div`
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.6) 100%);
+    background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.7) 100%);
     z-index: 1;
   }
 `;
@@ -317,34 +321,33 @@ const SidebarOverlay = styled.div`
   left: 0;
   right: 0;
   background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
-  padding: 1.5rem;
+  padding: 1rem;
   color: white;
   z-index: 2;
 `;
 
 const SidebarCategory = styled.span`
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
   color: white;
-  padding: 0.4rem 1rem;
-  border-radius: 20px;
-  font-size: 0.8rem;
+  padding: 0.3rem 0.8rem;
+  border-radius: 15px;
+  font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 1.2px;
-  margin-bottom: 0.8rem;
+  letter-spacing: 1px;
+  margin-bottom: 0.6rem;
   display: inline-block;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 8px rgba(23, 162, 184, 0.4);
 `;
 
 const SidebarTitleText = styled.h4`
-  font-size: 1.1rem;
-  font-weight: 800;
-  margin: 0 0 0.8rem 0;
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 0.6rem 0;
   line-height: 1.3;
-  text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.8);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
   font-family: 'Inter', sans-serif;
-  letter-spacing: -0.2px;
+  letter-spacing: -0.1px;
 `;
 
 const SidebarMeta = styled.div`
@@ -368,16 +371,21 @@ const SidebarMetaItem = styled.span`
 `;
 
 const SidebarContent = styled.div`
-  padding: 1.5rem;
+  padding: 1rem;
 `;
 
 const SidebarExcerpt = styled.p`
-  color: #555;
-  line-height: 1.6;
+  color: #666;
+  line-height: 1.5;
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 400;
   font-family: 'Inter', sans-serif;
+  max-height: 60px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
 `;
 
 const LoadingSpinner = styled.div`

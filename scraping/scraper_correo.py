@@ -122,6 +122,10 @@ class ScraperCorreo:
                     # Extraer fecha de publicación real
                     fecha_publicacion = get_publication_date(article, 'Diario Correo')
                     
+                    # Si no se puede extraer fecha específica, usar fecha actual
+                    if fecha_publicacion is None:
+                        fecha_publicacion = datetime.now().date()
+                    
                     noticias.append({
                         'titulo': title,
                         'contenido': content,
@@ -129,7 +133,7 @@ class ScraperCorreo:
                         'imagen_url': imagen_url,
                         'categoria': 'Economía',
                         'diario': 'Diario Correo',
-                        'fecha_publicacion': fecha_publicacion if fecha_publicacion else datetime.now().date(),
+                        'fecha_publicacion': fecha_publicacion,
                         'fecha_extraccion': datetime.now().isoformat()
                     })
                 except Exception as e:
@@ -183,6 +187,10 @@ class ScraperCorreo:
                     # Extraer fecha de publicación real
                     fecha_publicacion = get_publication_date(article, 'Diario Correo')
                     
+                    # Si no se puede extraer fecha específica, usar fecha actual
+                    if fecha_publicacion is None:
+                        fecha_publicacion = datetime.now().date()
+                    
                     noticias.append({
                         'titulo': title,
                         'contenido': content,
@@ -190,7 +198,7 @@ class ScraperCorreo:
                         'imagen_url': imagen_url,
                         'categoria': 'Espectáculos',
                         'diario': 'Diario Correo',
-                        'fecha_publicacion': fecha_publicacion if fecha_publicacion else datetime.now().date(),
+                        'fecha_publicacion': fecha_publicacion,
                         'fecha_extraccion': datetime.now().isoformat()
                     })
                 except Exception as e:
@@ -244,6 +252,10 @@ class ScraperCorreo:
                     # Extraer fecha de publicación real
                     fecha_publicacion = get_publication_date(article, 'Diario Correo')
                     
+                    # Si no se puede extraer fecha específica, usar fecha actual
+                    if fecha_publicacion is None:
+                        fecha_publicacion = datetime.now().date()
+                    
                     noticias.append({
                         'titulo': title,
                         'contenido': content,
@@ -251,7 +263,7 @@ class ScraperCorreo:
                         'imagen_url': imagen_url,
                         'categoria': 'Mundo',
                         'diario': 'Diario Correo',
-                        'fecha_publicacion': fecha_publicacion if fecha_publicacion else datetime.now().date(),
+                        'fecha_publicacion': fecha_publicacion,
                         'fecha_extraccion': datetime.now().isoformat()
                     })
                 except Exception as e:

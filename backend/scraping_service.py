@@ -73,8 +73,13 @@ class ScrapingService:
                 fecha_publicacion = None
                 if news_item.get('fecha_publicacion'):
                     try:
-                        fecha_publicacion = datetime.fromisoformat(news_item['fecha_publicacion'])
-                    except ValueError:
+                        # Si es un objeto date, convertirlo a datetime
+                        if hasattr(news_item['fecha_publicacion'], 'year'):
+                            fecha_publicacion = datetime.combine(news_item['fecha_publicacion'], datetime.min.time())
+                        else:
+                            # Si es un string, intentar parsearlo
+                            fecha_publicacion = datetime.fromisoformat(news_item['fecha_publicacion'])
+                    except (ValueError, TypeError):
                         fecha_publicacion = None
                 
                 existing = db.query(Noticia).filter(
