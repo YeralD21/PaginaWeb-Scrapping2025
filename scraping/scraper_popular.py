@@ -16,6 +16,67 @@ class ScraperPopular:
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         })
     
+    def get_full_article_content(self, article_url: str) -> str:
+        """Extrae el contenido completo de un artículo individual"""
+        try:
+            if not article_url:
+                return ""
+            
+            response = self.session.get(article_url, timeout=10)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Buscar el contenido principal del artículo
+            content_selectors = [
+                'div.article-content',
+                'div.entry-content', 
+                'div.post-content',
+                'div.content',
+                'article div',
+                'div.story-body',
+                'div.article-body',
+                '.main-content p',
+                'div[class*="content"] p',
+                'article p'
+            ]
+            
+            content_paragraphs = []
+            
+            for selector in content_selectors:
+                elements = soup.select(selector)
+                if elements:
+                    for element in elements:
+                        paragraphs = element.find_all('p')
+                        for p in paragraphs:
+                            text = p.get_text(strip=True)
+                            if text and len(text) > 50:  # Solo párrafos con contenido sustancial
+                                content_paragraphs.append(text)
+                    
+                    if content_paragraphs:
+                        break
+            
+            # Si no encontramos contenido con los selectores, buscar todos los párrafos
+            if not content_paragraphs:
+                all_paragraphs = soup.find_all('p')
+                for p in all_paragraphs:
+                    text = p.get_text(strip=True)
+                    if text and len(text) > 50:
+                        content_paragraphs.append(text)
+            
+            # Unir los párrafos y limpiar
+            full_content = '\n\n'.join(content_paragraphs)
+            
+            # Limitar longitud para evitar contenido excesivo
+            if len(full_content) > 3000:
+                full_content = full_content[:3000] + "..."
+            
+            return full_content
+            
+        except Exception as e:
+            logging.warning(f"Error extrayendo contenido completo de {article_url}: {e}")
+            return ""
+    
     def _find_image_url(self, element):
         """Función mejorada para buscar URLs de imágenes"""
         imagen_url = None
@@ -98,11 +159,15 @@ class ScraperPopular:
                     else:
                         full_url = href
                     
-                    # Buscar contenido relacionado
-                    content = ""
-                    content_elem = container.find('p') or container.find('span')
-                    if content_elem:
-                        content = content_elem.get_text(strip=True)
+                    # Extraer contenido completo del artículo
+                    print(f"🔍 Extrayendo contenido de: {full_url}")
+                    content = self.get_full_article_content(full_url)
+                    
+                    # Si no se pudo obtener contenido completo, usar resumen local
+                    if not content:
+                        content_elem = container.find('p') or container.find('span')
+                        if content_elem:
+                            content = content_elem.get_text(strip=True)
                     
                     # Buscar imagen en el contenedor
                     imagen_url = self._find_image_url(container)

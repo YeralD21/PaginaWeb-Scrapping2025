@@ -1,0 +1,30 @@
+# Base de Datos
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=diarios_scraping
+DB_USER=postgres
+DB_PASSWORD=tu_password
+
+# Backend
+BACKEND_HOST=localhost
+BACKEND_PORT=8000
+
+# Frontend
+FRONTEND_PORT=3000
+
+# Scheduler
+SCHEDULE_INTERVAL_MINUTES=15
+
+# Email para alertas (opcional)
+SMTP_SERVER=smtp.gmail.com
+SMTP_PORT=587
+EMAIL_USER=tu_email@gmail.com
+EMAIL_PASSWORD=tu_app_password
+
+# Sistema de duplicados
+DUPLICATE_SIMILARITY_THRESHOLD=0.85
+DUPLICATE_TIME_WINDOW_HOURS=24
+
+# Sistema de alertas
+ALERT_MAX_NOTIFICATIONS_PER_HOUR=10
+ALERT_WEBHOOK_TIMEOUT=10

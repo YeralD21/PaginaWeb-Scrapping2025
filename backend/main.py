@@ -10,7 +10,15 @@ import requests
 from contextlib import asynccontextmanager
 
 from database import get_db, create_tables, test_connection
-from models import Diario, Noticia, EstadisticaScraping
+from models import Diario, Noticia, EstadisticaScraping, AlertaConfiguracion, AlertaDisparo, TrendingKeywords
+from duplicate_detector import DuplicateDetector
+from content_generator import generate_content_for_news
+try:
+    from alert_system import AlertSystem
+except ImportError:
+    # Usar versión simplificada si hay problemas con email
+    from alert_system_simple import AlertSystemSimple as AlertSystem
+from scraping_service import ScrapingService
 from pydantic import BaseModel
 
 logging.basicConfig(level=logging.INFO)
@@ -27,6 +35,57 @@ class NoticiaResponse(BaseModel):
     fecha_extraccion: datetime
     diario_id: int
     diario_nombre: str
+    
+    # Nuevos campos opcionales
+    autor: Optional[str] = None
+    tags: Optional[List[str]] = None
+    sentimiento: Optional[str] = None
+    tiempo_lectura_min: Optional[int] = None
+    popularidad_score: Optional[float] = None
+    es_trending: Optional[bool] = None
+    palabras_clave: Optional[List[str]] = None
+    resumen_auto: Optional[str] = None
+    idioma: Optional[str] = None
+    region: Optional[str] = None
+    es_alerta: Optional[bool] = None
+    nivel_urgencia: Optional[str] = None
+    keywords_alerta: Optional[List[str]] = None
+    
+    class Config:
+        from_attributes = True
+
+class AlertaConfigRequest(BaseModel):
+    nombre: str
+    descripcion: Optional[str] = None
+    keywords: List[str]
+    categorias: Optional[List[str]] = None
+    diarios: Optional[List[str]] = None
+    nivel_urgencia: Optional[str] = 'media'
+    notificar_email: Optional[bool] = False
+    email_destino: Optional[str] = None
+    notificar_webhook: Optional[bool] = False
+    webhook_url: Optional[str] = None
+    activa: Optional[bool] = True
+
+class AlertaResponse(BaseModel):
+    id: int
+    nombre: str
+    descripcion: Optional[str]
+    keywords: List[str]
+    categorias: Optional[List[str]]
+    diarios: Optional[List[str]]
+    nivel_urgencia: str
+    activa: bool
+    fecha_creacion: datetime
+    
+    class Config:
+        from_attributes = True
+
+class TrendingKeywordResponse(BaseModel):
+    palabra: str
+    frecuencia: int
+    categoria: Optional[str]
+    score_trending: float
     
     class Config:
         from_attributes = True
@@ -283,6 +342,69 @@ async def get_noticias_recientes(
     ).order_by(Noticia.fecha_extraccion.desc()).limit(limit)
     
     noticias = query.all()
+    
+    result = []
+    for noticia in noticias:
+        result.append(NoticiaResponse(
+            id=noticia.id,
+            titulo=noticia.titulo,
+            contenido=noticia.contenido,
+            enlace=noticia.enlace,
+            imagen_url=noticia.imagen_url,
+            categoria=noticia.categoria,
+            fecha_publicacion=noticia.fecha_publicacion,
+            fecha_extraccion=noticia.fecha_extraccion,
+            diario_id=noticia.diario_id,
+            diario_nombre=noticia.diario.nombre
+        ))
+    
+    return result
+
+@app.get("/noticias/relevantes-anteriores", response_model=List[NoticiaResponse])
+async def get_noticias_relevantes_anteriores(
+    dias: int = Query(7, description="Buscar en los últimos X días"),
+    limit: int = Query(15, description="Límite de noticias a retornar"),
+    excluir_fecha: Optional[str] = Query(None, description="Fecha a excluir en formato YYYY-MM-DD"),
+    db: Session = Depends(get_db)
+):
+    """Obtener noticias relevantes de días anteriores, ordenadas por relevancia"""
+    from datetime import datetime, timedelta
+    from sqlalchemy import func, case, desc
+    
+    # Calcular fecha límite
+    fecha_limite = datetime.now() - timedelta(days=dias)
+    
+    # Construir query base
+    query = db.query(Noticia).join(Diario).filter(
+        Noticia.fecha_publicacion >= fecha_limite
+    )
+    
+    # Excluir fecha específica si se proporciona
+    if excluir_fecha:
+        try:
+            fecha_excluir = datetime.strptime(excluir_fecha, "%Y-%m-%d").date()
+            fecha_inicio_excluir = datetime.combine(fecha_excluir, datetime.min.time())
+            fecha_fin_excluir = datetime.combine(fecha_excluir, datetime.max.time())
+            query = query.filter(
+                ~((Noticia.fecha_publicacion >= fecha_inicio_excluir) & 
+                  (Noticia.fecha_publicacion <= fecha_fin_excluir))
+            )
+        except ValueError:
+            pass  # Si la fecha no es válida, no excluir nada
+    
+    # Ordenar por relevancia: priorizar categorías importantes y noticias más recientes
+    # Dar más peso a ciertas categorías
+    categoria_peso = case(
+        (Noticia.categoria.in_(['POLÍTICA', 'ECONOMÍA', 'DEPORTES']), 3),
+        (Noticia.categoria.in_(['NACIONAL', 'INTERNACIONAL']), 2),
+        else_=1
+    )
+    
+    # Ordenar por peso de categoría y fecha de publicación
+    noticias = query.order_by(
+        desc(categoria_peso),
+        desc(Noticia.fecha_publicacion)
+    ).limit(limit).all()
     
     result = []
     for noticia in noticias:
@@ -565,8 +687,429 @@ async def get_noticia_by_id(
         fecha_publicacion=noticia.fecha_publicacion,
         fecha_extraccion=noticia.fecha_extraccion,
         diario_id=noticia.diario_id,
-        diario_nombre=noticia.diario.nombre
+        diario_nombre=noticia.diario.nombre,
+        # Nuevos campos
+        autor=noticia.autor,
+        tags=noticia.tags,
+        sentimiento=noticia.sentimiento,
+        tiempo_lectura_min=noticia.tiempo_lectura_min,
+        popularidad_score=noticia.popularidad_score,
+        es_trending=noticia.es_trending,
+        palabras_clave=noticia.palabras_clave,
+        resumen_auto=noticia.resumen_auto,
+        idioma=noticia.idioma,
+        region=noticia.region,
+        es_alerta=noticia.es_alerta,
+        nivel_urgencia=noticia.nivel_urgencia,
+        keywords_alerta=noticia.keywords_alerta
     )
+
+# ================== NUEVOS ENDPOINTS ==================
+
+@app.post("/alertas/crear", response_model=AlertaResponse)
+async def crear_alerta(alerta_data: AlertaConfigRequest, db: Session = Depends(get_db)):
+    """Crear una nueva configuración de alerta"""
+    try:
+        alert_system = AlertSystem()
+        
+        # Convertir a diccionario
+        alert_dict = alerta_data.dict()
+        
+        # Crear la alerta
+        alerta_config = alert_system.create_alert_configuration(db, alert_dict)
+        
+        return AlertaResponse(
+            id=alerta_config.id,
+            nombre=alerta_config.nombre,
+            descripcion=alerta_config.descripcion,
+            keywords=alerta_config.keywords,
+            categorias=alerta_config.categorias,
+            diarios=alerta_config.diarios,
+            nivel_urgencia=alerta_config.nivel_urgencia,
+            activa=alerta_config.activa,
+            fecha_creacion=alerta_config.fecha_creacion
+        )
+        
+    except Exception as e:
+        logger.error(f"Error creando alerta: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/alertas", response_model=List[AlertaResponse])
+async def listar_alertas(activa: Optional[bool] = None, db: Session = Depends(get_db)):
+    """Listar todas las configuraciones de alerta"""
+    query = db.query(AlertaConfiguracion)
+    
+    if activa is not None:
+        query = query.filter(AlertaConfiguracion.activa == activa)
+    
+    alertas = query.order_by(AlertaConfiguracion.fecha_creacion.desc()).all()
+    
+    return [AlertaResponse(
+        id=alerta.id,
+        nombre=alerta.nombre,
+        descripcion=alerta.descripcion,
+        keywords=alerta.keywords,
+        categorias=alerta.categorias,
+        diarios=alerta.diarios,
+        nivel_urgencia=alerta.nivel_urgencia,
+        activa=alerta.activa,
+        fecha_creacion=alerta.fecha_creacion
+    ) for alerta in alertas]
+
+@app.get("/alertas/{alerta_id}/disparos")
+async def obtener_disparos_alerta(
+    alerta_id: int,
+    limit: int = Query(50, le=200),
+    db: Session = Depends(get_db)
+):
+    """Obtener disparos de una alerta específica"""
+    disparos = db.query(AlertaDisparo).filter(
+        AlertaDisparo.configuracion_id == alerta_id
+    ).order_by(AlertaDisparo.fecha_disparo.desc()).limit(limit).all()
+    
+    result = []
+    for disparo in disparos:
+        result.append({
+            'id': disparo.id,
+            'keyword_match': disparo.keyword_match,
+            'nivel_urgencia': disparo.nivel_urgencia,
+            'fecha_disparo': disparo.fecha_disparo,
+            'notificacion_enviada': disparo.notificacion_enviada,
+            'noticia': {
+                'id': disparo.noticia.id,
+                'titulo': disparo.noticia.titulo,
+                'categoria': disparo.noticia.categoria,
+                'diario': disparo.noticia.diario.nombre,
+                'enlace': disparo.noticia.enlace
+            }
+        })
+    
+    return result
+
+@app.put("/alertas/{alerta_id}")
+async def actualizar_alerta(
+    alerta_id: int,
+    alerta_data: AlertaConfigRequest,
+    db: Session = Depends(get_db)
+):
+    """Actualizar configuración de alerta"""
+    alerta = db.query(AlertaConfiguracion).filter(AlertaConfiguracion.id == alerta_id).first()
+    
+    if not alerta:
+        raise HTTPException(status_code=404, detail="Alerta no encontrada")
+    
+    # Actualizar campos
+    update_data = alerta_data.dict(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(alerta, field, value)
+    
+    db.commit()
+    
+    return {"message": "Alerta actualizada exitosamente"}
+
+@app.delete("/alertas/{alerta_id}")
+async def eliminar_alerta(alerta_id: int, db: Session = Depends(get_db)):
+    """Eliminar una configuración de alerta"""
+    alerta = db.query(AlertaConfiguracion).filter(AlertaConfiguracion.id == alerta_id).first()
+    
+    if not alerta:
+        raise HTTPException(status_code=404, detail="Alerta no encontrada")
+    
+    # En lugar de eliminar, desactivar
+    alerta.activa = False
+    db.commit()
+    
+    return {"message": "Alerta desactivada exitosamente"}
+
+@app.get("/noticias/buscar", response_model=List[NoticiaResponse])
+async def buscar_noticias(
+    q: str = Query(..., min_length=3, description="Término de búsqueda"),
+    categoria: Optional[str] = Query(None),
+    diario: Optional[str] = Query(None),
+    sentimiento: Optional[str] = Query(None),
+    fecha_desde: Optional[str] = Query(None),
+    fecha_hasta: Optional[str] = Query(None),
+    limit: int = Query(50, le=200),
+    db: Session = Depends(get_db)
+):
+    """Búsqueda avanzada de noticias"""
+    query = db.query(Noticia).join(Diario)
+    
+    # Búsqueda por texto en título y contenido
+    search_filter = Noticia.titulo.ilike(f"%{q}%")
+    if True:  # Buscar también en contenido
+        search_filter = search_filter | Noticia.contenido.ilike(f"%{q}%")
+    
+    query = query.filter(search_filter)
+    
+    # Filtros adicionales
+    if categoria:
+        query = query.filter(Noticia.categoria == categoria)
+    
+    if diario:
+        query = query.filter(Diario.nombre == diario)
+    
+    if sentimiento:
+        query = query.filter(Noticia.sentimiento == sentimiento)
+    
+    if fecha_desde:
+        try:
+            fecha_desde_dt = datetime.strptime(fecha_desde, "%Y-%m-%d")
+            query = query.filter(Noticia.fecha_publicacion >= fecha_desde_dt)
+        except ValueError:
+            pass
+    
+    if fecha_hasta:
+        try:
+            fecha_hasta_dt = datetime.strptime(fecha_hasta, "%Y-%m-%d")
+            query = query.filter(Noticia.fecha_publicacion <= fecha_hasta_dt)
+        except ValueError:
+            pass
+    
+    noticias = query.order_by(Noticia.fecha_extraccion.desc()).limit(limit).all()
+    
+    # Convertir a response model
+    result = []
+    for noticia in noticias:
+        result.append(NoticiaResponse(
+            id=noticia.id,
+            titulo=noticia.titulo,
+            contenido=noticia.contenido,
+            enlace=noticia.enlace,
+            imagen_url=noticia.imagen_url,
+            categoria=noticia.categoria,
+            fecha_publicacion=noticia.fecha_publicacion,
+            fecha_extraccion=noticia.fecha_extraccion,
+            diario_id=noticia.diario_id,
+            diario_nombre=noticia.diario.nombre,
+            autor=noticia.autor,
+            tags=noticia.tags,
+            sentimiento=noticia.sentimiento,
+            tiempo_lectura_min=noticia.tiempo_lectura_min,
+            popularidad_score=noticia.popularidad_score,
+            es_trending=noticia.es_trending,
+            palabras_clave=noticia.palabras_clave,
+            resumen_auto=noticia.resumen_auto,
+            idioma=noticia.idioma,
+            region=noticia.region,
+            es_alerta=noticia.es_alerta,
+            nivel_urgencia=noticia.nivel_urgencia,
+            keywords_alerta=noticia.keywords_alerta
+        ))
+    
+    return result
+
+@app.get("/trending/noticias", response_model=List[NoticiaResponse])
+async def obtener_noticias_trending(
+    limit: int = Query(20, le=50),
+    categoria: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
+    """Obtener noticias trending o de alta urgencia"""
+    query = db.query(Noticia).join(Diario)
+    
+    # Filtrar por noticias de alerta o trending
+    trending_filter = (Noticia.es_alerta == True) | (Noticia.es_trending == True)
+    query = query.filter(trending_filter)
+    
+    if categoria:
+        query = query.filter(Noticia.categoria == categoria)
+    
+    # Ordenar por urgencia y fecha
+    noticias = query.order_by(
+        Noticia.nivel_urgencia.desc(),
+        Noticia.fecha_extraccion.desc()
+    ).limit(limit).all()
+    
+    result = []
+    for noticia in noticias:
+        result.append(NoticiaResponse(
+            id=noticia.id,
+            titulo=noticia.titulo,
+            contenido=noticia.contenido,
+            enlace=noticia.enlace,
+            imagen_url=noticia.imagen_url,
+            categoria=noticia.categoria,
+            fecha_publicacion=noticia.fecha_publicacion,
+            fecha_extraccion=noticia.fecha_extraccion,
+            diario_id=noticia.diario_id,
+            diario_nombre=noticia.diario.nombre,
+            autor=noticia.autor,
+            sentimiento=noticia.sentimiento,
+            tiempo_lectura_min=noticia.tiempo_lectura_min,
+            es_alerta=noticia.es_alerta,
+            nivel_urgencia=noticia.nivel_urgencia,
+            keywords_alerta=noticia.keywords_alerta
+        ))
+    
+    return result
+
+@app.get("/analytics/sentimientos")
+async def analisis_sentimientos(
+    dias: int = Query(7, ge=1, le=30),
+    db: Session = Depends(get_db)
+):
+    """Análisis de sentimientos por diario y categoría"""
+    fecha_limite = datetime.utcnow() - timedelta(days=dias)
+    
+    # Análisis general por sentimiento
+    sentimientos = db.query(
+        Noticia.sentimiento,
+        func.count(Noticia.id).label('cantidad')
+    ).filter(
+        Noticia.fecha_extraccion >= fecha_limite,
+        Noticia.sentimiento.isnot(None)
+    ).group_by(Noticia.sentimiento).all()
+    
+    # Análisis por diario
+    por_diario = db.query(
+        Diario.nombre,
+        Noticia.sentimiento,
+        func.count(Noticia.id).label('cantidad')
+    ).join(Noticia).filter(
+        Noticia.fecha_extraccion >= fecha_limite,
+        Noticia.sentimiento.isnot(None)
+    ).group_by(Diario.nombre, Noticia.sentimiento).all()
+    
+    # Análisis por categoría
+    por_categoria = db.query(
+        Noticia.categoria,
+        Noticia.sentimiento,
+        func.count(Noticia.id).label('cantidad')
+    ).filter(
+        Noticia.fecha_extraccion >= fecha_limite,
+        Noticia.sentimiento.isnot(None)
+    ).group_by(Noticia.categoria, Noticia.sentimiento).all()
+    
+    return {
+        'periodo_dias': dias,
+        'sentimientos_general': [
+            {'sentimiento': sent, 'cantidad': cant}
+            for sent, cant in sentimientos
+        ],
+        'por_diario': [
+            {'diario': diario, 'sentimiento': sent, 'cantidad': cant}
+            for diario, sent, cant in por_diario
+        ],
+        'por_categoria': [
+            {'categoria': cat, 'sentimiento': sent, 'cantidad': cant}
+            for cat, sent, cant in por_categoria
+        ]
+    }
+
+@app.get("/analytics/palabras-clave", response_model=List[TrendingKeywordResponse])
+async def palabras_clave_trending(
+    dias: int = Query(7, ge=1, le=30),
+    categoria: Optional[str] = Query(None),
+    limit: int = Query(20, le=50),
+    db: Session = Depends(get_db)
+):
+    """Obtener palabras clave más frecuentes"""
+    fecha_limite = datetime.utcnow() - timedelta(days=dias)
+    
+    query = db.query(TrendingKeywords).filter(
+        TrendingKeywords.fecha >= fecha_limite
+    )
+    
+    if categoria:
+        query = query.filter(TrendingKeywords.categoria == categoria)
+    
+    keywords = query.order_by(
+        TrendingKeywords.frecuencia.desc(),
+        TrendingKeywords.score_trending.desc()
+    ).limit(limit).all()
+    
+    return [TrendingKeywordResponse(
+        palabra=kw.palabra,
+        frecuencia=kw.frecuencia,
+        categoria=kw.categoria,
+        score_trending=kw.score_trending
+    ) for kw in keywords]
+
+@app.get("/analytics/duplicados")
+async def estadisticas_duplicados(
+    dias: int = Query(7, ge=1, le=30),
+    db: Session = Depends(get_db)
+):
+    """Estadísticas de detección de duplicados"""
+    try:
+        duplicate_detector = DuplicateDetector()
+        stats = duplicate_detector.get_duplicate_stats(db, dias)
+        return stats
+    except Exception as e:
+        logger.error(f"Error obteniendo estadísticas de duplicados: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/analytics/alertas")
+async def estadisticas_alertas(
+    dias: int = Query(7, ge=1, le=30),
+    db: Session = Depends(get_db)
+):
+    """Estadísticas del sistema de alertas"""
+    try:
+        alert_system = AlertSystem()
+        stats = alert_system.get_alert_statistics(db, dias)
+        return stats
+    except Exception as e:
+        logger.error(f"Error obteniendo estadísticas de alertas: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/scraping/ejecutar")
+async def ejecutar_scraping_manual():
+    """Ejecutar scraping manual (útil para testing)"""
+    try:
+        scraping_service = ScrapingService()
+        result = scraping_service.execute_scraping()
+        return result
+    except Exception as e:
+        logger.error(f"Error en scraping manual: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/noticias/generar-contenido")
+async def generar_contenido_noticias(db: Session = Depends(get_db)):
+    """Generar contenido automático para noticias que no tienen contenido"""
+    try:
+        # Buscar noticias sin contenido o con contenido muy corto
+        noticias_sin_contenido = db.query(Noticia).filter(
+            or_(
+                Noticia.contenido == None,
+                Noticia.contenido == '',
+                func.length(Noticia.contenido) < 100
+            )
+        ).limit(50).all()  # Limitar a 50 para evitar sobrecarga
+        
+        updated_count = 0
+        
+        for noticia in noticias_sin_contenido:
+            try:
+                # Generar contenido basado en el título y categoría
+                nuevo_contenido = generate_content_for_news(
+                    title=noticia.titulo,
+                    existing_content=noticia.contenido or "",
+                    category=noticia.categoria or "mundo"
+                )
+                
+                # Actualizar la noticia
+                noticia.contenido = nuevo_contenido
+                updated_count += 1
+                
+            except Exception as e:
+                logger.error(f"Error generando contenido para noticia {noticia.id}: {e}")
+                continue
+        
+        # Confirmar cambios
+        db.commit()
+        
+        return {
+            "success": True,
+            "message": f"Contenido generado para {updated_count} noticias",
+            "noticias_procesadas": updated_count,
+            "noticias_encontradas": len(noticias_sin_contenido)
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error generando contenido: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

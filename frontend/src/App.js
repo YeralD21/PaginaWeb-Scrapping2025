@@ -2,12 +2,16 @@
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import styled from 'styled-components';
-import { FiFileText, FiBarChart2, FiFilter, FiRefreshCw, FiCalendar } from 'react-icons/fi';
+import { FiFileText, FiBarChart2, FiFilter, FiRefreshCw, FiCalendar, FiSearch, FiAlertTriangle, FiTrendingUp, FiPieChart } from 'react-icons/fi';
 import DiarioComercio from './components/DiarioComercio';
 import DiarioCorreo from './components/DiarioCorreo';
 import DiarioPopular from './components/DiarioPopular';
 import Comparativa from './components/Comparativa';
 import NoticiaDetalle from './components/NoticiaDetalle';
+import AlertManager from './components/AlertManager';
+import AdvancedSearch from './components/AdvancedSearch';
+import AnalyticsDashboard from './components/AnalyticsDashboard';
+import TrendingNews from './components/TrendingNews';
 
 const Container = styled.div`
   width: 100%;
@@ -324,6 +328,78 @@ const TextNewsMetaSmall = styled(TextNewsMeta)`
   margin-top: 0.4rem;
 `;
 
+// Estilos para noticias relevantes
+const RelevantNewsCard = styled.article`
+  background: white;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.06);
+  border-left: 3px solid #28a745;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  margin-bottom: 0.8rem;
+  
+  &:hover {
+    transform: translateX(4px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+    border-left-color: #20c997;
+  }
+`;
+
+const RelevantNewsTitle = styled.h4`
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+`;
+
+const RelevantNewsMeta = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+`;
+
+const RelevantNewsDate = styled.span`
+  color: #666;
+  font-size: 0.7rem;
+  font-weight: 500;
+`;
+
+const RelevantNewsCategory = styled.span`
+  background: ${props => {
+    switch(props.categoria?.toLowerCase()) {
+      case 'política': return '#dc3545';
+      case 'economía': return '#28a745';
+      case 'deportes': return '#fd7e14';
+      case 'nacional': return '#007bff';
+      case 'internacional': return '#6f42c1';
+      default: return '#6c757d';
+    }
+  }};
+  color: white;
+  padding: 0.2rem 0.5rem;
+  border-radius: 8px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+`;
+
+const RelevantNewsDiario = styled.span`
+  color: #495057;
+  font-size: 0.7rem;
+  font-weight: 500;
+  background: #f8f9fa;
+  padding: 0.2rem 0.4rem;
+  border-radius: 6px;
+`;
+
 const TextNewsCategory = styled.span`
   background: #dc3545;
   color: white;
@@ -347,37 +423,89 @@ const TextNewsDiario = styled.span`
   font-size: 0.7rem;
 `;
 
-// Hero Section - Noticia Principal
-const HeroSection = styled.section`
+// Sección de Noticias Destacadas - Diseño Moderno
+const FeaturedSection = styled.section`
   margin-bottom: 3rem;
 `;
 
-const HeroCard = styled.article`
-  position: relative;
-  background: white;
-  border-radius: 15px;
-  overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
+const FeaturedTitle = styled.h2`
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #b8860b;
+  margin-bottom: 2rem;
+  border-left: 6px solid #b8860b;
+  padding-left: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+`;
 
-  &:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+const FeaturedGrid = styled.div`
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 1.5rem;
+  height: 600px;
+
+  @media (max-width: 968px) {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto auto;
+    height: auto;
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    height: auto;
   }
 `;
 
-const HeroImage = styled.div`
+const MainFeaturedCard = styled.article`
+  grid-row: 1 / -1;
   position: relative;
-  height: 500px;
+  border-radius: 20px;
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
   background: ${props => props.imageUrl ? `url(${props.imageUrl})` : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'};
   background-size: cover;
   background-position: center;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
+
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+  }
+
+  @media (max-width: 968px) {
+    grid-row: 1;
+    grid-column: 1 / -1;
+    height: 400px;
+  }
 `;
 
-const HeroOverlay = styled.div`
+const SmallFeaturedCard = styled.article`
+  position: relative;
+  border-radius: 15px;
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  background: ${props => props.imageUrl ? `url(${props.imageUrl})` : 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)'};
+  background-size: cover;
+  background-position: center;
+  min-height: 280px;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+  }
+
+  @media (max-width: 768px) {
+    min-height: 250px;
+  }
+`;
+
+const CardOverlay = styled.div`
   position: absolute;
   bottom: 0;
   left: 0;
@@ -385,45 +513,87 @@ const HeroOverlay = styled.div`
   background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
   padding: 2rem;
   color: white;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
 `;
 
-const HeroTimeBadge = styled.div`
+const SmallCardOverlay = styled.div`
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
+  padding: 1.5rem;
+  color: white;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+`;
+
+
+const TimeBadge = styled.div`
   position: absolute;
   top: 1.5rem;
   right: 1.5rem;
-  background: rgba(220, 53, 69, 0.9);
+  background: rgba(184, 134, 11, 0.9);
   color: white;
   padding: 0.5rem 1rem;
-  border-radius: 25px;
+  border-radius: 20px;
   font-size: 0.9rem;
   font-weight: 600;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.3);
 `;
 
-const HeroCategory = styled.span`
-  background: #dc3545;
+const SmallTimeBadge = styled(TimeBadge)`
+  top: 1rem;
+  right: 1rem;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+`;
+
+const CategoryBadge = styled.div`
+  background: #b8860b;
   color: white;
-  padding: 0.3rem 0.8rem;
+  padding: 0.4rem 0.8rem;
   border-radius: 15px;
   font-size: 0.8rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
   margin-bottom: 1rem;
   display: inline-block;
+  width: fit-content;
 `;
 
-const HeroTitle = styled.h2`
-  font-size: 2.5rem;
+const SmallCategoryBadge = styled(CategoryBadge)`
+  font-size: 0.7rem;
+  padding: 0.3rem 0.6rem;
+  margin-bottom: 0.8rem;
+`;
+
+const FeaturedCardTitle = styled.h3`
+  font-size: 2.2rem;
   font-weight: 700;
   margin: 0 0 1rem 0;
   line-height: 1.2;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+
+  @media (max-width: 768px) {
+    font-size: 1.8rem;
+  }
 `;
 
-const HeroMeta = styled.div`
+const SmallCardTitle = styled.h4`
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 0.8rem 0;
+  line-height: 1.3;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7);
+`;
+
+const CardMeta = styled.div`
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -431,10 +601,221 @@ const HeroMeta = styled.div`
   opacity: 0.9;
 `;
 
-const HeroDate = styled.span`
+const SmallCardMeta = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  font-size: 0.8rem;
+  opacity: 0.9;
+`;
+
+const AuthorName = styled.span`
+  font-weight: 600;
+  color: #b8860b;
+`;
+
+const DateBadge = styled.div`
   display: flex;
   align-items: center;
   gap: 0.3rem;
+`;
+
+// Sección de Lista de Noticias (Estilo Primera Imagen)
+const ListSection = styled.section`
+  margin-bottom: 3rem;
+`;
+
+const ListTitle = styled.h2`
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 2rem;
+  border-bottom: 3px solid #dc3545;
+  padding-bottom: 0.5rem;
+  display: inline-block;
+`;
+
+const NewsListGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+`;
+
+const NewsListItem = styled.article`
+  display: flex;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border-left: 4px solid transparent;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    border-left-color: #dc3545;
+  }
+`;
+
+const NewsListImage = styled.div`
+  width: 120px;
+  height: 80px;
+  border-radius: 8px;
+  background: ${props => props.imageUrl ? `url(${props.imageUrl})` : 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'};
+  background-size: cover;
+  background-position: center;
+  flex-shrink: 0;
+`;
+
+const NewsListContent = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+`;
+
+const NewsListMeta = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 0.5rem;
+`;
+
+const NewsListDate = styled.span`
+  background: #f8f9fa;
+  color: #666;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+`;
+
+const NewsListCategory = styled.span`
+  background: #dc3545;
+  color: white;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+`;
+
+const NewsListTitle = styled.h3`
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+  line-height: 1.4;
+  margin: 0 0 0.5rem 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+`;
+
+const NewsListAuthor = styled.span`
+  font-size: 0.9rem;
+  color: #666;
+  font-weight: 500;
+`;
+
+// Sección de Grid Compacto (Estilo Segunda Imagen)
+const CompactSection = styled.section`
+  margin-bottom: 3rem;
+`;
+
+const CompactTitle = styled.h2`
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 2rem;
+  text-align: center;
+  position: relative;
+  
+  &:after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 3px;
+    background: linear-gradient(90deg, #dc3545, #fd7e14);
+    border-radius: 2px;
+  }
+`;
+
+const CompactGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+`;
+
+const CompactCard = styled.article`
+  position: relative;
+  height: 250px;
+  border-radius: 15px;
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+  transition: all 0.3s ease;
+  background: ${props => props.imageUrl ? `url(${props.imageUrl})` : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'};
+  background-size: cover;
+  background-position: center;
+
+  &:hover {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+  }
+`;
+
+const CompactOverlay = styled.div`
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.9));
+  padding: 1.5rem;
+  color: white;
+  height: 70%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+`;
+
+const CompactBadge = styled.div`
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  background: rgba(220, 53, 69, 0.9);
+  color: white;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  backdrop-filter: blur(10px);
+`;
+
+const CompactCardTitle = styled.h3`
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin: 0 0 0.8rem 0;
+  line-height: 1.3;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7);
+`;
+
+const CompactCardMeta = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  opacity: 0.9;
 `;
 
 // Secondary News Grid
@@ -545,16 +926,6 @@ const NewsDate = styled.span`
   gap: 0.3rem;
 `;
 
-const NewsContent = styled.div`
-  padding: 1.5rem;
-`;
-
-const NewsExcerpt = styled.p`
-  color: #666;
-  line-height: 1.6;
-  margin: 0;
-  font-size: 0.95rem;
-`;
 
 const LoadingSpinner = styled.div`
   display: flex;
@@ -589,10 +960,12 @@ function MainView() {
   const [diarioFiltro, setDiarioFiltro] = useState(null);
   const [mostrarDiarios, setMostrarDiarios] = useState(false);
   const [categoriasDisponibles, setCategoriasDisponibles] = useState([]);
+  const [noticiasRelevantes, setNoticiasRelevantes] = useState([]);
 
   useEffect(() => {
       fetchFechasDisponibles();
       fetchCategoriasDisponibles();
+      fetchNoticiasRelevantes(); // Cargar noticias relevantes al inicio
   }, []);
 
   // Cerrar dropdown al hacer click fuera
@@ -650,11 +1023,32 @@ function MainView() {
       const response = await axios.get(`http://localhost:8000/noticias/por-fecha?fecha=${fecha}`);
       setNoticias(response.data);
       setError(null);
+      // También obtener noticias relevantes de días anteriores
+      fetchNoticiasRelevantes(fecha);
     } catch (error) {
       console.error('Error fetching noticias:', error);
       setError('Error al cargar las noticias');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchNoticiasRelevantes = async (fechaExcluir = null) => {
+    try {
+      const params = new URLSearchParams({
+        dias: '7',
+        limit: '12'
+      });
+      
+      if (fechaExcluir) {
+        params.append('excluir_fecha', fechaExcluir);
+      }
+      
+      const response = await axios.get(`http://localhost:8000/noticias/relevantes-anteriores?${params}`);
+      setNoticiasRelevantes(response.data);
+    } catch (error) {
+      console.error('Error fetching noticias relevantes:', error);
+      // No mostrar error aquí para no interferir con la carga principal
     }
   };
 
@@ -739,6 +1133,23 @@ function MainView() {
     });
   };
 
+  const formatRelativeDate = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+      return 'Hoy';
+    } else if (diffDays === 1) {
+      return 'Ayer';
+    } else if (diffDays <= 7) {
+      return `Hace ${diffDays} días`;
+    } else {
+      return formatDate(dateString);
+    }
+  };
+
   // Filtrar noticias por categoría y diario si están seleccionados
   let noticiasAMostrar = noticias;
   
@@ -773,16 +1184,24 @@ function MainView() {
     return 1;
   });
 
-  // Obtener noticia principal (primera noticia)
-  const noticiaPrincipal = noticiasAMostrar.length > 0 ? noticiasAMostrar[0] : null;
+  // Separar noticias con y sin imagen MANTENIENDO EL TOTAL
+  const noticiasConImagen = noticiasAMostrar.filter(noticia => 
+    noticia.imagen_url && noticia.imagen_url.trim() !== ''
+  );
   
-  // Obtener noticias secundarias (resto)
-  const noticiasSecundarias = noticiasAMostrar.slice(1);
-  
-  // Separar noticias sin imágenes para el panel izquierdo
   const noticiasSinImagen = noticiasAMostrar.filter(noticia => 
     !noticia.imagen_url || noticia.imagen_url.trim() === ''
   );
+
+  // Obtener noticia principal (primera con imagen, o primera de todas si no hay imágenes)
+  const noticiaPrincipal = noticiasConImagen.length > 0 ? noticiasConImagen[0] : 
+                          (noticiasAMostrar.length > 0 ? noticiasAMostrar[0] : null);
+  
+  // Para el grid secundario: usar TODAS las noticias restantes (con y sin imagen)
+  // Si hay noticia principal con imagen, quitar esa del array
+  const noticiasSecundarias = noticiaPrincipal && noticiasConImagen.length > 0 
+    ? noticiasAMostrar.filter(n => n.id !== noticiaPrincipal.id)
+    : noticiasAMostrar.slice(1);
 
 
   return (
@@ -793,15 +1212,43 @@ function MainView() {
         <Subtitle>Plataforma de noticias con Web Scraping</Subtitle>
           <Navigation>
         <NavButton 
-          active={activeTab === 'noticias'} 
-          onClick={() => setActiveTab('noticias')}
+          active={location.pathname === '/'}
+          onClick={() => navigate('/')}
         >
           <FiFileText />
           Noticias
         </NavButton>
         <NavButton 
-              onClick={handleComparativa}
-              style={{ background: '#dc3545', color: 'white' }}
+          active={location.pathname === '/trending'}
+          onClick={() => navigate('/trending')}
+        >
+          <FiTrendingUp />
+          Trending
+        </NavButton>
+        <NavButton 
+          active={location.pathname === '/buscar'}
+          onClick={() => navigate('/buscar')}
+        >
+          <FiSearch />
+          Búsqueda
+        </NavButton>
+        <NavButton 
+          active={location.pathname === '/analytics'}
+          onClick={() => navigate('/analytics')}
+        >
+          <FiPieChart />
+          Analytics
+        </NavButton>
+        <NavButton 
+          active={location.pathname === '/alertas'}
+          onClick={() => navigate('/alertas')}
+        >
+          <FiAlertTriangle />
+          Alertas
+        </NavButton>
+        <NavButton 
+          active={location.pathname === '/comparativa'}
+          onClick={() => navigate('/comparativa')}
         >
           <FiBarChart2 />
           Comparativa
@@ -931,10 +1378,42 @@ function MainView() {
         
         {!loading && !error && noticias.length > 0 && (
           <>
-            {/* Panel izquierdo - Noticias sin imágenes */}
+            {/* Panel izquierdo - Noticias Relevantes de Días Anteriores */}
             <LeftPanel>
-              <LeftPanelTitle>📰 Más Noticias</LeftPanelTitle>
-              {noticiasSinImagen.map((noticia, index) => {
+              <LeftPanelTitle>🕒 Noticias Relevantes</LeftPanelTitle>
+              {noticiasRelevantes.length > 0 ? (
+                noticiasRelevantes.map((noticia, index) => (
+                  <RelevantNewsCard 
+                    key={`relevant-${noticia.id}`} 
+                    onClick={() => navigate(`/noticia/${noticia.id}`)}
+                  >
+                    <RelevantNewsMeta>
+                      <RelevantNewsDate>
+                        {formatRelativeDate(noticia.fecha_publicacion)}
+                      </RelevantNewsDate>
+                      <RelevantNewsCategory categoria={noticia.categoria}>
+                        {noticia.categoria}
+                      </RelevantNewsCategory>
+                    </RelevantNewsMeta>
+                    <RelevantNewsTitle>{noticia.titulo}</RelevantNewsTitle>
+                    <RelevantNewsDiario>
+                      {noticia.diario_nombre}
+                    </RelevantNewsDiario>
+                  </RelevantNewsCard>
+                ))
+              ) : (
+                <div style={{ 
+                  padding: '2rem', 
+                  textAlign: 'center', 
+                  color: '#666',
+                  fontStyle: 'italic'
+                }}>
+                  No hay noticias relevantes disponibles
+                </div>
+              )}
+              
+              {/* Fallback: Mostrar algunas noticias sin imagen si no hay relevantes */}
+              {noticiasRelevantes.length === 0 && noticiasSinImagen.slice(0, 5).map((noticia, index) => {
                 // Alternar entre diferentes tamaños de cards
                 const cardType = index % 3;
                 const CardComponent = cardType === 0 ? TextNewsCardLarge : 
@@ -947,15 +1426,56 @@ function MainView() {
                 return (
                   <CardComponent key={index} onClick={() => navigate(`/noticia/${noticia.id}`)}>
                     <TitleComponent>{noticia.titulo}</TitleComponent>
+                    {/* Nuevos indicadores */}
+                    {(noticia.es_alerta || noticia.sentimiento) && (
+                      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                        {noticia.es_alerta && (
+                          <span style={{
+                            background: noticia.nivel_urgencia === 'critica' ? '#dc3545' : 
+                                       noticia.nivel_urgencia === 'alta' ? '#fd7e14' : 
+                                       noticia.nivel_urgencia === 'media' ? '#ffc107' : '#28a745',
+                            color: 'white',
+                            padding: '0.2rem 0.5rem',
+                            borderRadius: '10px',
+                            fontSize: '0.7rem',
+                            fontWeight: '600',
+                            textTransform: 'uppercase'
+                          }}>
+                            🚨 {noticia.nivel_urgencia}
+                          </span>
+                        )}
+                        {noticia.sentimiento && (
+                          <span style={{
+                            background: noticia.sentimiento === 'positivo' ? '#28a745' : 
+                                       noticia.sentimiento === 'negativo' ? '#dc3545' : '#6c757d',
+                            color: 'white',
+                            padding: '0.2rem 0.5rem',
+                            borderRadius: '10px',
+                            fontSize: '0.7rem',
+                            fontWeight: '600'
+                          }}>
+                            {noticia.sentimiento === 'positivo' ? '😊' : 
+                             noticia.sentimiento === 'negativo' ? '😞' : '😐'} {noticia.sentimiento}
+                          </span>
+                        )}
+                      </div>
+                    )}
                     <MetaComponent>
                       <div>
                         <TextNewsCategory>{noticia.categoria}</TextNewsCategory>
                         <TextNewsDiario>{noticia.diario}</TextNewsDiario>
                       </div>
-                      <TextNewsDate>
-                        <FiCalendar />
-                        {formatDate(noticia.fecha_publicacion)}
-                      </TextNewsDate>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.2rem' }}>
+                        <TextNewsDate>
+                          <FiCalendar />
+                          {formatDate(noticia.fecha_publicacion)}
+                        </TextNewsDate>
+                        {noticia.tiempo_lectura_min && (
+                          <span style={{ fontSize: '0.6rem', color: '#999' }}>
+                            ⏱️ {noticia.tiempo_lectura_min} min
+                          </span>
+                        )}
+                      </div>
                     </MetaComponent>
                   </CardComponent>
                 );
@@ -1004,61 +1524,205 @@ function MainView() {
                         </div>
             )}
 
-            {/* Hero Section - Noticia Principal */}
-            <HeroSection>
-              {noticiaPrincipal && (
-                <HeroCard onClick={() => navigate(`/noticia/${noticiaPrincipal.id}`)}>
-                  <HeroImage imageUrl={noticiaPrincipal.imagen_url}>
-                    <HeroTimeBadge>
+            {/* Sección de Noticias Destacadas */}
+            <FeaturedSection>
+              <FeaturedTitle>Destacadas del día</FeaturedTitle>
+              <FeaturedGrid>
+                {/* Noticia Principal Grande */}
+                {noticiaPrincipal && (
+                  <MainFeaturedCard 
+                    imageUrl={noticiaPrincipal.imagen_url}
+                    onClick={() => navigate(`/noticia/${noticiaPrincipal.id}`)}
+                  >
+                    <TimeBadge>
                       {formatTime(noticiaPrincipal.fecha_publicacion)}
-                    </HeroTimeBadge>
-                    <HeroOverlay>
-                      <HeroCategory>{noticiaPrincipal.categoria}</HeroCategory>
-                      <HeroTitle>{noticiaPrincipal.titulo}</HeroTitle>
-                      <HeroMeta>
-                        <span>{noticiaPrincipal.diario}</span>
-                        <HeroDate>
+                    </TimeBadge>
+                    <CardOverlay>
+                      <CategoryBadge>{noticiaPrincipal.categoria}</CategoryBadge>
+                      <FeaturedCardTitle>{noticiaPrincipal.titulo}</FeaturedCardTitle>
+                      <CardMeta>
+                        <AuthorName>{noticiaPrincipal.diario}</AuthorName>
+                        <DateBadge>
                           <FiCalendar />
                           {formatDate(noticiaPrincipal.fecha_publicacion)}
-                        </HeroDate>
-                      </HeroMeta>
-                    </HeroOverlay>
-                  </HeroImage>
-                </HeroCard>
-              )}
-            </HeroSection>
+                        </DateBadge>
+                      </CardMeta>
+                    </CardOverlay>
+                  </MainFeaturedCard>
+                )}
 
-            {/* Secondary News Grid */}
-            <SecondarySection>
-              <SectionTitle>Más Noticias</SectionTitle>
-              <NewsGrid>
-                {noticiasSecundarias.map((noticia, index) => (
-                  <NewsCard key={index} onClick={() => navigate(`/noticia/${noticia.id}`)}>
-                    <NewsImage imageUrl={noticia.imagen_url}>
-                      <NewsTimeBadge>
-                        {formatTime(noticia.fecha_publicacion)}
-                      </NewsTimeBadge>
-                      <NewsOverlay>
-                        <NewsCategory>{noticia.categoria}</NewsCategory>
-                        <NewsTitle>{noticia.titulo}</NewsTitle>
-                        <NewsMeta>
-                          <span>{noticia.diario}</span>
-                          <NewsDate>
-                            <FiCalendar />
-                            {formatDate(noticia.fecha_publicacion)}
-                          </NewsDate>
-                        </NewsMeta>
-                      </NewsOverlay>
-                    </NewsImage>
-                    <NewsContent>
-                      <NewsExcerpt>
-                        {noticia.contenido || 'Sin contenido disponible...'}
-                      </NewsExcerpt>
-                    </NewsContent>
-                  </NewsCard>
+                {/* Noticias Pequeñas */}
+                {noticiasSecundarias.slice(0, 4).map((noticia, index) => (
+                  <SmallFeaturedCard 
+                    key={index}
+                    imageUrl={noticia.imagen_url}
+                    onClick={() => navigate(`/noticia/${noticia.id}`)}
+                  >
+                    <SmallTimeBadge>
+                      {formatTime(noticia.fecha_publicacion)}
+                    </SmallTimeBadge>
+                    <SmallCardOverlay>
+                      <SmallCategoryBadge>{noticia.categoria}</SmallCategoryBadge>
+                      <SmallCardTitle>{noticia.titulo}</SmallCardTitle>
+                      <SmallCardMeta>
+                        <AuthorName>{noticia.diario}</AuthorName>
+                        <DateBadge>
+                          <FiCalendar />
+                          {formatDate(noticia.fecha_publicacion)}
+                        </DateBadge>
+                      </SmallCardMeta>
+                    </SmallCardOverlay>
+                  </SmallFeaturedCard>
                 ))}
-              </NewsGrid>
-            </SecondarySection>
+              </FeaturedGrid>
+            </FeaturedSection>
+
+            {/* Sección de Lista de Noticias (Estilo Primera Imagen) */}
+            <ListSection>
+              <ListTitle>Últimas Noticias</ListTitle>
+              <NewsListGrid>
+                {noticiasSecundarias.slice(4, 12).map((noticia, index) => (
+                  <NewsListItem key={index} onClick={() => navigate(`/noticia/${noticia.id}`)}>
+                    <NewsListImage imageUrl={noticia.imagen_url} />
+                    <NewsListContent>
+                      <div>
+                        <NewsListMeta>
+                          <NewsListDate>
+                            {formatDate(noticia.fecha_publicacion)}
+                          </NewsListDate>
+                          <NewsListCategory>
+                            {noticia.categoria}
+                          </NewsListCategory>
+                        </NewsListMeta>
+                        <NewsListTitle>{noticia.titulo}</NewsListTitle>
+                      </div>
+                      <NewsListAuthor>{noticia.diario}</NewsListAuthor>
+                    </NewsListContent>
+                  </NewsListItem>
+                ))}
+              </NewsListGrid>
+            </ListSection>
+
+            {/* Sección de Grid Compacto (Estilo Segunda Imagen) */}
+            <CompactSection>
+              <CompactTitle>Noticias Destacadas</CompactTitle>
+              <CompactGrid>
+                {noticiasSecundarias.slice(12, 18).map((noticia, index) => (
+                  <CompactCard 
+                    key={index}
+                    imageUrl={noticia.imagen_url}
+                    onClick={() => navigate(`/noticia/${noticia.id}`)}
+                  >
+                    <CompactBadge>{noticia.categoria}</CompactBadge>
+                    <CompactOverlay>
+                      <CompactCardTitle>{noticia.titulo}</CompactCardTitle>
+                      <CompactCardMeta>
+                        <span>{noticia.diario}</span>
+                        <DateBadge>
+                          <FiCalendar />
+                          {formatDate(noticia.fecha_publicacion)}
+                        </DateBadge>
+                      </CompactCardMeta>
+                    </CompactOverlay>
+                  </CompactCard>
+                ))}
+              </CompactGrid>
+            </CompactSection>
+
+            {/* Resto de Noticias - Diseño Original */}
+            {noticiasSecundarias.slice(18).length > 0 && (
+              <SecondarySection>
+                <SectionTitle>Más Noticias</SectionTitle>
+                <NewsGrid>
+                  {noticiasSecundarias.slice(18).map((noticia, index) => {
+                    // Si la noticia tiene imagen, usar el diseño con imagen
+                    if (noticia.imagen_url && noticia.imagen_url.trim() !== '') {
+                      return (
+                        <NewsCard key={index} onClick={() => navigate(`/noticia/${noticia.id}`)}>
+                          <NewsImage imageUrl={noticia.imagen_url}>
+                            <NewsTimeBadge>
+                              {formatTime(noticia.fecha_publicacion)}
+                            </NewsTimeBadge>
+                            <NewsOverlay>
+                              <NewsCategory>{noticia.categoria}</NewsCategory>
+                              <NewsTitle>{noticia.titulo}</NewsTitle>
+                              <NewsMeta>
+                                <span>{noticia.diario}</span>
+                                <NewsDate>
+                                  <FiCalendar />
+                                  {formatDate(noticia.fecha_publicacion)}
+                                </NewsDate>
+                              </NewsMeta>
+                            </NewsOverlay>
+                          </NewsImage>
+                        </NewsCard>
+                      );
+                    } else {
+                      // Si no tiene imagen, usar diseño de texto
+                      const cardType = index % 3;
+                      const CardComponent = cardType === 0 ? TextNewsCardLarge : 
+                                          cardType === 1 ? TextNewsCard : TextNewsCardSmall;
+                      const TitleComponent = cardType === 0 ? TextNewsTitleLarge : 
+                                           cardType === 1 ? TextNewsTitle : TextNewsTitleSmall;
+                      const MetaComponent = cardType === 0 ? TextNewsMetaLarge : 
+                                          cardType === 1 ? TextNewsMeta : TextNewsMetaSmall;
+                      
+                      return (
+                        <CardComponent key={index} onClick={() => navigate(`/noticia/${noticia.id}`)}>
+                          <TitleComponent>{noticia.titulo}</TitleComponent>
+                          {/* Nuevos indicadores */}
+                          {(noticia.es_alerta || noticia.sentimiento) && (
+                            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                              {noticia.es_alerta && (
+                                <span style={{
+                                  background: noticia.nivel_urgencia === 'critica' ? '#dc3545' : 
+                                             noticia.nivel_urgencia === 'alta' ? '#fd7e14' : 
+                                             noticia.nivel_urgencia === 'media' ? '#ffc107' : '#28a745',
+                                  color: 'white',
+                                  padding: '0.2rem 0.5rem',
+                                  borderRadius: '10px',
+                                  fontSize: '0.7rem',
+                                  fontWeight: '600',
+                                  textTransform: 'uppercase'
+                                }}>
+                                  🚨 {noticia.nivel_urgencia}
+                                </span>
+                              )}
+                              {noticia.sentimiento && (
+                                <span style={{
+                                  background: noticia.sentimiento === 'positivo' ? '#28a745' : 
+                                             noticia.sentimiento === 'negativo' ? '#dc3545' : '#6c757d',
+                                  color: 'white',
+                                  padding: '0.2rem 0.5rem',
+                                  borderRadius: '10px',
+                                  fontSize: '0.7rem',
+                                  fontWeight: '600'
+                                }}>
+                                  {noticia.sentimiento === 'positivo' ? '😊' : 
+                                   noticia.sentimiento === 'negativo' ? '😞' : '😐'} {noticia.sentimiento}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          <MetaComponent>
+                            <div>
+                              <TextNewsCategory>{noticia.categoria}</TextNewsCategory>
+                              <TextNewsDiario>{noticia.diario}</TextNewsDiario>
+                            </div>
+                            <div>
+                              <TextNewsDate>
+                                <FiCalendar />
+                                {formatDate(noticia.fecha_publicacion)}
+                              </TextNewsDate>
+                            </div>
+                          </MetaComponent>
+                        </CardComponent>
+                      );
+                    }
+                  })}
+                </NewsGrid>
+              </SecondarySection>
+            )}
             </RightPanel>
         </>
       )}
@@ -1078,6 +1742,10 @@ function App() {
         <Route path="/diario/el-popular" element={<DiarioPopular />} />
         <Route path="/comparativa" element={<Comparativa />} />
         <Route path="/noticia/:id" element={<NoticiaDetalle />} />
+        <Route path="/alertas" element={<AlertManager />} />
+        <Route path="/buscar" element={<AdvancedSearch />} />
+        <Route path="/analytics" element={<AnalyticsDashboard />} />
+        <Route path="/trending" element={<TrendingNews />} />
       </Routes>
     </Router>
   );
