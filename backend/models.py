@@ -52,6 +52,11 @@ class Noticia(Base):
     nivel_urgencia = Column(String(20))  # baja, media, alta, critica
     keywords_alerta = Column(JSON)  # Palabras clave que activaron alertas
     
+    # CAMPOS PARA CLASIFICACIÓN GEOGRÁFICA
+    geographic_type = Column(String(20), default='nacional')  # internacional, nacional, regional, local
+    geographic_confidence = Column(Float, default=0.5)  # Confianza de la clasificación (0-1)
+    geographic_keywords = Column(JSON)  # Palabras clave geográficas encontradas
+    
     # Relación con diario
     diario = relationship("Diario", back_populates="noticias")
     

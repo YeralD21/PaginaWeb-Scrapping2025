@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from typing import List, Optional
+from typing import List, Optional, Dict
 from datetime import datetime, timedelta, timezone
 import logging
 import requests
@@ -50,6 +50,11 @@ class NoticiaResponse(BaseModel):
     es_alerta: Optional[bool] = None
     nivel_urgencia: Optional[str] = None
     keywords_alerta: Optional[List[str]] = None
+    
+    # Campos geográficos
+    geographic_type: Optional[str] = None
+    geographic_confidence: Optional[float] = None
+    geographic_keywords: Optional[Dict] = None
     
     class Config:
         from_attributes = True
@@ -151,6 +156,7 @@ async def root():
 async def get_noticias(
     categoria: Optional[str] = Query(None),
     diario: Optional[str] = Query(None),
+    geographic_type: Optional[str] = Query(None, description="Filtrar por tipo geográfico: internacional, nacional, regional, local"),
     limit: int = Query(100),
     offset: int = Query(0),
     db: Session = Depends(get_db)
@@ -161,6 +167,8 @@ async def get_noticias(
         query = query.filter(Noticia.categoria == categoria)
     if diario:
         query = query.filter(Diario.nombre == diario)
+    if geographic_type:
+        query = query.filter(Noticia.geographic_type == geographic_type)
     
     noticias = query.order_by(Noticia.fecha_extraccion.desc()).offset(offset).limit(limit).all()
     
@@ -488,7 +496,10 @@ async def get_noticias_por_fecha(
                 fecha_publicacion=noticia.fecha_publicacion,
                 fecha_extraccion=noticia.fecha_extraccion,
                 diario_id=noticia.diario_id,
-                diario_nombre=noticia.diario.nombre
+                diario_nombre=noticia.diario.nombre,
+                geographic_type=noticia.geographic_type,
+                geographic_confidence=noticia.geographic_confidence,
+                geographic_keywords=noticia.geographic_keywords
             ))
         
         logger.info(f"Retornando {len(result)} noticias")
@@ -1038,6 +1049,77 @@ async def estadisticas_duplicados(
         return stats
     except Exception as e:
         logger.error(f"Error obteniendo estadísticas de duplicados: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/analytics/geografico")
+async def estadisticas_geograficas(
+    dias: int = Query(7, ge=1, le=30),
+    db: Session = Depends(get_db)
+):
+    """Estadísticas de clasificación geográfica de noticias"""
+    try:
+        fecha_limite = datetime.utcnow() - timedelta(days=dias)
+        
+        # Estadísticas por tipo geográfico
+        stats_geograficas = db.query(
+            Noticia.geographic_type,
+            func.count(Noticia.id).label('cantidad'),
+            func.avg(Noticia.geographic_confidence).label('confianza_promedio')
+        ).filter(
+            Noticia.fecha_extraccion >= fecha_limite
+        ).group_by(Noticia.geographic_type).all()
+        
+        # Estadísticas por diario y tipo geográfico
+        stats_por_diario = db.query(
+            Diario.nombre,
+            Noticia.geographic_type,
+            func.count(Noticia.id).label('cantidad')
+        ).join(Noticia).filter(
+            Noticia.fecha_extraccion >= fecha_limite
+        ).group_by(Diario.nombre, Noticia.geographic_type).all()
+        
+        # Total de noticias en el período
+        total_noticias = db.query(func.count(Noticia.id)).filter(
+            Noticia.fecha_extraccion >= fecha_limite
+        ).scalar()
+        
+        # Formatear resultados
+        resultado = {
+            'periodo_dias': dias,
+            'total_noticias': total_noticias,
+            'por_tipo_geografico': [],
+            'por_diario': {}
+        }
+        
+        # Procesar estadísticas por tipo
+        for stat in stats_geograficas:
+            tipo = stat.geographic_type or 'nacional'  # Default si es None
+            cantidad = stat.cantidad
+            confianza = round(float(stat.confianza_promedio or 0.5), 2)
+            porcentaje = round((cantidad / total_noticias) * 100, 1) if total_noticias > 0 else 0
+            
+            resultado['por_tipo_geografico'].append({
+                'tipo': tipo,
+                'cantidad': cantidad,
+                'porcentaje': porcentaje,
+                'confianza_promedio': confianza
+            })
+        
+        # Procesar estadísticas por diario
+        for stat in stats_por_diario:
+            diario = stat.nombre
+            tipo = stat.geographic_type or 'nacional'
+            cantidad = stat.cantidad
+            
+            if diario not in resultado['por_diario']:
+                resultado['por_diario'][diario] = {}
+            
+            resultado['por_diario'][diario][tipo] = cantidad
+        
+        return resultado
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo estadísticas geográficas: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/analytics/alertas")

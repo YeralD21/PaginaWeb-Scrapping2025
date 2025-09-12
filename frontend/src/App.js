@@ -12,6 +12,7 @@ import AlertManager from './components/AlertManager';
 import AdvancedSearch from './components/AdvancedSearch';
 import AnalyticsDashboard from './components/AnalyticsDashboard';
 import TrendingNews from './components/TrendingNews';
+import GeographicFilter from './components/GeographicFilter';
 
 const Container = styled.div`
   width: 100%;
@@ -958,6 +959,7 @@ function MainView() {
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState(null);
   const [mostrarCategorias, setMostrarCategorias] = useState(false);
   const [diarioFiltro, setDiarioFiltro] = useState(null);
+  const [geographicFilter, setGeographicFilter] = useState(null);
   const [mostrarDiarios, setMostrarDiarios] = useState(false);
   const [categoriasDisponibles, setCategoriasDisponibles] = useState([]);
   const [noticiasRelevantes, setNoticiasRelevantes] = useState([]);
@@ -967,6 +969,16 @@ function MainView() {
       fetchCategoriasDisponibles();
       fetchNoticiasRelevantes(); // Cargar noticias relevantes al inicio
   }, []);
+
+  // Efecto para recargar noticias cuando cambian los filtros
+  useEffect(() => {
+    if (categoriaSeleccionada || diarioFiltro || geographicFilter) {
+      fetchNoticiasConFiltros();
+    } else if (!fechaSeleccionada) {
+      // Si no hay filtros activos y no hay fecha seleccionada, cargar noticias recientes
+      fetchNoticiasConFiltros();
+    }
+  }, [categoriaSeleccionada, diarioFiltro, geographicFilter]);
 
   // Cerrar dropdown al hacer click fuera
   useEffect(() => {
@@ -1025,6 +1037,36 @@ function MainView() {
       setError(null);
       // También obtener noticias relevantes de días anteriores
       fetchNoticiasRelevantes(fecha);
+    } catch (error) {
+      console.error('Error fetching noticias:', error);
+      setError('Error al cargar las noticias');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchNoticiasConFiltros = async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      
+      if (categoriaSeleccionada) {
+        params.append('categoria', categoriaSeleccionada);
+      }
+      
+      if (diarioFiltro) {
+        params.append('diario', diarioFiltro);
+      }
+      
+      if (geographicFilter) {
+        params.append('geographic_type', geographicFilter);
+      }
+      
+      params.append('limit', '100');
+      
+      const response = await axios.get(`http://localhost:8000/noticias?${params.toString()}`);
+      setNoticias(response.data);
+      setError(null);
     } catch (error) {
       console.error('Error fetching noticias:', error);
       setError('Error al cargar las noticias');
@@ -1371,6 +1413,14 @@ function MainView() {
         </FiltersContent>
       </FiltersSection>
 
+      {/* Filtro Geográfico */}
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1rem' }}>
+        <GeographicFilter 
+          onFilterChange={setGeographicFilter}
+          selectedType={geographicFilter || 'todos'}
+        />
+      </div>
+
       <MainContent>
         {loading && <LoadingSpinner>Cargando noticias...</LoadingSpinner>}
         
@@ -1426,40 +1476,61 @@ function MainView() {
                 return (
                   <CardComponent key={index} onClick={() => navigate(`/noticia/${noticia.id}`)}>
                     <TitleComponent>{noticia.titulo}</TitleComponent>
-                    {/* Nuevos indicadores */}
-                    {(noticia.es_alerta || noticia.sentimiento) && (
-                      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                        {noticia.es_alerta && (
-                          <span style={{
-                            background: noticia.nivel_urgencia === 'critica' ? '#dc3545' : 
-                                       noticia.nivel_urgencia === 'alta' ? '#fd7e14' : 
-                                       noticia.nivel_urgencia === 'media' ? '#ffc107' : '#28a745',
-                            color: 'white',
-                            padding: '0.2rem 0.5rem',
-                            borderRadius: '10px',
-                            fontSize: '0.7rem',
-                            fontWeight: '600',
-                            textTransform: 'uppercase'
-                          }}>
-                            🚨 {noticia.nivel_urgencia}
-                          </span>
-                        )}
-                        {noticia.sentimiento && (
-                          <span style={{
-                            background: noticia.sentimiento === 'positivo' ? '#28a745' : 
-                                       noticia.sentimiento === 'negativo' ? '#dc3545' : '#6c757d',
-                            color: 'white',
-                            padding: '0.2rem 0.5rem',
-                            borderRadius: '10px',
-                            fontSize: '0.7rem',
-                            fontWeight: '600'
-                          }}>
-                            {noticia.sentimiento === 'positivo' ? '😊' : 
-                             noticia.sentimiento === 'negativo' ? '😞' : '😐'} {noticia.sentimiento}
-                          </span>
-                        )}
-                      </div>
-                    )}
+                    {/* Indicadores geográficos y de alerta */}
+                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+                      {/* Indicador geográfico */}
+                      {noticia.geographic_type && (
+                        <span style={{
+                          background: noticia.geographic_type === 'internacional' ? '#007bff' : 
+                                     noticia.geographic_type === 'nacional' ? '#dc3545' : 
+                                     noticia.geographic_type === 'regional' ? '#28a745' : 
+                                     noticia.geographic_type === 'local' ? '#ffc107' : '#6c757d',
+                          color: noticia.geographic_type === 'local' ? '#000' : '#fff',
+                          padding: '0.2rem 0.5rem',
+                          borderRadius: '10px',
+                          fontSize: '0.7rem',
+                          fontWeight: '600',
+                          textTransform: 'uppercase'
+                        }}>
+                          {noticia.geographic_type === 'internacional' ? '🌍' : 
+                           noticia.geographic_type === 'nacional' ? '🇵🇪' : 
+                           noticia.geographic_type === 'regional' ? '🏞️' : 
+                           noticia.geographic_type === 'local' ? '🏙️' : '📰'} 
+                          {noticia.geographic_type}
+                        </span>
+                      )}
+                      
+                      {/* Indicadores existentes */}
+                      {noticia.es_alerta && (
+                        <span style={{
+                          background: noticia.nivel_urgencia === 'critica' ? '#dc3545' : 
+                                     noticia.nivel_urgencia === 'alta' ? '#fd7e14' : 
+                                     noticia.nivel_urgencia === 'media' ? '#ffc107' : '#28a745',
+                          color: 'white',
+                          padding: '0.2rem 0.5rem',
+                          borderRadius: '10px',
+                          fontSize: '0.7rem',
+                          fontWeight: '600',
+                          textTransform: 'uppercase'
+                        }}>
+                          🚨 {noticia.nivel_urgencia}
+                        </span>
+                      )}
+                      {noticia.sentimiento && (
+                        <span style={{
+                          background: noticia.sentimiento === 'positivo' ? '#28a745' : 
+                                     noticia.sentimiento === 'negativo' ? '#dc3545' : '#6c757d',
+                          color: 'white',
+                          padding: '0.2rem 0.5rem',
+                          borderRadius: '10px',
+                          fontSize: '0.7rem',
+                          fontWeight: '600'
+                        }}>
+                          {noticia.sentimiento === 'positivo' ? '😊' : 
+                           noticia.sentimiento === 'negativo' ? '😞' : '😐'} {noticia.sentimiento}
+                        </span>
+                      )}
+                    </div>
                     <MetaComponent>
                       <div>
                         <TextNewsCategory>{noticia.categoria}</TextNewsCategory>

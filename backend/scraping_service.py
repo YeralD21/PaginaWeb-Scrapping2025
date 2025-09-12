@@ -12,6 +12,7 @@ from database import get_db
 from models import Diario, Noticia, EstadisticaScraping
 from duplicate_detector import DuplicateDetector
 from content_generator import generate_content_for_news
+from geographic_classifier import get_geographic_classification
 try:
     from alert_system import AlertSystem
 except ImportError:
@@ -125,8 +126,21 @@ class ScrapingService:
                         news_item['contenido'] = generated_content
                         print(f"✅ Contenido generado ({len(generated_content)} chars)")
                     
+                    # CLASIFICACIÓN GEOGRÁFICA AUTOMÁTICA
+                    geographic_info = get_geographic_classification(
+                        title=news_item['titulo'],
+                        content=news_item.get('contenido', '')
+                    )
+                    
                     # Preparar datos de noticia con nuevos campos
                     enhanced_news = self.duplicate_detector.prepare_news_for_save(news_item.copy())
+                    
+                    # Agregar información geográfica
+                    enhanced_news['geographic_type'] = geographic_info['geographic_type']
+                    enhanced_news['geographic_confidence'] = geographic_info['confidence']
+                    enhanced_news['geographic_keywords'] = geographic_info['keywords_found']
+                    
+                    print(f"🌍 Clasificación geográfica: {geographic_info['geographic_type']} (confianza: {geographic_info['confidence']})")
                     
                     # Crear nueva noticia con campos extendidos
                     noticia = Noticia(
@@ -146,7 +160,12 @@ class ScrapingService:
                         palabras_clave=enhanced_news.get('palabras_clave'),
                         tiempo_lectura_min=enhanced_news.get('tiempo_lectura_min', 1),
                         idioma='es',
-                        region='Peru'  # Asumir que todas las noticias son de Perú
+                        region='Peru',  # Asumir que todas las noticias son de Perú
+                        
+                        # Campos geográficos
+                        geographic_type=enhanced_news.get('geographic_type', 'nacional'),
+                        geographic_confidence=enhanced_news.get('geographic_confidence', 0.5),
+                        geographic_keywords=enhanced_news.get('geographic_keywords', {})
                     )
                     
                     # Extraer autor si es posible (campo opcional)
