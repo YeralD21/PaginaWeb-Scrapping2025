@@ -1,0 +1,28 @@
+{
+  "scraping_hours": [
+    6,
+    9,
+    12,
+    15,
+    18,
+    21
+  ],
+  "timezone": "America/Lima",
+  "max_retries": 3,
+  "retry_delay_minutes": 5,
+  "log_level": "INFO",
+  "log_rotation": true,
+  "max_log_files": 7,
+  "health_check_interval": 300,
+  "enable_notifications": true,
+  "database_timeout": 30,
+  "scraping_timeout": 600,
+  "cleanup_old_logs_days": 30,
+  "emergency_stop_after_failures": 10,
+  "run_initial_scraping": false,
+  "created_by": "quick_setup.py",
+  "created_at": "2025-09-12T08:47:29.406328",
+  "description": "Configuración automática - Sistema optimizado para extracción cada 3 horas",
+  "last_updated": "2025-09-12T08:56:18.282753",
+  "updated_by": "configure_scheduler.py"
+}
