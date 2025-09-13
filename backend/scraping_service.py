@@ -129,7 +129,8 @@ class ScrapingService:
                     # CLASIFICACIÓN GEOGRÁFICA AUTOMÁTICA
                     geographic_info = get_geographic_classification(
                         title=news_item['titulo'],
-                        content=news_item.get('contenido', '')
+                        content=news_item.get('contenido', ''),
+                        category=news_item.get('categoria', '')
                     )
                     
                     # Preparar datos de noticia con nuevos campos

@@ -63,7 +63,9 @@ const Navigation = styled.nav`
   margin-top: 1.5rem;
 `;
 
-const NavButton = styled.button`
+const NavButton = styled.button.withConfig({
+  shouldForwardProp: (prop) => prop !== 'active',
+})`
   background: ${props => props.active ? '#dc3545' : 'transparent'};
   color: white;
   border: 2px solid ${props => props.active ? '#dc3545' : 'rgba(255, 255, 255, 0.3)'};
@@ -90,6 +92,7 @@ const FiltersSection = styled.div`
   position: sticky;
   top: 120px;
   z-index: 99;
+  overflow: visible;
 `;
 
 const FiltersContent = styled.div`
@@ -101,6 +104,7 @@ const FiltersContent = styled.div`
   align-items: center;
   flex-wrap: wrap;
   gap: 1rem;
+  overflow: visible;
 `;
 
 const FilterGroup = styled.div`
@@ -127,7 +131,9 @@ const FilterButton = styled.button`
   }
 `;
 
-const DiarioFilterButton = styled.button`
+const DiarioFilterButton = styled.button.withConfig({
+  shouldForwardProp: (prop) => prop !== 'active',
+})`
   background: ${props => props.active ? '#dc3545' : 'white'};
   color: ${props => props.active ? 'white' : '#333'};
   border: 2px solid ${props => props.active ? '#dc3545' : '#e9ecef'};
@@ -200,7 +206,9 @@ const DateFilter = styled.div`
   align-items: center;
 `;
 
-const DateButton = styled.button`
+const DateButton = styled.button.withConfig({
+  shouldForwardProp: (prop) => prop !== 'active',
+})`
   background: ${props => props.active ? '#dc3545' : 'white'};
   color: ${props => props.active ? 'white' : '#333'};
   border: 2px solid ${props => props.active ? '#dc3545' : '#e9ecef'};
@@ -1406,20 +1414,19 @@ function MainView() {
                   ))}
           </DateFilter>
 
-          <FilterButton onClick={handleRefresh}>
-            <FiRefreshCw />
-            Actualizar
-          </FilterButton>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <FilterButton onClick={handleRefresh}>
+              <FiRefreshCw />
+              Actualizar
+            </FilterButton>
+            
+            <GeographicFilter 
+              onFilterChange={setGeographicFilter}
+              selectedType={geographicFilter || 'todos'}
+            />
+          </div>
         </FiltersContent>
       </FiltersSection>
-
-      {/* Filtro Geográfico */}
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1rem' }}>
-        <GeographicFilter 
-          onFilterChange={setGeographicFilter}
-          selectedType={geographicFilter || 'todos'}
-        />
-      </div>
 
       <MainContent>
         {loading && <LoadingSpinner>Cargando noticias...</LoadingSpinner>}

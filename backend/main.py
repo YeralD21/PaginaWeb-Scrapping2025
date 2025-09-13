@@ -507,7 +507,7 @@ async def get_noticias_por_fecha(
         
     except ValueError as e:
         logger.error(f"Error de formato de fecha: {e}")
-        return {"error": "Formato de fecha inválido. Use YYYY-MM-DD"}
+        raise HTTPException(status_code=400, detail="Formato de fecha inválido. Use YYYY-MM-DD")
     except Exception as e:
         logger.error(f"Error inesperado: {e}")
         raise HTTPException(status_code=500, detail=str(e))

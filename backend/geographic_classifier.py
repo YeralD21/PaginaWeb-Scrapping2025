@@ -15,7 +15,7 @@ class GeographicKeywords:
     # Países y regiones internacionales
     international_countries = [
         # Países principales
-        'estados unidos', 'eeuu', 'usa', 'washington', 'nueva york',
+        'estados unidos', 'eeuu', 'usa', 'washington', 'nueva york', 'trump', 'biden',
         'china', 'beijing', 'shanghai', 'hong kong',
         'rusia', 'moscú', 'putin', 'kremlin',
         'alemania', 'berlín', 'merkel', 'scholz',
@@ -33,6 +33,11 @@ class GeographicKeywords:
         'méxico', 'ciudad de méxico',
         'canadá', 'ottawa', 'toronto',
         'australia', 'canberra', 'sídney',
+        'venezuela', 'caracas', 'maduro',
+        'ecuador', 'quito', 'guayaquil',
+        'bolivia', 'la paz', 'santa cruz',
+        'paraguay', 'asunción',
+        'uruguay', 'montevideo',
         
         # Organismos internacionales
         'onu', 'naciones unidas', 'otan', 'nato',
@@ -153,17 +158,28 @@ class GeographicClassifier:
         pattern = r'\b(?:' + '|'.join(re.escape(kw) for kw in keywords) + r')\b'
         return re.compile(pattern, re.IGNORECASE)
     
-    def classify_news(self, title: str, content: str = "") -> Dict[str, any]:
+    def classify_news(self, title: str, content: str = "", category: str = "") -> Dict[str, any]:
         """
         Clasificar una noticia geográficamente
         
         Args:
             title: Título de la noticia
             content: Contenido de la noticia (opcional)
+            category: Categoría de la noticia (opcional)
             
         Returns:
             Dict con la clasificación y detalles
         """
+        # Si la categoría es "Mundo", clasificar directamente como internacional
+        if category and category.lower() == 'mundo':
+            return {
+                'geographic_type': 'internacional',
+                'confidence': 0.9,
+                'matches': {'internacional': 1, 'nacional': 0, 'regional': 0, 'local': 0},
+                'keywords_found': {'internacional': ['categoría mundo'], 'nacional': [], 'regional': [], 'local': []},
+                'is_mixed': False
+            }
+        
         # Combinar título y contenido para análisis
         text = f"{title} {content}".lower()
         
@@ -171,10 +187,10 @@ class GeographicClassifier:
         matches = {}
         keywords_found = {}
         
-        for category, pattern in self.patterns.items():
+        for category_key, pattern in self.patterns.items():
             found_matches = pattern.findall(text)
-            matches[category] = len(found_matches)
-            keywords_found[category] = list(set(found_matches))  # Eliminar duplicados
+            matches[category_key] = len(found_matches)
+            keywords_found[category_key] = list(set(found_matches))  # Eliminar duplicados
         
         # Determinar categoría principal
         primary_category = self._determine_primary_category(matches, text)
@@ -265,14 +281,14 @@ class GeographicClassifier:
 # Instancia global del clasificador
 geo_classifier = GeographicClassifier()
 
-def classify_geographic_type(title: str, content: str = "") -> str:
+def classify_geographic_type(title: str, content: str = "", category: str = "") -> str:
     """Función helper para clasificar tipo geográfico"""
-    result = geo_classifier.classify_news(title, content)
+    result = geo_classifier.classify_news(title, content, category)
     return result['geographic_type']
 
-def get_geographic_classification(title: str, content: str = "") -> Dict:
+def get_geographic_classification(title: str, content: str = "", category: str = "") -> Dict:
     """Función helper para obtener clasificación completa"""
-    return geo_classifier.classify_news(title, content)
+    return geo_classifier.classify_news(title, content, category)
 
 # Ejemplos de uso
 if __name__ == "__main__":

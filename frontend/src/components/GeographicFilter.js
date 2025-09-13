@@ -1,44 +1,364 @@
 import React, { useState, useEffect } from 'react';
+import styled from 'styled-components';
+import {
+  FiGlobe,
+  FiMapPin,
+  FiHome,
+  FiLayers,
+  FiFileText,
+  FiTrendingUp,
+  FiBarChart2,
+  FiRefreshCw,
+  FiChevronDown,
+  FiChevronRight,
+  FiFilter
+} from 'react-icons/fi';
+
+// Styled Components - Diseño elegante y moderno
+const Container = styled.div`
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  padding: 8px;
+  position: relative;
+  min-width: 200px;
+  flex-shrink: 0;
+`;
+
+const Header = styled.div`
+  margin-bottom: 12px;
+  text-align: center;
+`;
+
+const Title = styled.h3`
+  font-size: 16px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #1f2937, #4b5563);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0 0 2px 0;
+  letter-spacing: -0.025em;
+`;
+
+const Subtitle = styled.p`
+  color: #64748b;
+  font-size: 11px;
+  margin: 0;
+  font-weight: 500;
+`;
+
+const LoadingIndicator = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: #eff6ff;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #2563eb;
+`;
+
+const MainContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: stretch;
+  
+  @media (min-width: 500px) {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+`;
+
+const FiltersGrid = styled.div`
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: flex-start;
+`;
+
+const StatsSection = styled.div`
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  border-radius: 12px;
+  padding: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  min-width: 140px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  backdrop-filter: blur(10px);
+  flex-shrink: 0;
+`;
+
+const FilterCard = styled.button`
+  position: relative;
+  padding: 6px 10px;
+  border-radius: 12px;
+  border: 2px solid ${props => props.isSelected ? props.borderColor : 'transparent'};
+  background: ${props => props.isSelected ? 
+    `linear-gradient(135deg, ${props.bgColor}, ${props.borderColor}15)` : 
+    'rgba(255, 255, 255, 0.8)'};
+  backdrop-filter: blur(10px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  min-width: 70px;
+  text-align: center;
+  transform-origin: center;
+  box-shadow: ${props => props.isSelected ? 
+    `0 8px 25px -8px ${props.borderColor}40` : 
+    '0 2px 4px rgba(0, 0, 0, 0.05)'};
+  
+  &:hover {
+    border-color: ${props => props.borderColor};
+    background: ${props => `linear-gradient(135deg, ${props.bgColor}, ${props.borderColor}20)`};
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 12px 25px -8px ${props => props.borderColor}50;
+  }
+  
+  &:active {
+    transform: translateY(0) scale(0.98);
+  }
+`;
+
+const CardTitle = styled.div`
+  font-weight: 600;
+  font-size: 12px;
+  color: ${props => props.isSelected ? props.textColor : '#374151'};
+  margin-bottom: 2px;
+`;
+
+const StatsNumber = styled.div`
+  font-weight: 700;
+  font-size: 13px;
+  color: ${props => props.isSelected ? props.textColor : '#1f2937'};
+  transition: all 0.3s ease;
+  position: relative;
+  
+  &.updating {
+    animation: pulse 0.6s ease-in-out;
+  }
+  
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); color: #10b981; }
+    100% { transform: scale(1); }
+  }
+`;
+
+const StatsLabel = styled.div`
+  font-size: 9px;
+  color: #6b7280;
+  margin-top: 1px;
+  font-weight: 500;
+`;
+
+const StatsHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 6px;
+`;
+
+const StatsTitle = styled.h4`
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+  font-size: 12px;
+`;
+
+const StatsGrid = styled.div`
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+`;
+
+const StatCard = styled.div`
+  text-align: center;
+  padding: 4px;
+  background: white;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  min-width: 45px;
+  flex: 1;
+`;
+
+const StatNumber = styled.div`
+  font-weight: 700;
+  font-size: 11px;
+  color: ${props => props.color || '#1f2937'};
+  margin-bottom: 1px;
+  transition: all 0.3s ease;
+  
+  &.updating {
+    animation: countUp 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  @keyframes countUp {
+    0% { 
+      transform: scale(0.8) rotateX(90deg); 
+      opacity: 0; 
+    }
+    50% { 
+      transform: scale(1.05) rotateX(0deg); 
+      opacity: 1; 
+    }
+    100% { 
+      transform: scale(1) rotateX(0deg); 
+      opacity: 1; 
+    }
+  }
+`;
+
+const StatLabel = styled.div`
+  font-size: 7px;
+  color: #4b5563;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+`;
+
+const StatSubLabel = styled.div`
+  font-size: 6px;
+  color: #6b7280;
+  margin-top: 1px;
+  font-weight: 500;
+`;
+
+const ActiveFilterSection = styled.div`
+  margin-top: 12px;
+  padding: 8px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  font-size: 12px;
+`;
+
+const ActiveFilterContent = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+`;
+
+const ActiveFilterText = styled.div`
+  color: #1e40af;
+  font-weight: 500;
+`;
+
+const ClearButton = styled.button`
+  padding: 4px 8px;
+  background: white;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  
+  &:hover {
+    background: #dbeafe;
+  }
+`;
+
+const ToggleButton = styled.button`
+  width: 100%;
+  padding: 8px 12px;
+  background: white;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  
+  &:hover {
+    border-color: #9ca3af;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  &:active {
+    transform: translateY(1px);
+  }
+`;
+
+const ExpandableContent = styled.div`
+  overflow: hidden;
+  transition: all 0.3s ease;
+  width: ${props => props.isExpanded ? '700px' : '0px'};
+  opacity: ${props => props.isExpanded ? '1' : '0'};
+  position: absolute;
+  top: 0;
+  left: 100%;
+  z-index: 1000;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  margin-left: 8px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+`;
+
+const IconWrapper = styled.div`
+  transition: transform 0.3s ease;
+  transform: ${props => props.isExpanded ? 'rotate(90deg)' : 'rotate(0deg)'};
+`;
 
 const GeographicFilter = ({ onFilterChange, selectedType = 'todos' }) => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [animatingStats, setAnimatingStats] = useState(new Set());
+  const [previousStats, setPreviousStats] = useState(null);
+  const [isExpanded, setIsExpanded] = useState(false);
 
-  // Configuración de tipos geográficos
+  // Configuración de tipos geográficos - diseño compacto
   const geographicTypes = [
     { 
       key: 'todos', 
-      label: 'Todas las Noticias', 
-      icon: '📰', 
-      color: 'bg-gray-100 text-gray-800',
+      label: 'Todas', 
+      textColor: '#1e293b',
+      bgColor: '#f8fafc',
+      borderColor: '#e2e8f0',
       description: 'Ver todas las noticias sin filtro'
     },
     { 
       key: 'internacional', 
       label: 'Internacional', 
-      icon: '🌍', 
-      color: 'bg-blue-100 text-blue-800',
+      textColor: '#ffffff',
+      bgColor: '#3b82f6',
+      borderColor: '#2563eb',
       description: 'Noticias de otros países y organismos internacionales'
     },
     { 
       key: 'nacional', 
       label: 'Nacional', 
-      icon: '🇵🇪', 
-      color: 'bg-red-100 text-red-800',
+      textColor: '#ffffff',
+      bgColor: '#10b981',
+      borderColor: '#059669',
       description: 'Noticias del gobierno y política nacional'
     },
     { 
       key: 'regional', 
       label: 'Regional', 
-      icon: '🏞️', 
-      color: 'bg-green-100 text-green-800',
+      textColor: '#ffffff',
+      bgColor: '#8b5cf6',
+      borderColor: '#7c3aed',
       description: 'Noticias de las regiones del Perú'
     },
     { 
       key: 'local', 
       label: 'Local', 
-      icon: '🏙️', 
-      color: 'bg-yellow-100 text-yellow-800',
+      textColor: '#ffffff',
+      bgColor: '#f59e0b',
+      borderColor: '#d97706',
       description: 'Noticias de Lima y Callao'
     }
   ];
@@ -46,25 +366,77 @@ const GeographicFilter = ({ onFilterChange, selectedType = 'todos' }) => {
   // Cargar estadísticas geográficas
   useEffect(() => {
     loadGeographicStats();
+    
+    // Configurar actualización automática cada 30 segundos
+    const interval = setInterval(() => {
+      loadGeographicStats(true);
+    }, 30000);
+    
+    return () => clearInterval(interval);
   }, []);
 
-  const loadGeographicStats = async () => {
-    setLoading(true);
+  const loadGeographicStats = async (isAutoUpdate = false) => {
+    if (!isAutoUpdate) {
+      setLoading(true);
+    }
+    
     try {
       const response = await fetch('http://localhost:8000/analytics/geografico?dias=7');
       if (response.ok) {
         const data = await response.json();
+        
+        // Si es actualización automática, comparar y animar cambios
+        if (isAutoUpdate && stats) {
+          setPreviousStats(stats);
+          animateChanges(stats, data);
+        }
+        
         setStats(data);
       }
     } catch (error) {
       console.error('Error cargando estadísticas geográficas:', error);
     } finally {
-      setLoading(false);
+      if (!isAutoUpdate) {
+        setLoading(false);
+      }
+    }
+  };
+
+  // Animar cambios en las estadísticas
+  const animateChanges = (oldStats, newStats) => {
+    const changedStats = new Set();
+    
+    // Comparar total de noticias
+    if (oldStats.total_noticias !== newStats.total_noticias) {
+      changedStats.add('total');
+    }
+    
+    // Comparar estadísticas por tipo
+    if (oldStats.por_tipo_geografico && newStats.por_tipo_geografico) {
+      oldStats.por_tipo_geografico.forEach((oldStat, index) => {
+        const newStat = newStats.por_tipo_geografico[index];
+        if (newStat && oldStat.cantidad !== newStat.cantidad) {
+          changedStats.add(newStat.tipo);
+        }
+      });
+    }
+    
+    if (changedStats.size > 0) {
+      setAnimatingStats(changedStats);
+      
+      // Limpiar animaciones después de 1 segundo
+      setTimeout(() => {
+        setAnimatingStats(new Set());
+      }, 1000);
     }
   };
 
   const handleFilterClick = (type) => {
     onFilterChange(type === 'todos' ? null : type);
+  };
+
+  const toggleExpanded = () => {
+    setIsExpanded(!isExpanded);
   };
 
   const getStatsForType = (type) => {
@@ -80,115 +452,165 @@ const GeographicFilter = ({ onFilterChange, selectedType = 'todos' }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-          <span className="mr-2">🗺️</span>
-          Filtros Geográficos
-        </h3>
-        {loading && (
-          <div className="flex items-center text-sm text-gray-500">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-2"></div>
-            Cargando estadísticas...
-          </div>
-        )}
-      </div>
-
-      {/* Filtros en grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
-        {geographicTypes.map((type) => {
-          const isSelected = selectedType === type.key;
-          const typeStats = getStatsForType(type.key);
-          
-          return (
-            <button
-              key={type.key}
-              onClick={() => handleFilterClick(type.key)}
-              className={`
-                relative p-4 rounded-lg border-2 transition-all duration-200 text-left
-                ${isSelected 
-                  ? 'border-blue-500 bg-blue-50 shadow-md transform scale-105' 
-                  : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
-                }
-              `}
-              title={type.description}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-2xl">{type.icon}</span>
-                {isSelected && (
-                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                )}
-              </div>
-              
-              <div className="text-sm font-medium text-gray-800 mb-1">
-                {type.label}
-              </div>
-              
-              {typeStats && (
-                <div className="text-xs text-gray-600">
-                  <div className="font-semibold">{typeStats.cantidad} noticias</div>
-                  <div>{typeStats.porcentaje}% del total</div>
-                </div>
-              )}
-              
-              {type.key === 'todos' && stats && (
-                <div className="text-xs text-gray-600">
-                  <div className="font-semibold">{getTotalNews()} noticias</div>
-                  <div>Últimos 7 días</div>
-                </div>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Estadísticas detalladas */}
-      {stats && (
-        <div className="border-t pt-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            <div className="text-center">
-              <div className="font-semibold text-lg text-gray-800">
-                {getTotalNews()}
-              </div>
-              <div className="text-gray-600">Total Noticias</div>
-              <div className="text-xs text-gray-500">Últimos 7 días</div>
-            </div>
-            
-            {stats.por_tipo_geografico?.slice(0, 3).map((stat, index) => (
-              <div key={stat.tipo} className="text-center">
-                <div className="font-semibold text-lg text-gray-800">
-                  {stat.cantidad}
-                </div>
-                <div className="text-gray-600 capitalize">{stat.tipo}</div>
-                <div className="text-xs text-gray-500">{stat.porcentaje}%</div>
-              </div>
-            ))}
-          </div>
+    <Container>
+      {/* Botón de toggle */}
+      <ToggleButton onClick={toggleExpanded}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <FiFilter style={{ width: '14px', height: '14px', color: '#6b7280' }} />
+          <span>Filtrar Geográficamente</span>
         </div>
-      )}
+        <IconWrapper isExpanded={isExpanded}>
+          <FiChevronRight style={{ width: '14px', height: '14px', color: '#6b7280' }} />
+        </IconWrapper>
+      </ToggleButton>
 
-      {/* Indicador de filtro activo */}
-      {selectedType && selectedType !== 'todos' && (
-        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center text-blue-800">
-              <span className="mr-2">
-                {geographicTypes.find(t => t.key === selectedType)?.icon}
-              </span>
-              <span className="font-medium">
-                Filtro activo: {geographicTypes.find(t => t.key === selectedType)?.label}
+      {/* Contenido desplegable */}
+      <ExpandableContent isExpanded={isExpanded}>
+        <div style={{ 
+          padding: '8px 16px', 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '16px',
+          width: '100%',
+          minHeight: '40px'
+        }}>
+          {/* Título y filtros */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <FiFilter style={{ width: '16px', height: '16px', color: '#6b7280' }} />
+              <span style={{ 
+                fontSize: '14px', 
+                fontWeight: '600', 
+                color: '#374151',
+                letterSpacing: '0.3px'
+              }}>
+                Filtros:
               </span>
             </div>
-            <button
-              onClick={() => handleFilterClick('todos')}
-              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-            >
-              Limpiar filtro
-            </button>
+
+            <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+              {geographicTypes.map((type) => {
+                const isSelected = selectedType === type.key;
+                const typeStats = getStatsForType(type.key);
+                
+                return (
+                  <button
+                    key={type.key}
+                    onClick={() => handleFilterClick(type.key)}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      border: `2px solid ${isSelected ? type.borderColor : '#e5e7eb'}`,
+                      background: isSelected ? type.bgColor : 'white',
+                      color: isSelected ? type.textColor : '#6b7280',
+                      fontSize: '13px',
+                      fontWeight: isSelected ? '600' : '500',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      minWidth: '70px',
+                      justifyContent: 'center',
+                      boxShadow: isSelected ? '0 2px 4px rgba(0, 0, 0, 0.1)' : 'none',
+                      transform: isSelected ? 'translateY(-1px)' : 'translateY(0)'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isSelected) {
+                        e.target.style.background = '#f9fafb';
+                        e.target.style.borderColor = '#d1d5db';
+                        e.target.style.transform = 'translateY(-1px)';
+                        e.target.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isSelected) {
+                        e.target.style.background = 'white';
+                        e.target.style.borderColor = '#e5e7eb';
+                        e.target.style.transform = 'translateY(0)';
+                        e.target.style.boxShadow = 'none';
+                      }
+                    }}
+                  >
+                    <span style={{ fontSize: '13px', fontWeight: 'inherit' }}>{type.label}</span>
+                    {typeStats && (
+                      <span style={{ 
+                        fontSize: '12px', 
+                        fontWeight: '700',
+                        opacity: isSelected ? '0.9' : '0.7',
+                        background: isSelected ? 'rgba(255, 255, 255, 0.2)' : '#f3f4f6',
+                        color: isSelected ? 'white' : '#374151',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        minWidth: '20px',
+                        textAlign: 'center'
+                      }}>
+                        {typeStats.cantidad}
+                      </span>
+                    )}
+                    {type.key === 'todos' && stats && (
+                      <span style={{ 
+                        fontSize: '12px', 
+                        fontWeight: '700',
+                        opacity: isSelected ? '0.9' : '0.7',
+                        background: isSelected ? 'rgba(255, 255, 255, 0.2)' : '#f3f4f6',
+                        color: isSelected ? 'white' : '#374151',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        minWidth: '20px',
+                        textAlign: 'center'
+                      }}>
+                        {getTotalNews()}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
+
+
+          {/* Filtro activo */}
+          {selectedType && selectedType !== 'todos' && (
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px',
+              padding: '6px 12px',
+              background: '#dbeafe',
+              borderRadius: '8px',
+              border: '1px solid #93c5fd',
+              marginLeft: 'auto'
+            }}>
+              <span style={{ fontSize: '13px', color: '#1e40af', fontWeight: '500' }}>
+                Filtro: {geographicTypes.find(t => t.key === selectedType)?.label}
+              </span>
+              <button
+                onClick={() => handleFilterClick('todos')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#1e40af',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                  fontWeight: '600'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.background = '#bfdbfe';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = 'none';
+                }}
+              >
+                Limpiar
+              </button>
+            </div>
+          )}
         </div>
-      )}
-    </div>
+      </ExpandableContent>
+    </Container>
   );
 };
 
