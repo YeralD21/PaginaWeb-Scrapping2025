@@ -2,9 +2,10 @@
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from scraper_correo import ScraperCorreo
+from scraper_correo_optimized import ScraperCorreoOptimized
 from scraper_comercio import ScraperComercio
-from scraper_popular import ScraperPopular
+from scraper_popular_improved import ScraperPopularImproved
+from scraper_cnn_final import ScraperCNNFinal
 from datetime import datetime
 import logging
 
@@ -14,9 +15,10 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 class MainScraper:
     def __init__(self):
         self.scrapers = {
-            'correo': ScraperCorreo(),
+            'correo': ScraperCorreoOptimized(),
             'comercio': ScraperComercio(),
-            'popular': ScraperPopular()
+            'popular': ScraperPopularImproved(),
+            'cnn': ScraperCNNFinal()
         }
     
     def scrape_all(self):

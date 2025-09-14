@@ -321,7 +321,7 @@ const AdvancedSearch = () => {
   const [categorias, setCategorias] = useState([]);
   const [sortBy, setSortBy] = useState('fecha');
 
-  const diarios = ['El Comercio', 'Diario Correo', 'El Popular'];
+  const diarios = ['El Comercio', 'Diario Correo', 'El Popular', 'CNN en Español'];
   const sentimientos = ['positivo', 'negativo', 'neutral'];
 
   useEffect(() => {

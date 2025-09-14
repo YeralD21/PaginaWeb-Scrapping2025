@@ -1368,6 +1368,12 @@ function MainView() {
                   >
                     El Popular
                   </CategoriaOption>
+                  <CategoriaOption 
+                    className={diarioFiltro === 'CNN en Español' ? 'active' : ''}
+                    onClick={() => handleDiarioFiltro('CNN en Español')}
+                  >
+                    CNN en Español
+                  </CategoriaOption>
                 </CategoriaDropdownContent>
               )}
             </CategoriaDropdown>
