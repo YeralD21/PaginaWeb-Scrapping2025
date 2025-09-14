@@ -73,66 +73,77 @@ class ScraperComercio:
             logging.warning(f"Error extrayendo contenido completo de {article_url}: {e}")
             return ""
         
-    def get_deportes(self) -> List[Dict]:
-        """Extrae noticias de la sección Deportes"""
+    def get_deportes(self, max_pages=3) -> List[Dict]:
+        """Extrae noticias de la sección Deportes con paginación"""
         try:
-            url = f"{self.base_url}/deportes/"
-            response = self.session.get(url)
-            response.raise_for_status()
-            
-            soup = BeautifulSoup(response.content, 'html.parser')
             noticias = []
             
-            # Buscar artículos de deportes
-            articles = soup.find_all('article') or soup.find_all('div', class_='story-item')
-            
-            for article in articles[:10]:
-                try:
-                    title_elem = article.find('h2') or article.find('h3') or article.find('a')
-                    if not title_elem:
-                        continue
+            for page in range(1, max_pages + 1):
+                if page == 1:
+                    url = f"{self.base_url}/deportes/"
+                else:
+                    # El Comercio usa diferentes formatos de paginación
+                    url = f"{self.base_url}/deportes/?page={page}"
+                
+                response = self.session.get(url)
+                response.raise_for_status()
+                
+                soup = BeautifulSoup(response.content, 'html.parser')
+                
+                # Buscar artículos de deportes
+                articles = soup.find_all('article') or soup.find_all('div', class_='story-item')
+                
+                for article in articles[:15]:  # Aumentar de 10 a 15 por página
+                    try:
+                        title_elem = article.find('h2') or article.find('h3') or article.find('a')
+                        if not title_elem:
+                            continue
+                            
+                        title = title_elem.get_text(strip=True)
+                        link_elem = article.find('a')
+                        link = link_elem.get('href') if link_elem else None
                         
-                    title = title_elem.get_text(strip=True)
-                    link_elem = article.find('a')
-                    link = link_elem.get('href') if link_elem else None
-                    
-                    if link and not link.startswith('http'):
-                        link = self.base_url + link
-                    
-                    # Extraer contenido completo del artículo
-                    print(f"🔍 Extrayendo contenido de El Comercio: {link}")
-                    content = self.get_full_article_content(link)
-                    
-                    # Si no se pudo obtener contenido completo, usar resumen local
-                    if not content:
-                        content_elem = article.find('p')
-                        content = content_elem.get_text(strip=True) if content_elem else ""
-                    
-                    # Buscar imagen
-                    imagen_url = None
-                    img_elem = article.find('img')
-                    if img_elem:
-                        imagen_url = img_elem.get('src') or img_elem.get('data-src')
-                        if imagen_url and not imagen_url.startswith('http'):
-                            imagen_url = self.base_url + imagen_url
-                    
-                    # Para El Comercio, asumir que las noticias son del día actual
-                    # ya que no tienen fechas específicas en la página principal
-                    fecha_actual = datetime.now().date()
-                    
-                    noticias.append({
-                        'titulo': title,
-                        'contenido': content,
-                        'enlace': link,
-                        'imagen_url': imagen_url,
-                        'categoria': 'Deportes',
-                        'diario': 'El Comercio',
-                        'fecha_publicacion': fecha_actual,
-                        'fecha_extraccion': datetime.now().isoformat()
-                    })
-                except Exception as e:
-                    logging.warning(f"Error procesando artículo de deportes: {e}")
-                    continue
+                        if link and not link.startswith('http'):
+                            link = self.base_url + link
+                        
+                        # Extraer contenido completo del artículo
+                        print(f"🔍 Extrayendo contenido de El Comercio: {link}")
+                        content = self.get_full_article_content(link)
+                        
+                        # Si no se pudo obtener contenido completo, usar resumen local
+                        if not content:
+                            content_elem = article.find('p')
+                            content = content_elem.get_text(strip=True) if content_elem else ""
+                        
+                        # Buscar imagen
+                        imagen_url = None
+                        img_elem = article.find('img')
+                        if img_elem:
+                            imagen_url = img_elem.get('src') or img_elem.get('data-src')
+                            if imagen_url and not imagen_url.startswith('http'):
+                                imagen_url = self.base_url + imagen_url
+                        
+                        # Para El Comercio, asumir que las noticias son del día actual
+                        # ya que no tienen fechas específicas en la página principal
+                        fecha_actual = datetime.now().date()
+                        
+                        noticias.append({
+                            'titulo': title,
+                            'contenido': content,
+                            'enlace': link,
+                            'imagen_url': imagen_url,
+                            'categoria': 'Deportes',
+                            'diario': 'El Comercio',
+                            'fecha_publicacion': fecha_actual,
+                            'fecha_extraccion': datetime.now().isoformat()
+                        })
+                    except Exception as e:
+                        logging.warning(f"Error procesando artículo de deportes: {e}")
+                        continue
+                
+                # Si no hay más artículos en esta página, salir del bucle
+                if len(articles) < 5:
+                    break
                     
             return noticias
             
@@ -140,64 +151,74 @@ class ScraperComercio:
             logging.error(f"Error obteniendo deportes de El Comercio: {e}")
             return []
     
-    def get_economia(self) -> List[Dict]:
-        """Extrae noticias de la sección Economía"""
+    def get_economia(self, max_pages=3) -> List[Dict]:
+        """Extrae noticias de la sección Economía con paginación"""
         try:
-            url = f"{self.base_url}/economia/"
-            response = self.session.get(url)
-            response.raise_for_status()
-            
-            soup = BeautifulSoup(response.content, 'html.parser')
             noticias = []
             
-            articles = soup.find_all('article') or soup.find_all('div', class_='story-item')
-            
-            for article in articles[:10]:
-                try:
-                    title_elem = article.find('h2') or article.find('h3') or article.find('a')
-                    if not title_elem:
-                        continue
+            for page in range(1, max_pages + 1):
+                if page == 1:
+                    url = f"{self.base_url}/economia/"
+                else:
+                    url = f"{self.base_url}/economia/?page={page}"
+                
+                response = self.session.get(url)
+                response.raise_for_status()
+                
+                soup = BeautifulSoup(response.content, 'html.parser')
+                
+                articles = soup.find_all('article') or soup.find_all('div', class_='story-item')
+                
+                for article in articles[:15]:  # Aumentar de 10 a 15 por página
+                    try:
+                        title_elem = article.find('h2') or article.find('h3') or article.find('a')
+                        if not title_elem:
+                            continue
+                            
+                        title = title_elem.get_text(strip=True)
+                        link_elem = article.find('a')
+                        link = link_elem.get('href') if link_elem else None
                         
-                    title = title_elem.get_text(strip=True)
-                    link_elem = article.find('a')
-                    link = link_elem.get('href') if link_elem else None
-                    
-                    if link and not link.startswith('http'):
-                        link = self.base_url + link
-                    
-                    # Extraer contenido completo del artículo
-                    print(f"🔍 Extrayendo contenido de El Comercio: {link}")
-                    content = self.get_full_article_content(link)
-                    
-                    # Si no se pudo obtener contenido completo, usar resumen local
-                    if not content:
-                        content_elem = article.find('p')
-                        content = content_elem.get_text(strip=True) if content_elem else ""
-                    
-                    # Buscar imagen
-                    imagen_url = None
-                    img_elem = article.find('img')
-                    if img_elem:
-                        imagen_url = img_elem.get('src') or img_elem.get('data-src')
-                        if imagen_url and not imagen_url.startswith('http'):
-                            imagen_url = self.base_url + imagen_url
-                    
-                    # Para El Comercio, asumir que las noticias son del día actual
-                    fecha_actual = datetime.now().date()
-                    
-                    noticias.append({
-                        'titulo': title,
-                        'contenido': content,
-                        'enlace': link,
-                        'imagen_url': imagen_url,
-                        'categoria': 'Economía',
-                        'diario': 'El Comercio',
-                        'fecha_publicacion': fecha_actual,
-                        'fecha_extraccion': datetime.now().isoformat()
-                    })
-                except Exception as e:
-                    logging.warning(f"Error procesando artículo de economía: {e}")
-                    continue
+                        if link and not link.startswith('http'):
+                            link = self.base_url + link
+                        
+                        # Extraer contenido completo del artículo
+                        print(f"🔍 Extrayendo contenido de El Comercio: {link}")
+                        content = self.get_full_article_content(link)
+                        
+                        # Si no se pudo obtener contenido completo, usar resumen local
+                        if not content:
+                            content_elem = article.find('p')
+                            content = content_elem.get_text(strip=True) if content_elem else ""
+                        
+                        # Buscar imagen
+                        imagen_url = None
+                        img_elem = article.find('img')
+                        if img_elem:
+                            imagen_url = img_elem.get('src') or img_elem.get('data-src')
+                            if imagen_url and not imagen_url.startswith('http'):
+                                imagen_url = self.base_url + imagen_url
+                        
+                        # Para El Comercio, asumir que las noticias son del día actual
+                        fecha_actual = datetime.now().date()
+                        
+                        noticias.append({
+                            'titulo': title,
+                            'contenido': content,
+                            'enlace': link,
+                            'imagen_url': imagen_url,
+                            'categoria': 'Economía',
+                            'diario': 'El Comercio',
+                            'fecha_publicacion': fecha_actual,
+                            'fecha_extraccion': datetime.now().isoformat()
+                        })
+                    except Exception as e:
+                        logging.warning(f"Error procesando artículo de economía: {e}")
+                        continue
+                
+                # Si no hay más artículos en esta página, salir del bucle
+                if len(articles) < 5:
+                    break
                     
             return noticias
             
@@ -205,69 +226,213 @@ class ScraperComercio:
             logging.error(f"Error obteniendo economía de El Comercio: {e}")
             return []
     
-    def get_mundo(self) -> List[Dict]:
-        """Extrae noticias de la sección Mundo"""
+    def get_mundo(self, max_pages=3) -> List[Dict]:
+        """Extrae noticias de la sección Mundo con paginación"""
         try:
-            url = f"{self.base_url}/mundo/"
-            response = self.session.get(url)
-            response.raise_for_status()
-            
-            soup = BeautifulSoup(response.content, 'html.parser')
             noticias = []
             
-            articles = soup.find_all('article') or soup.find_all('div', class_='story-item')
-            
-            for article in articles[:10]:
-                try:
-                    title_elem = article.find('h2') or article.find('h3') or article.find('a')
-                    if not title_elem:
-                        continue
+            for page in range(1, max_pages + 1):
+                if page == 1:
+                    url = f"{self.base_url}/mundo/"
+                else:
+                    url = f"{self.base_url}/mundo/?page={page}"
+                
+                response = self.session.get(url)
+                response.raise_for_status()
+                
+                soup = BeautifulSoup(response.content, 'html.parser')
+                
+                articles = soup.find_all('article') or soup.find_all('div', class_='story-item')
+                
+                for article in articles[:15]:  # Aumentar de 10 a 15 por página
+                    try:
+                        title_elem = article.find('h2') or article.find('h3') or article.find('a')
+                        if not title_elem:
+                            continue
+                            
+                        title = title_elem.get_text(strip=True)
+                        link_elem = article.find('a')
+                        link = link_elem.get('href') if link_elem else None
                         
-                    title = title_elem.get_text(strip=True)
-                    link_elem = article.find('a')
-                    link = link_elem.get('href') if link_elem else None
-                    
-                    if link and not link.startswith('http'):
-                        link = self.base_url + link
-                    
-                    # Extraer contenido completo del artículo
-                    print(f"🔍 Extrayendo contenido de El Comercio: {link}")
-                    content = self.get_full_article_content(link)
-                    
-                    # Si no se pudo obtener contenido completo, usar resumen local
-                    if not content:
-                        content_elem = article.find('p')
-                        content = content_elem.get_text(strip=True) if content_elem else ""
-                    
-                    # Buscar imagen
-                    imagen_url = None
-                    img_elem = article.find('img')
-                    if img_elem:
-                        imagen_url = img_elem.get('src') or img_elem.get('data-src')
-                        if imagen_url and not imagen_url.startswith('http'):
-                            imagen_url = self.base_url + imagen_url
-                    
-                    # Para El Comercio, asumir que las noticias son del día actual
-                    fecha_actual = datetime.now().date()
-                    
-                    noticias.append({
-                        'titulo': title,
-                        'contenido': content,
-                        'enlace': link,
-                        'imagen_url': imagen_url,
-                        'categoria': 'Mundo',
-                        'diario': 'El Comercio',
-                        'fecha_publicacion': fecha_actual,
-                        'fecha_extraccion': datetime.now().isoformat()
-                    })
-                except Exception as e:
-                    logging.warning(f"Error procesando artículo de mundo: {e}")
-                    continue
+                        if link and not link.startswith('http'):
+                            link = self.base_url + link
+                        
+                        # Extraer contenido completo del artículo
+                        print(f"🔍 Extrayendo contenido de El Comercio: {link}")
+                        content = self.get_full_article_content(link)
+                        
+                        # Si no se pudo obtener contenido completo, usar resumen local
+                        if not content:
+                            content_elem = article.find('p')
+                            content = content_elem.get_text(strip=True) if content_elem else ""
+                        
+                        # Buscar imagen
+                        imagen_url = None
+                        img_elem = article.find('img')
+                        if img_elem:
+                            imagen_url = img_elem.get('src') or img_elem.get('data-src')
+                            if imagen_url and not imagen_url.startswith('http'):
+                                imagen_url = self.base_url + imagen_url
+                        
+                        # Para El Comercio, asumir que las noticias son del día actual
+                        fecha_actual = datetime.now().date()
+                        
+                        noticias.append({
+                            'titulo': title,
+                            'contenido': content,
+                            'enlace': link,
+                            'imagen_url': imagen_url,
+                            'categoria': 'Mundo',
+                            'diario': 'El Comercio',
+                            'fecha_publicacion': fecha_actual,
+                            'fecha_extraccion': datetime.now().isoformat()
+                        })
+                    except Exception as e:
+                        logging.warning(f"Error procesando artículo de mundo: {e}")
+                        continue
+                
+                # Si no hay más artículos en esta página, salir del bucle
+                if len(articles) < 5:
+                    break
                     
             return noticias
             
         except Exception as e:
             logging.error(f"Error obteniendo mundo de El Comercio: {e}")
+            return []
+
+    def get_politica(self, max_pages=3) -> List[Dict]:
+        """Extrae noticias de la sección Política"""
+        try:
+            noticias = []
+            
+            for page in range(1, max_pages + 1):
+                if page == 1:
+                    url = f"{self.base_url}/politica/"
+                else:
+                    url = f"{self.base_url}/politica/page/{page}/"
+                
+                response = self.session.get(url)
+                response.raise_for_status()
+                
+                soup = BeautifulSoup(response.content, 'html.parser')
+                articles = soup.find_all('article') or soup.find_all('div', class_='story-item')
+                
+                for article in articles[:15]:
+                    try:
+                        title_elem = article.find('h2') or article.find('h3') or article.find('a')
+                        if not title_elem:
+                            continue
+                            
+                        title = title_elem.get_text(strip=True)
+                        link_elem = article.find('a')
+                        link = link_elem.get('href') if link_elem else None
+                        
+                        if link and not link.startswith('http'):
+                            link = self.base_url + link
+                        
+                        content = self.get_full_article_content(link)
+                        if not content:
+                            content_elem = article.find('p')
+                            content = content_elem.get_text(strip=True) if content_elem else ""
+                        
+                        imagen_url = None
+                        img_elem = article.find('img')
+                        if img_elem:
+                            imagen_url = img_elem.get('src') or img_elem.get('data-src')
+                            if imagen_url and not imagen_url.startswith('http'):
+                                imagen_url = self.base_url + imagen_url
+                        
+                        fecha_actual = datetime.now().date()
+                        
+                        noticias.append({
+                            'titulo': title,
+                            'contenido': content,
+                            'enlace': link,
+                            'imagen_url': imagen_url,
+                            'categoria': 'Política',
+                            'diario': 'El Comercio',
+                            'fecha_publicacion': fecha_actual,
+                            'fecha_extraccion': datetime.now().isoformat()
+                        })
+                    except Exception as e:
+                        logging.warning(f"Error procesando artículo de política: {e}")
+                        continue
+                
+                if len(articles) < 5:
+                    break
+                    
+            return noticias
+            
+        except Exception as e:
+            logging.error(f"Error obteniendo política de El Comercio: {e}")
+            return []
+
+    def get_sociedad(self, max_pages=3) -> List[Dict]:
+        """Extrae noticias de la sección Sociedad"""
+        try:
+            noticias = []
+            
+            for page in range(1, max_pages + 1):
+                if page == 1:
+                    url = f"{self.base_url}/sociedad/"
+                else:
+                    url = f"{self.base_url}/sociedad/page/{page}/"
+                
+                response = self.session.get(url)
+                response.raise_for_status()
+                
+                soup = BeautifulSoup(response.content, 'html.parser')
+                articles = soup.find_all('article') or soup.find_all('div', class_='story-item')
+                
+                for article in articles[:15]:
+                    try:
+                        title_elem = article.find('h2') or article.find('h3') or article.find('a')
+                        if not title_elem:
+                            continue
+                            
+                        title = title_elem.get_text(strip=True)
+                        link_elem = article.find('a')
+                        link = link_elem.get('href') if link_elem else None
+                        
+                        if link and not link.startswith('http'):
+                            link = self.base_url + link
+                        
+                        content = self.get_full_article_content(link)
+                        if not content:
+                            content_elem = article.find('p')
+                            content = content_elem.get_text(strip=True) if content_elem else ""
+                        
+                        imagen_url = None
+                        img_elem = article.find('img')
+                        if img_elem:
+                            imagen_url = img_elem.get('src') or img_elem.get('data-src')
+                            if imagen_url and not imagen_url.startswith('http'):
+                                imagen_url = self.base_url + imagen_url
+                        
+                        fecha_actual = datetime.now().date()
+                        
+                        noticias.append({
+                            'titulo': title,
+                            'contenido': content,
+                            'enlace': link,
+                            'imagen_url': imagen_url,
+                            'categoria': 'Sociedad',
+                            'diario': 'El Comercio',
+                            'fecha_publicacion': fecha_actual,
+                            'fecha_extraccion': datetime.now().isoformat()
+                        })
+                    except Exception as e:
+                        logging.warning(f"Error procesando artículo de sociedad: {e}")
+                        continue
+                
+                if len(articles) < 5:
+                    break
+                    
+            return noticias
+            
+        except Exception as e:
+            logging.error(f"Error obteniendo sociedad de El Comercio: {e}")
             return []
 
     def get_all_news(self) -> List[Dict]:
@@ -276,6 +441,8 @@ class ScraperComercio:
         all_news.extend(self.get_deportes())
         all_news.extend(self.get_economia())
         all_news.extend(self.get_mundo())
+        all_news.extend(self.get_politica())
+        all_news.extend(self.get_sociedad())
         return all_news
 
 if __name__ == "__main__":

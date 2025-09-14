@@ -38,7 +38,7 @@ const DiarioComercio = () => {
   const loadNoticiasComercio = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:8000/noticias?limit=500');
+      const response = await fetch('http://localhost:8000/noticias?limit=100');
       const data = await response.json();
       
       // Filtrar noticias de El Comercio
@@ -275,13 +275,11 @@ const DiarioComercio = () => {
         zIndex: 100,
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
       }}>
-         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-           <img src="/images/logos/comercio.png" alt="El Comercio" style={{ height: '60px', width: 'auto', maxWidth: '400px', objectFit: 'contain' }} />
-           <button
+        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <img src="/images/logos/comercio.png" alt="El Comercio" style={{ height: '60px', width: 'auto', maxWidth: '400px', objectFit: 'contain' }} />
+          <button
             onClick={() => setMostrarSeccionSuscripcion(true)}
             style={{
-              position: 'absolute',
-              right: '2rem',
               background: '#1a1a1a',
               color: 'white',
               border: 'none',
@@ -870,3 +868,4 @@ const DiarioComercio = () => {
 };
 
 export default DiarioComercio;
+
