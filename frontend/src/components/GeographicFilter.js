@@ -16,13 +16,13 @@ import {
 
 // Styled Components - Diseño elegante y moderno
 const Container = styled.div`
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e5e7eb;
-  padding: 8px;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  border: none;
+  padding: 0;
   position: relative;
-  min-width: 200px;
+  min-width: auto;
   flex-shrink: 0;
 `;
 
@@ -262,54 +262,56 @@ const ClearButton = styled.button`
 `;
 
 const ToggleButton = styled.button`
-  width: 100%;
-  padding: 8px 12px;
+  padding: 0.5rem 1rem;
   background: white;
-  color: #374151;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 500;
+  color: #495057;
+  border: 1px solid #e9ecef;
+  border-radius: 25px;
+  font-size: 0.9rem;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  gap: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   
   &:hover {
-    border-color: #9ca3af;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-color: #dc3545;
+    color: #dc3545;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-1px);
   }
   
   &:active {
-    transform: translateY(1px);
+    transform: translateY(0);
   }
 `;
 
 const ExpandableContent = styled.div`
   overflow: hidden;
   transition: all 0.3s ease;
-  width: ${props => props.isExpanded ? '700px' : '0px'};
+  max-height: ${props => props.isExpanded ? '400px' : '0px'};
   opacity: ${props => props.isExpanded ? '1' : '0'};
   position: absolute;
-  top: 0;
-  left: 100%;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 1000;
   background: white;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  margin-left: 8px;
-  height: 100%;
+  border-radius: 12px;
+  box-shadow: 0 8px 25px -8px rgba(0, 0, 0, 0.2);
+  margin-top: 8px;
   display: flex;
-  align-items: center;
-  min-width: 0;
+  flex-direction: column;
+  min-width: 300px;
+  max-width: 500px;
 `;
 
 const IconWrapper = styled.div`
   transition: transform 0.3s ease;
-  transform: ${props => props.isExpanded ? 'rotate(90deg)' : 'rotate(0deg)'};
+  transform: ${props => props.isExpanded ? 'rotate(180deg)' : 'rotate(0deg)'};
 `;
 
 const GeographicFilter = ({ onFilterChange, selectedType = 'todos' }) => {
@@ -460,130 +462,130 @@ const GeographicFilter = ({ onFilterChange, selectedType = 'todos' }) => {
           <span>Filtrar Geográficamente</span>
         </div>
         <IconWrapper isExpanded={isExpanded}>
-          <FiChevronRight style={{ width: '14px', height: '14px', color: '#6b7280' }} />
+          <FiChevronDown style={{ width: '14px', height: '14px', color: '#6b7280' }} />
         </IconWrapper>
       </ToggleButton>
 
       {/* Contenido desplegable */}
       <ExpandableContent isExpanded={isExpanded}>
         <div style={{ 
-          padding: '8px 16px', 
+          padding: '6px 10px', 
           display: 'flex', 
-          alignItems: 'center', 
-          gap: '16px',
-          width: '100%',
-          minHeight: '40px'
+          flexDirection: 'column',
+          gap: '6px',
+          width: '100%'
         }}>
-          {/* Título y filtros */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <FiFilter style={{ width: '16px', height: '16px', color: '#6b7280' }} />
-              <span style={{ 
-                fontSize: '14px', 
-                fontWeight: '600', 
-                color: '#374151',
-                letterSpacing: '0.3px'
-              }}>
-                Filtros:
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-              {geographicTypes.map((type) => {
-                const isSelected = selectedType === type.key;
-                const typeStats = getStatsForType(type.key);
-                
-                return (
-                  <button
-                    key={type.key}
-                    onClick={() => handleFilterClick(type.key)}
-                    style={{
-                      padding: '6px 12px',
-                      borderRadius: '8px',
-                      border: `2px solid ${isSelected ? type.borderColor : '#e5e7eb'}`,
-                      background: isSelected ? type.bgColor : 'white',
-                      color: isSelected ? type.textColor : '#6b7280',
-                      fontSize: '13px',
-                      fontWeight: isSelected ? '600' : '500',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      minWidth: '70px',
-                      justifyContent: 'center',
-                      boxShadow: isSelected ? '0 2px 4px rgba(0, 0, 0, 0.1)' : 'none',
-                      transform: isSelected ? 'translateY(-1px)' : 'translateY(0)'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isSelected) {
-                        e.target.style.background = '#f9fafb';
-                        e.target.style.borderColor = '#d1d5db';
-                        e.target.style.transform = 'translateY(-1px)';
-                        e.target.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isSelected) {
-                        e.target.style.background = 'white';
-                        e.target.style.borderColor = '#e5e7eb';
-                        e.target.style.transform = 'translateY(0)';
-                        e.target.style.boxShadow = 'none';
-                      }
-                    }}
-                  >
-                    <span style={{ fontSize: '13px', fontWeight: 'inherit' }}>{type.label}</span>
-                    {typeStats && (
-                      <span style={{ 
-                        fontSize: '12px', 
-                        fontWeight: '700',
-                        opacity: isSelected ? '0.9' : '0.7',
-                        background: isSelected ? 'rgba(255, 255, 255, 0.2)' : '#f3f4f6',
-                        color: isSelected ? 'white' : '#374151',
-                        padding: '2px 6px',
-                        borderRadius: '4px',
-                        minWidth: '20px',
-                        textAlign: 'center'
-                      }}>
-                        {typeStats.cantidad}
-                      </span>
-                    )}
-                    {type.key === 'todos' && stats && (
-                      <span style={{ 
-                        fontSize: '12px', 
-                        fontWeight: '700',
-                        opacity: isSelected ? '0.9' : '0.7',
-                        background: isSelected ? 'rgba(255, 255, 255, 0.2)' : '#f3f4f6',
-                        color: isSelected ? 'white' : '#374151',
-                        padding: '2px 6px',
-                        borderRadius: '4px',
-                        minWidth: '20px',
-                        textAlign: 'center'
-                      }}>
-                        {getTotalNews()}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+          {/* Título */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <FiFilter style={{ width: '16px', height: '16px', color: '#6b7280' }} />
+            <span style={{ 
+              fontSize: '14px', 
+              fontWeight: '600', 
+              color: '#374151',
+              letterSpacing: '0.3px'
+            }}>
+              Filtros:
+            </span>
           </div>
 
+          {/* Filtros en grid de 2 columnas */}
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: '4px',
+            width: '100%'
+          }}>
+            {geographicTypes.map((type) => {
+              const isSelected = selectedType === type.key;
+              const typeStats = getStatsForType(type.key);
+              
+              return (
+                <button
+                  key={type.key}
+                  onClick={() => handleFilterClick(type.key)}
+                  style={{
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    border: `1px solid ${isSelected ? type.borderColor : '#e5e7eb'}`,
+                    background: isSelected ? type.bgColor : 'white',
+                    color: isSelected ? type.textColor : '#6b7280',
+                    fontSize: '11px',
+                    fontWeight: isSelected ? '600' : '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    boxShadow: isSelected ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'none',
+                    transform: isSelected ? 'translateY(-1px)' : 'translateY(0)',
+                    minHeight: '28px'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isSelected) {
+                      e.target.style.background = '#f9fafb';
+                      e.target.style.borderColor = '#d1d5db';
+                      e.target.style.transform = 'translateY(-1px)';
+                      e.target.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isSelected) {
+                      e.target.style.background = 'white';
+                      e.target.style.borderColor = '#e5e7eb';
+                      e.target.style.transform = 'translateY(0)';
+                      e.target.style.boxShadow = 'none';
+                    }
+                  }}
+                >
+                  <span style={{ fontSize: '11px', fontWeight: 'inherit' }}>{type.label}</span>
+                  {typeStats && (
+                    <span style={{ 
+                      fontSize: '9px', 
+                      fontWeight: '700',
+                      opacity: isSelected ? '0.9' : '0.7',
+                      background: isSelected ? 'rgba(255, 255, 255, 0.2)' : '#f3f4f6',
+                      color: isSelected ? 'white' : '#374151',
+                      padding: '1px 3px',
+                      borderRadius: '2px',
+                      minWidth: '16px',
+                      textAlign: 'center'
+                    }}>
+                      {typeStats.cantidad}
+                    </span>
+                  )}
+                  {type.key === 'todos' && stats && (
+                    <span style={{ 
+                      fontSize: '9px', 
+                      fontWeight: '700',
+                      opacity: isSelected ? '0.9' : '0.7',
+                      background: isSelected ? 'rgba(255, 255, 255, 0.2)' : '#f3f4f6',
+                      color: isSelected ? 'white' : '#374151',
+                      padding: '1px 3px',
+                      borderRadius: '2px',
+                      minWidth: '16px',
+                      textAlign: 'center'
+                    }}>
+                      {getTotalNews()}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
 
           {/* Filtro activo */}
           {selectedType && selectedType !== 'todos' && (
             <div style={{ 
               display: 'flex', 
               alignItems: 'center', 
-              gap: '8px',
-              padding: '6px 12px',
+              justifyContent: 'space-between',
+              padding: '4px 8px',
               background: '#dbeafe',
-              borderRadius: '8px',
-              border: '1px solid #93c5fd',
-              marginLeft: 'auto'
+              borderRadius: '4px',
+              border: '1px solid #93c5fd'
             }}>
-              <span style={{ fontSize: '13px', color: '#1e40af', fontWeight: '500' }}>
-                Filtro: {geographicTypes.find(t => t.key === selectedType)?.label}
+              <span style={{ fontSize: '11px', color: '#1e40af', fontWeight: '500' }}>
+                Filtro activo: {geographicTypes.find(t => t.key === selectedType)?.label}
               </span>
               <button
                 onClick={() => handleFilterClick('todos')}
@@ -591,11 +593,12 @@ const GeographicFilter = ({ onFilterChange, selectedType = 'todos' }) => {
                   background: 'none',
                   border: 'none',
                   color: '#1e40af',
-                  fontSize: '12px',
+                  fontSize: '10px',
                   cursor: 'pointer',
-                  padding: '2px 6px',
-                  borderRadius: '4px',
-                  fontWeight: '600'
+                  padding: '2px 4px',
+                  borderRadius: '2px',
+                  fontWeight: '600',
+                  transition: 'background 0.2s ease'
                 }}
                 onMouseEnter={(e) => {
                   e.target.style.background = '#bfdbfe';
@@ -615,3 +618,4 @@ const GeographicFilter = ({ onFilterChange, selectedType = 'todos' }) => {
 };
 
 export default GeographicFilter;
+ 

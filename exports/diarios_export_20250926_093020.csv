@@ -1,0 +1,5 @@
+id,nombre,url,activo,fecha_creacion,total_noticias
+1,Diario Correo,https://diariocorreo.pe,True,2025-09-06T20:22:11.092002,827
+2,El Comercio,https://elcomercio.pe,True,2025-09-06T20:22:11.092008,1206
+3,El Popular,https://elpopular.pe,True,2025-09-06T20:22:11.092010,845
+4,CNN en Español,https://cnnespanol.cnn.com,True,2025-09-14T16:45:23.348320,902

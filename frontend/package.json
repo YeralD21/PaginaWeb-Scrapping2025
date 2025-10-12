@@ -13,9 +13,9 @@
     "styled-components": "^6.1.1"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
+    "start": "craco start",
+    "build": "craco build",
+    "test": "craco test",
     "eject": "react-scripts eject"
   },
   "browserslist": {
@@ -32,6 +32,7 @@
   },
   "proxy": "http://localhost:8000",
   "devDependencies": {
+    "@craco/craco": "^7.1.0",
     "tailwindcss": "^4.1.13"
   }
 }

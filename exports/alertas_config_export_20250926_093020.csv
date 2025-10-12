@@ -1,0 +1,4 @@
+id,nombre,descripcion,keywords,categorias,diarios,nivel_urgencia,activa,fecha_creacion,notificar_email,email_destino,notificar_webhook,webhook_url
+1,Noticias Políticas Críticas,Alertas para noticias políticas de alta importancia,"[""crisis"", ""emergencia"", ""protesta"", ""corrupcion"", ""escandalo""]","[""POLÍTICA""]",,alta,True,2025-09-11T21:28:45.336351,False,,False,
+2,Noticias Económicas Importantes,Alertas para noticias económicas relevantes,"[""economia"", ""mercado"", ""inversion"", ""crisis economica"", ""inflacion""]","[""ECONOMÍA""]",,media,True,2025-09-11T21:28:45.336357,False,,False,
+3,Deportes Destacados,Alertas para noticias deportivas importantes,"[""campeonato"", ""mundial"", ""final"", ""victoria"", ""record""]","[""DEPORTES""]",,baja,True,2025-09-11T21:28:45.336359,False,,False,

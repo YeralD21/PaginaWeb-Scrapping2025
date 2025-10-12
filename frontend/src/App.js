@@ -2,10 +2,11 @@
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import styled from 'styled-components';
-import { FiFileText, FiBarChart2, FiFilter, FiRefreshCw, FiCalendar, FiSearch, FiAlertTriangle, FiTrendingUp, FiPieChart } from 'react-icons/fi';
+import { FiFileText, FiBarChart2, FiFilter, FiRefreshCw, FiCalendar, FiSearch, FiAlertTriangle, FiTrendingUp, FiPieChart, FiChevronDown } from 'react-icons/fi';
 import DiarioComercio from './components/DiarioComercio';
 import DiarioCorreo from './components/DiarioCorreo';
 import DiarioPopular from './components/DiarioPopular';
+import DiarioCNN from './components/DiarioCNN';
 import Comparativa from './components/Comparativa';
 import NoticiaDetalle from './components/NoticiaDetalle';
 import AlertManager from './components/AlertManager';
@@ -13,6 +14,8 @@ import AdvancedSearch from './components/AdvancedSearch';
 import AnalyticsDashboard from './components/AnalyticsDashboard';
 import TrendingNews from './components/TrendingNews';
 import GeographicFilter from './components/GeographicFilter';
+import DateFilter from './components/DateFilter';
+import DateFilterExample from './components/DateFilterExample';
 
 const Container = styled.div`
   width: 100%;
@@ -200,7 +203,7 @@ const CategoriaOption = styled.button`
   }
 `;
 
-const DateFilter = styled.div`
+const DateFilterContainer = styled.div`
   display: flex;
   gap: 0.5rem;
   align-items: center;
@@ -969,23 +972,134 @@ function MainView() {
   const [diarioFiltro, setDiarioFiltro] = useState(null);
   const [geographicFilter, setGeographicFilter] = useState(null);
   const [mostrarDiarios, setMostrarDiarios] = useState(false);
+  const [dateFilter, setDateFilter] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedMonth, setSelectedMonth] = useState(null);
+  const [showDateDropdown, setShowDateDropdown] = useState(false);
+  const [selectedYear, setSelectedYear] = useState(null);
+  const [selectedMonthInYear, setSelectedMonthInYear] = useState(null);
+  const [dateFilterLevel, setDateFilterLevel] = useState('year'); // 'year', 'month', 'day'
   const [categoriasDisponibles, setCategoriasDisponibles] = useState([]);
   const [noticiasRelevantes, setNoticiasRelevantes] = useState([]);
+
+  // Función para procesar fechas de manera jerárquica
+  const processHierarchicalDates = (fechas) => {
+    const years = {};
+    
+    fechas.forEach(fecha => {
+      const date = new Date(fecha.fecha);
+      const year = date.getFullYear();
+      const month = date.getMonth() + 1; // 0-indexed to 1-indexed
+      const day = date.getDate();
+      
+      if (!years[year]) {
+        years[year] = {
+          year: year,
+          months: {},
+          totalNoticias: 0
+        };
+      }
+      
+      if (!years[year].months[month]) {
+        years[year].months[month] = {
+          month: month,
+          monthName: date.toLocaleDateString('es-ES', { month: 'long' }),
+          days: {},
+          totalNoticias: 0
+        };
+      }
+      
+      if (!years[year].months[month].days[day]) {
+        years[year].months[month].days[day] = {
+          day: day,
+          date: fecha.fecha,
+          fecha_formateada: fecha.fecha_formateada,
+          totalNoticias: fecha.total_noticias
+        };
+      }
+      
+      years[year].totalNoticias += fecha.total_noticias;
+      years[year].months[month].totalNoticias += fecha.total_noticias;
+    });
+    
+    return years;
+  };
+
+  // Obtener años disponibles
+  const getAvailableYears = () => {
+    const hierarchicalDates = processHierarchicalDates(fechasDisponibles);
+    return Object.values(hierarchicalDates).sort((a, b) => b.year - a.year);
+  };
+
+  // Obtener meses disponibles para un año
+  const getAvailableMonths = (year) => {
+    const hierarchicalDates = processHierarchicalDates(fechasDisponibles);
+    const yearData = hierarchicalDates[year];
+    if (!yearData) return [];
+    
+    return Object.values(yearData.months).sort((a, b) => b.month - a.month);
+  };
+
+  // Obtener días disponibles para un año y mes
+  const getAvailableDays = (year, month) => {
+    const hierarchicalDates = processHierarchicalDates(fechasDisponibles);
+    const yearData = hierarchicalDates[year];
+    if (!yearData || !yearData.months[month]) return [];
+    
+    return Object.values(yearData.months[month].days).sort((a, b) => b.day - a.day);
+  };
+
+  // Función para obtener el texto del botón según la selección actual
+  const getDateFilterButtonText = () => {
+    if (selectedDate) {
+      const date = new Date(selectedDate);
+      return date.toLocaleDateString('es-ES', { 
+        day: '2-digit', 
+        month: '2-digit', 
+        year: 'numeric' 
+      });
+    } else if (selectedMonthInYear && selectedYear) {
+      const date = new Date(selectedYear, selectedMonthInYear - 1);
+      return date.toLocaleDateString('es-ES', { 
+        month: 'long', 
+        year: 'numeric' 
+      });
+    } else if (selectedYear) {
+      return selectedYear.toString();
+    }
+    return 'Filtrar por fecha';
+  };
+
+  // Función para obtener el número de noticias según la selección actual
+  const getDateFilterCount = () => {
+    if (selectedDate) {
+      const fecha = fechasDisponibles.find(f => f.fecha === selectedDate);
+      return fecha ? fecha.total_noticias : 0;
+    } else if (selectedMonthInYear && selectedYear) {
+      const months = getAvailableMonths(selectedYear);
+      const month = months.find(m => m.month === selectedMonthInYear);
+      return month ? month.totalNoticias : 0;
+    } else if (selectedYear) {
+      const years = getAvailableYears();
+      const year = years.find(y => y.year === selectedYear);
+      return year ? year.totalNoticias : 0;
+    }
+    return noticias.length;
+  };
 
   useEffect(() => {
       fetchFechasDisponibles();
       fetchCategoriasDisponibles();
       fetchNoticiasRelevantes(); // Cargar noticias relevantes al inicio
+      fetchTodasLasNoticias(); // Cargar todas las noticias para el filtro de fechas
   }, []);
 
   // Efecto para recargar noticias cuando cambian los filtros
   useEffect(() => {
     if (categoriaSeleccionada || diarioFiltro || geographicFilter) {
       fetchNoticiasConFiltros();
-    } else if (!fechaSeleccionada) {
-      // Si no hay filtros activos y no hay fecha seleccionada, cargar noticias recientes
-      fetchNoticiasConFiltros();
     }
+    // Removido el else para no sobrescribir las noticias cargadas por fetchTodasLasNoticias
   }, [categoriaSeleccionada, diarioFiltro, geographicFilter]);
 
   // Cerrar dropdown al hacer click fuera
@@ -1102,6 +1216,18 @@ function MainView() {
     }
   };
 
+  const fetchTodasLasNoticias = async () => {
+    try {
+      console.log('🔄 Cargando todas las noticias para el filtro de fechas...');
+      // Cargar todas las noticias sin filtros para el filtro de fechas
+      const response = await axios.get('http://localhost:8000/noticias?limit=2000');
+      console.log(`✅ Noticias cargadas: ${response.data.length}`);
+      setNoticias(response.data);
+    } catch (error) {
+      console.error('❌ Error fetching todas las noticias:', error);
+    }
+  };
+
   const handleRefresh = () => {
     if (fechaSeleccionada) {
       fetchNoticiasPorFecha(fechaSeleccionada);
@@ -1113,7 +1239,12 @@ function MainView() {
       navigate('/');
     } else {
       // Navegar a la ruta específica del diario
-      const rutaDiario = diario.toLowerCase().replace(/\s+/g, '-');
+      let rutaDiario;
+      if (diario === 'CNN en Español') {
+        rutaDiario = 'cnn-en-español';
+      } else {
+        rutaDiario = diario.toLowerCase().replace(/\s+/g, '-');
+      }
       navigate(`/diario/${rutaDiario}`);
     }
   };
@@ -1146,6 +1277,25 @@ function MainView() {
 
   const toggleMostrarDiarios = () => {
     setMostrarDiarios(!mostrarDiarios);
+  };
+
+  const handleDateFilter = (date, filteredNews, monthData) => {
+    if (date) {
+      // Filtro por fecha específica
+      setSelectedDate(date);
+      setSelectedMonth(null);
+      setDateFilter(filteredNews);
+    } else if (monthData) {
+      // Filtro por mes completo
+      setSelectedMonth(monthData.key);
+      setSelectedDate(null);
+      setDateFilter(filteredNews);
+    } else {
+      // Limpiar filtros
+      setSelectedDate(null);
+      setSelectedMonth(null);
+      setDateFilter(null);
+    }
   };
 
   const toggleMostrarCategorias = () => {
@@ -1200,8 +1350,8 @@ function MainView() {
     }
   };
 
-  // Filtrar noticias por categoría y diario si están seleccionados
-  let noticiasAMostrar = noticias;
+  // Filtrar noticias por categoría, diario y fecha si están seleccionados
+  let noticiasAMostrar = dateFilter || noticias;
   
   if (categoriaSeleccionada) {
     noticiasAMostrar = noticiasAMostrar.filter(noticia => noticia.categoria === categoriaSeleccionada);
@@ -1302,6 +1452,13 @@ function MainView() {
         >
           <FiBarChart2 />
           Comparativa
+        </NavButton>
+        <NavButton 
+          active={location.pathname === '/filtro-fechas'}
+          onClick={() => navigate('/filtro-fechas')}
+        >
+          <FiCalendar />
+          Filtro Fechas
         </NavButton>
           </Navigation>
         </HeaderContent>
@@ -1404,35 +1561,386 @@ function MainView() {
               >
                 El Popular
               </DiarioFilterButton>
+              <DiarioFilterButton 
+                active={location.pathname === '/diario/cnn-en-español'}
+                onClick={() => handleDiarioFilter('CNN en Español')}
+              >
+                CNN Español
+              </DiarioFilterButton>
             </div>
           </FilterGroup>
           
-          <DateFilter>
-            <FiCalendar />
-                  {fechasDisponibles.map((fecha) => (
-                    <DateButton
-                      key={fecha.fecha}
-                      active={fechaSeleccionada === fecha.fecha}
-                onClick={() => setFechaSeleccionada(fecha.fecha)}
-                    >
-                {fecha.fecha_formateada} ({fecha.total_noticias})
-                    </DateButton>
-                  ))}
-          </DateFilter>
 
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            <FilterButton onClick={handleRefresh}>
-              <FiRefreshCw />
-              Actualizar
-            </FilterButton>
-            
+        </FiltersContent>
+      </FiltersSection>
+
+      {/* Barra de herramientas con filtros y acciones */}
+      <div style={{
+        background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
+        borderBottom: '1px solid #dee2e6',
+        padding: '1rem 0',
+        marginBottom: '1rem'
+      }}>
+        <div style={{
+          maxWidth: '1200px',
+          margin: '0 auto',
+          padding: '0 2rem',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: '1rem',
+          flexWrap: 'wrap'
+        }}>
+          {/* Filtro de fecha compacto con dropdown */}
+          <div style={{ position: 'relative' }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.5rem 1rem',
+              background: 'white',
+              borderRadius: '25px',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+              border: '1px solid #e9ecef',
+              transition: 'all 0.2s ease',
+              cursor: 'pointer',
+              minWidth: '200px'
+            }}
+            onClick={() => {
+              if (showDateDropdown) {
+                // Si se está cerrando, resetear al nivel de año
+                setDateFilterLevel('year');
+                setSelectedYear(null);
+                setSelectedMonthInYear(null);
+                setSelectedDate(null);
+              }
+              setShowDateDropdown(!showDateDropdown);
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = '#6f42c1';
+              e.currentTarget.style.color = '#6f42c1';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = '#e9ecef';
+              e.currentTarget.style.color = '#495057';
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+            }}
+            >
+              <FiCalendar style={{ color: '#6f42c1', fontSize: '1.1rem' }} />
+              <span style={{ fontSize: '0.9rem', fontWeight: '600', color: '#495057' }}>
+                {getDateFilterButtonText()}
+              </span>
+              <span style={{ 
+                fontSize: '0.8rem', 
+                color: '#6c757d',
+                background: '#f8f9fa',
+                padding: '2px 6px',
+                borderRadius: '10px'
+              }}>
+                {getDateFilterCount()} noticias
+              </span>
+              <FiChevronDown style={{ 
+                color: '#6f42c1', 
+                fontSize: '0.9rem',
+                transform: showDateDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.2s ease'
+              }} />
+            </div>
+
+            {/* Dropdown jerárquico de fechas */}
+            {showDateDropdown && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: '0',
+                right: '0',
+                background: 'white',
+                border: '1px solid #e5e7eb',
+                borderRadius: '12px',
+                boxShadow: '0 8px 25px -8px rgba(0, 0, 0, 0.2)',
+                marginTop: '8px',
+                zIndex: 1000,
+                maxHeight: '300px',
+                overflowY: 'auto',
+                minWidth: '250px'
+              }}>
+                <div style={{ padding: '8px' }}>
+                  {/* Breadcrumb */}
+                  <div style={{
+                    fontSize: '0.8rem',
+                    fontWeight: '600',
+                    color: '#6f42c1',
+                    padding: '6px 8px',
+                    borderBottom: '1px solid #f3f4f6',
+                    marginBottom: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    {dateFilterLevel === 'year' && 'Seleccionar año:'}
+                    {dateFilterLevel === 'month' && `Año ${selectedYear} - Seleccionar mes:`}
+                    {dateFilterLevel === 'day' && `${selectedYear} - ${new Date(selectedYear, selectedMonthInYear - 1).toLocaleDateString('es-ES', { month: 'long' })} - Seleccionar día:`}
+                  </div>
+
+                  {/* Botón de regreso */}
+                  {dateFilterLevel !== 'year' && (
+                    <div
+                      onClick={() => {
+                        if (dateFilterLevel === 'day') {
+                          setDateFilterLevel('month');
+                          setSelectedDate(null);
+                        } else if (dateFilterLevel === 'month') {
+                          setDateFilterLevel('year');
+                          setSelectedMonthInYear(null);
+                        }
+                      }}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        backgroundColor: '#f8f9fa',
+                        border: '1px solid #e9ecef',
+                        marginBottom: '4px',
+                        fontSize: '0.8rem',
+                        color: '#6c757d'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.backgroundColor = '#e9ecef';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.backgroundColor = '#f8f9fa';
+                      }}
+                    >
+                      ← Volver
+                    </div>
+                  )}
+
+                  {/* Contenido según el nivel */}
+                  {dateFilterLevel === 'year' && getAvailableYears().map((year) => (
+                    <div
+                      key={year.year}
+                      onClick={() => {
+                        setSelectedYear(year.year);
+                        setDateFilterLevel('month');
+                        setSelectedMonthInYear(null);
+                        setSelectedDate(null);
+                      }}
+                      style={{
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        backgroundColor: selectedYear === year.year ? '#f3f4f6' : 'transparent',
+                        border: selectedYear === year.year ? '1px solid #6f42c1' : '1px solid transparent'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (selectedYear !== year.year) {
+                          e.target.style.backgroundColor = '#f8f9fa';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (selectedYear !== year.year) {
+                          e.target.style.backgroundColor = 'transparent';
+                        }
+                      }}
+                    >
+                      <span style={{ fontSize: '0.85rem', color: '#374151' }}>
+                        {year.year}
+                      </span>
+                      <span style={{ 
+                        fontSize: '0.75rem', 
+                        color: '#6c757d',
+                        background: '#e5e7eb',
+                        padding: '2px 6px',
+                        borderRadius: '4px'
+                      }}>
+                        {year.totalNoticias}
+                      </span>
+                    </div>
+                  ))}
+
+                  {dateFilterLevel === 'month' && selectedYear && getAvailableMonths(selectedYear).map((month) => (
+                    <div
+                      key={month.month}
+                      onClick={() => {
+                        setSelectedMonthInYear(month.month);
+                        setDateFilterLevel('day');
+                        setSelectedDate(null);
+                      }}
+                      style={{
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        backgroundColor: selectedMonthInYear === month.month ? '#f3f4f6' : 'transparent',
+                        border: selectedMonthInYear === month.month ? '1px solid #6f42c1' : '1px solid transparent'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (selectedMonthInYear !== month.month) {
+                          e.target.style.backgroundColor = '#f8f9fa';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (selectedMonthInYear !== month.month) {
+                          e.target.style.backgroundColor = 'transparent';
+                        }
+                      }}
+                    >
+                      <span style={{ fontSize: '0.85rem', color: '#374151' }}>
+                        {month.monthName}
+                      </span>
+                      <span style={{ 
+                        fontSize: '0.75rem', 
+                        color: '#6c757d',
+                        background: '#e5e7eb',
+                        padding: '2px 6px',
+                        borderRadius: '4px'
+                      }}>
+                        {month.totalNoticias}
+                      </span>
+                    </div>
+                  ))}
+
+                  {dateFilterLevel === 'day' && selectedYear && selectedMonthInYear && getAvailableDays(selectedYear, selectedMonthInYear).map((day) => (
+                    <div
+                      key={day.day}
+                      onClick={() => {
+                        setSelectedDate(day.date);
+                        setShowDateDropdown(false);
+                        // Aplicar filtro de fecha
+                        handleDateFilter(day.date);
+                      }}
+                      style={{
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        backgroundColor: selectedDate === day.date ? '#f3f4f6' : 'transparent',
+                        border: selectedDate === day.date ? '1px solid #6f42c1' : '1px solid transparent'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (selectedDate !== day.date) {
+                          e.target.style.backgroundColor = '#f8f9fa';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (selectedDate !== day.date) {
+                          e.target.style.backgroundColor = 'transparent';
+                        }
+                      }}
+                    >
+                      <span style={{ fontSize: '0.85rem', color: '#374151' }}>
+                        {day.fecha_formateada}
+                      </span>
+                      <span style={{ 
+                        fontSize: '0.75rem', 
+                        color: '#6c757d',
+                        background: '#e5e7eb',
+                        padding: '2px 6px',
+                        borderRadius: '4px'
+                      }}>
+                        {day.totalNoticias}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.5rem 1rem',
+            background: 'white',
+            borderRadius: '25px',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+            border: '1px solid #e9ecef',
+            transition: 'all 0.2s ease',
+            cursor: 'pointer'
+          }}
+          onClick={handleRefresh}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = '#28a745';
+            e.currentTarget.style.color = '#28a745';
+            e.currentTarget.style.transform = 'translateY(-1px)';
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = '#e9ecef';
+            e.currentTarget.style.color = '#495057';
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+          }}
+          >
+            <FiRefreshCw style={{ color: '#28a745', fontSize: '1.1rem' }} />
+            <span style={{ fontSize: '0.9rem', fontWeight: '600', color: '#495057' }}>Actualizar</span>
+          </div>
+
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.5rem 1rem',
+            background: 'white',
+            borderRadius: '25px',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+            border: '1px solid #e9ecef',
+            transition: 'all 0.2s ease',
+            cursor: 'pointer'
+          }}
+          onClick={fetchTodasLasNoticias}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = '#007bff';
+            e.currentTarget.style.color = '#007bff';
+            e.currentTarget.style.transform = 'translateY(-1px)';
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = '#e9ecef';
+            e.currentTarget.style.color = '#495057';
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+          }}
+          >
+            <FiRefreshCw style={{ color: '#007bff', fontSize: '1.1rem' }} />
+            <span style={{ fontSize: '0.9rem', fontWeight: '600', color: '#495057' }}>Recargar Todas</span>
+          </div>
+
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.5rem 1rem',
+            background: 'white',
+            borderRadius: '25px',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+            border: '1px solid #e9ecef'
+          }}>
             <GeographicFilter 
               onFilterChange={setGeographicFilter}
               selectedType={geographicFilter || 'todos'}
             />
           </div>
-        </FiltersContent>
-      </FiltersSection>
+        </div>
+      </div>
 
       <MainContent>
         {loading && <LoadingSpinner>Cargando noticias...</LoadingSpinner>}
@@ -1569,7 +2077,7 @@ function MainView() {
             {/* Panel derecho - Noticias con imágenes */}
             <RightPanel>
             {/* Información de filtros activos */}
-            {(categoriaSeleccionada || diarioFiltro) && (
+            {(categoriaSeleccionada || diarioFiltro || selectedDate || selectedMonth) && (
                     <div style={{ 
                 background: '#e3f2fd', 
                 padding: '1rem', 
@@ -1600,6 +2108,28 @@ function MainView() {
                     }}>
                       Diario: {diarioFiltro}
                                 </span>
+                  )}
+                  {selectedDate && (
+                    <span style={{ 
+                      background: '#ffc107', 
+                      color: '#212529', 
+                      padding: '0.3rem 0.8rem', 
+                      borderRadius: '15px',
+                      fontSize: '0.9rem'
+                    }}>
+                      Fecha: {selectedDate.toLocaleDateString('es-ES')}
+                    </span>
+                  )}
+                  {selectedMonth && (
+                    <span style={{ 
+                      background: '#17a2b8', 
+                      color: 'white', 
+                      padding: '0.3rem 0.8rem', 
+                      borderRadius: '15px',
+                      fontSize: '0.9rem'
+                    }}>
+                      Mes: {selectedMonth}
+                    </span>
                   )}
                               </div>
                 <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: '#666' }}>
@@ -1824,12 +2354,14 @@ function App() {
         <Route path="/diario/el-comercio" element={<DiarioComercio />} />
         <Route path="/diario/diario-correo" element={<DiarioCorreo />} />
         <Route path="/diario/el-popular" element={<DiarioPopular />} />
+        <Route path="/diario/cnn-en-español" element={<DiarioCNN />} />
         <Route path="/comparativa" element={<Comparativa />} />
         <Route path="/noticia/:id" element={<NoticiaDetalle />} />
         <Route path="/alertas" element={<AlertManager />} />
         <Route path="/buscar" element={<AdvancedSearch />} />
         <Route path="/analytics" element={<AnalyticsDashboard />} />
         <Route path="/trending" element={<TrendingNews />} />
+        <Route path="/filtro-fechas" element={<DateFilterExample />} />
       </Routes>
     </Router>
   );
