@@ -2,7 +2,9 @@
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import styled from 'styled-components';
-import { FiFileText, FiBarChart2, FiFilter, FiRefreshCw, FiCalendar, FiSearch, FiAlertTriangle, FiTrendingUp, FiPieChart, FiChevronDown } from 'react-icons/fi';
+import { FiFileText, FiBarChart2, FiFilter, FiRefreshCw, FiCalendar, FiSearch, FiAlertTriangle, FiTrendingUp, FiPieChart, FiChevronDown, FiRadio, FiShare2 } from 'react-icons/fi';
+import { AuthProvider } from './contexts/AuthContext';
+import AuthNavbar from './components/Auth/AuthNavbar';
 import DiarioComercio from './components/DiarioComercio';
 import DiarioCorreo from './components/DiarioCorreo';
 import DiarioPopular from './components/DiarioPopular';
@@ -16,6 +18,10 @@ import TrendingNews from './components/TrendingNews';
 import GeographicFilter from './components/GeographicFilter';
 import DateFilter from './components/DateFilter';
 import DateFilterExample from './components/DateFilterExample';
+import AppUGC from './AppUGC';
+import CommunityFeed from './components/Community/CommunityFeed';
+import UnifiedNews from './components/UnifiedNews';
+import SocialMediaFeed from './components/SocialMediaFeed';
 
 const Container = styled.div`
   width: 100%;
@@ -42,6 +48,20 @@ const HeaderContent = styled.div`
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+`;
+
+const HeaderLeft = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+`;
+
+const HeaderRight = styled.div`
+  display: flex;
+  align-items: center;
 `;
 
 const Title = styled.h1`
@@ -1408,8 +1428,15 @@ function MainView() {
     <Container>
         <Header>
         <HeaderContent>
-          <Title>Diarios Peruanos</Title>
-        <Subtitle>Plataforma de noticias con Web Scraping</Subtitle>
+          <HeaderLeft>
+            <Title>Diarios Peruanos</Title>
+            <Subtitle>Plataforma de noticias con Web Scraping</Subtitle>
+          </HeaderLeft>
+          <HeaderRight>
+            <AuthNavbar />
+          </HeaderRight>
+        </HeaderContent>
+        <HeaderContent>
           <Navigation>
         <NavButton 
           active={location.pathname === '/'}
@@ -1459,6 +1486,89 @@ function MainView() {
         >
           <FiCalendar />
           Filtro Fechas
+        </NavButton>
+        <NavButton 
+          active={location.pathname === '/comunidad'}
+          onClick={() => navigate('/comunidad')}
+          style={{
+            background: location.pathname === '/comunidad' 
+              ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
+              : 'transparent',
+            border: location.pathname === '/comunidad'
+              ? '2px solid #667eea'
+              : '2px solid rgba(255, 255, 255, 0.3)',
+            position: 'relative'
+          }}
+        >
+          🌐 COMUNIDAD
+          <span style={{
+            background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+            color: 'white',
+            padding: '0.2rem 0.5rem',
+            borderRadius: '10px',
+            fontSize: '0.7rem',
+            fontWeight: '700',
+            marginLeft: '0.5rem',
+            boxShadow: '0 2px 8px rgba(245, 87, 108, 0.4)'
+          }}>
+            NUEVO!
+          </span>
+        </NavButton>
+        <NavButton 
+          active={location.pathname === '/noticias-unificadas'}
+          onClick={() => navigate('/noticias-unificadas')}
+          style={{
+            background: location.pathname === '/noticias-unificadas'
+              ? 'linear-gradient(135deg, #2d8f47 0%, #1e6b35 100%)'
+              : 'transparent',
+            border: location.pathname === '/noticias-unificadas'
+              ? '2px solid #2d8f47'
+              : '2px solid rgba(255, 255, 255, 0.3)',
+            position: 'relative'
+          }}
+        >
+          <FiRadio />
+          Noticias Unificadas
+          <span style={{
+            background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
+            color: 'white',
+            padding: '0.2rem 0.5rem',
+            borderRadius: '10px',
+            fontSize: '0.7rem',
+            fontWeight: '700',
+            marginLeft: '0.5rem',
+            boxShadow: '0 2px 8px rgba(40, 167, 69, 0.4)'
+          }}>
+            FUSIÓN
+          </span>
+        </NavButton>
+        <NavButton 
+          active={location.pathname === '/redes-sociales'}
+          onClick={() => navigate('/redes-sociales')}
+          style={{
+            background: location.pathname === '/redes-sociales'
+              ? 'linear-gradient(135deg, #1da1f2 0%, #0084ff 100%)'
+              : 'transparent',
+            border: location.pathname === '/redes-sociales'
+              ? '2px solid #1da1f2'
+              : '2px solid rgba(255, 255, 255, 0.3)',
+            position: 'relative'
+          }}
+        >
+          <FiShare2 />
+          Redes Sociales
+          <span style={{
+            background: 'linear-gradient(135deg, #1da1f2 0%, #0084ff 100%)',
+            color: 'white',
+            padding: '0.2rem 0.5rem',
+            borderRadius: '10px',
+            fontSize: '0.7rem',
+            fontWeight: '700',
+            marginLeft: '0.5rem',
+            boxShadow: '0 2px 8px rgba(29, 161, 242, 0.4)'
+          }}>
+            NUEVO!
+          </span>
         </NavButton>
           </Navigation>
         </HeaderContent>
@@ -1939,6 +2049,37 @@ function MainView() {
               selectedType={geographicFilter || 'todos'}
             />
           </div>
+
+          {/* Botón Redes Sociales */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.5rem 1rem',
+            background: 'white',
+            borderRadius: '25px',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+            border: '1px solid #e9ecef',
+            transition: 'all 0.2s ease',
+            cursor: 'pointer'
+          }}
+          onClick={() => navigate('/redes-sociales')}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = '#1da1f2';
+            e.currentTarget.style.color = '#1da1f2';
+            e.currentTarget.style.transform = 'translateY(-1px)';
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = '#e9ecef';
+            e.currentTarget.style.color = '#495057';
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+          }}
+          >
+            <FiShare2 style={{ color: '#1da1f2', fontSize: '1.1rem' }} />
+            <span style={{ fontSize: '0.9rem', fontWeight: '600', color: '#495057' }}>Redes Sociales</span>
+          </div>
         </div>
       </div>
 
@@ -2348,22 +2489,30 @@ function MainView() {
 // Componente principal con rutas
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<MainView />} />
-        <Route path="/diario/el-comercio" element={<DiarioComercio />} />
-        <Route path="/diario/diario-correo" element={<DiarioCorreo />} />
-        <Route path="/diario/el-popular" element={<DiarioPopular />} />
-        <Route path="/diario/cnn-en-español" element={<DiarioCNN />} />
-        <Route path="/comparativa" element={<Comparativa />} />
-        <Route path="/noticia/:id" element={<NoticiaDetalle />} />
-        <Route path="/alertas" element={<AlertManager />} />
-        <Route path="/buscar" element={<AdvancedSearch />} />
-        <Route path="/analytics" element={<AnalyticsDashboard />} />
-        <Route path="/trending" element={<TrendingNews />} />
-        <Route path="/filtro-fechas" element={<DateFilterExample />} />
-      </Routes>
-    </Router>
+    <AuthProvider>
+      <Router>
+        <Routes>
+          <Route path="/" element={<MainView />} />
+          <Route path="/diario/el-comercio" element={<DiarioComercio />} />
+          <Route path="/diario/diario-correo" element={<DiarioCorreo />} />
+          <Route path="/diario/el-popular" element={<DiarioPopular />} />
+          <Route path="/diario/cnn-en-español" element={<DiarioCNN />} />
+          <Route path="/comparativa" element={<Comparativa />} />
+          <Route path="/noticia/:id" element={<NoticiaDetalle />} />
+          <Route path="/alertas" element={<AlertManager />} />
+          <Route path="/buscar" element={<AdvancedSearch />} />
+          <Route path="/analytics" element={<AnalyticsDashboard />} />
+          <Route path="/trending" element={<TrendingNews />} />
+          <Route path="/filtro-fechas" element={<DateFilterExample />} />
+          <Route path="/user-dashboard" element={<AppUGC />} />
+          <Route path="/admin-dashboard" element={<AppUGC />} />
+          <Route path="/ugc-feed" element={<AppUGC />} />
+          <Route path="/comunidad" element={<CommunityFeed />} />
+          <Route path="/noticias-unificadas" element={<UnifiedNews />} />
+          <Route path="/redes-sociales" element={<SocialMediaFeed />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }
 

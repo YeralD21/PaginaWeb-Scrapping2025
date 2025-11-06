@@ -67,6 +67,55 @@ class ScrapingService:
         
         return result
     
+    def execute_social_scraping(self) -> Dict:
+        """Ejecutar scraping solo de redes sociales"""
+        start_time = datetime.now()
+        result = {
+            'success': False,
+            'total_extracted': 0,
+            'total_saved': 0,
+            'duplicates_detected': 0,
+            'alerts_triggered': 0,
+            'duration_seconds': 0,
+            'error': None,
+            'errors': []
+        }
+        
+        try:
+            # Ejecutar scraping de redes sociales
+            logger.info("🌐 Iniciando scraping de redes sociales con Playwright...")
+            all_news = self.main_scraper.scrape_social_media()
+            logger.info(f"📊 Total extraído de scrapers: {len(all_news)}")
+            
+            # Log detallado de lo que se extrajo
+            if all_news:
+                for news in all_news[:3]:  # Mostrar las primeras 3
+                    logger.info(f"  - {news.get('diario', 'Unknown')}: {news.get('titulo', 'Sin título')[:60]}...")
+            else:
+                logger.warning("⚠️ No se extrajeron noticias de ninguna red social")
+            
+            result['total_extracted'] = len(all_news)
+            
+            # Guardar en base de datos con nueva lógica
+            save_result = self.save_news_to_database_enhanced(all_news)
+            result.update(save_result)
+            
+            # Calcular duración
+            duration = int((datetime.now() - start_time).total_seconds())
+            result['duration_seconds'] = duration
+            result['success'] = True
+            
+            logger.info(f"✅ Scraping de redes sociales completado: {result['total_saved']} noticias guardadas, "
+                       f"{result['duplicates_detected']} duplicados detectados, "
+                       f"{result['alerts_triggered']} alertas activadas en {duration}s")
+            
+        except Exception as e:
+            result['error'] = str(e)
+            result['duration_seconds'] = int((datetime.now() - start_time).total_seconds())
+            logger.error(f"❌ Error en scraping de redes sociales: {e}", exc_info=True)
+        
+        return result
+    
     def save_news_to_database_enhanced(self, news: List[Dict]) -> Dict:
         """Guardar noticias con detección de duplicados avanzada y sistema de alertas"""
         db = next(get_db())
@@ -141,7 +190,7 @@ class ScrapingService:
                     enhanced_news['geographic_confidence'] = geographic_info['confidence']
                     enhanced_news['geographic_keywords'] = geographic_info['keywords_found']
                     
-                    print(f"🌍 Clasificación geográfica: {geographic_info['geographic_type']} (confianza: {geographic_info['confidence']})")
+                    logger.info(f"[GEO] Clasificacion geografica: {geographic_info['geographic_type']} (confianza: {geographic_info['confidence']})")
                     
                     # Crear nueva noticia con campos extendidos
                     noticia = Noticia(

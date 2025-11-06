@@ -1,13 +1,29 @@
 ﻿from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List, Optional, Dict
 from datetime import datetime, timedelta, timezone
 import logging
 import requests
+import os
 from contextlib import asynccontextmanager
+
+# Configurar logging primero
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Configurar USE_SELENIUM desde variable de entorno
+# Por defecto: False (usa mock). Cambiar a True para usar Selenium
+USE_SELENIUM_ENV = os.getenv('USE_SELENIUM', 'False')
+if USE_SELENIUM_ENV.lower() == 'true':
+    os.environ['USE_SELENIUM'] = 'True'
+    logger.info("🚀 SELENIUM ACTIVADO - Usando scraping REAL de redes sociales")
+else:
+    os.environ['USE_SELENIUM'] = 'False'
+    logger.info("📦 SELENIUM DESACTIVADO - Usando datos MOCK (configura USE_SELENIUM=True para activar)")
 
 from database import get_db, create_tables, test_connection
 from models import Diario, Noticia, EstadisticaScraping, AlertaConfiguracion, AlertaDisparo, TrendingKeywords
@@ -21,8 +37,21 @@ except ImportError:
 from scraping_service import ScrapingService
 from pydantic import BaseModel
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# ===== IMPORTS UGC MEJORADO =====
+try:
+    from ugc_routes_enhanced import ugc_router, auth_router, admin_router
+    UGC_ENABLED = True
+    logger.info("✅ Módulo UGC Mejorado cargado correctamente (con revisión y reportes)")
+except ImportError as e:
+    UGC_ENABLED = False
+    logger.warning(f"⚠️  Módulo UGC Mejorado no disponible: {e}")
+    # Intentar cargar versión anterior como fallback
+    try:
+        from ugc_routes import router as ugc_router, auth_router, admin_router
+        UGC_ENABLED = True
+        logger.info("✅ Módulo UGC básico cargado (versión anterior)")
+    except ImportError:
+        logger.warning("⚠️  Ningún módulo UGC disponible")
 
 class NoticiaResponse(BaseModel):
     id: int
@@ -101,7 +130,13 @@ def init_diarios():
         diarios_data = [
             {"nombre": "Diario Correo", "url": "https://diariocorreo.pe"},
             {"nombre": "El Comercio", "url": "https://elcomercio.pe"},
-            {"nombre": "El Popular", "url": "https://elpopular.pe"}
+            {"nombre": "El Popular", "url": "https://elpopular.pe"},
+            {"nombre": "CNN en Español", "url": "https://cnnespanol.cnn.com"},
+            # Redes sociales
+            {"nombre": "Twitter", "url": "https://twitter.com"},
+            {"nombre": "Facebook", "url": "https://facebook.com"},
+            {"nombre": "Instagram", "url": "https://instagram.com"},
+            {"nombre": "YouTube", "url": "https://youtube.com"}
         ]
         
         for diario_data in diarios_data:
@@ -147,6 +182,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ===== MONTAR DIRECTORIO DE ARCHIVOS ESTÁTICOS =====
+import os
+uploads_dir = os.path.join(os.path.dirname(__file__), "uploads")
+os.makedirs(os.path.join(uploads_dir, "images"), exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
+logger.info(f"✅ Directorio de uploads montado: {uploads_dir}")
+
+# ===== INCLUIR RUTAS UGC =====
+if UGC_ENABLED:
+    app.include_router(auth_router)
+    app.include_router(ugc_router)
+    app.include_router(admin_router)
+    logger.info("✅ Rutas UGC integradas: /auth, /ugc, /admin")
 
 @app.get("/")
 async def root():
@@ -1145,6 +1194,70 @@ async def ejecutar_scraping_manual():
         return result
     except Exception as e:
         logger.error(f"Error en scraping manual: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/scraping/social-media/ejecutar")
+async def ejecutar_social_scraping():
+    """Ejecutar scraping solo de redes sociales"""
+    try:
+        scraping_service = ScrapingService()
+        result = scraping_service.execute_social_scraping()
+        return result
+    except Exception as e:
+        logger.error(f"Error en scraping de redes sociales: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/social-media", response_model=List[NoticiaResponse])
+async def get_social_media_news(
+    categoria: Optional[str] = Query(None),
+    diario: Optional[str] = Query(None),
+    limit: int = Query(100),
+    offset: int = Query(0),
+    db: Session = Depends(get_db)
+):
+    """Obtener noticias de redes sociales"""
+    try:
+        # Redes sociales válidas
+        social_networks = ['Twitter', 'Facebook', 'Instagram', 'YouTube']
+        
+        query = db.query(Noticia).join(Diario).filter(
+            Diario.nombre.in_(social_networks)
+        )
+        
+        # Aplicar filtros
+        if categoria:
+            query = query.filter(Noticia.categoria == categoria)
+        
+        if diario:
+            query = query.filter(Diario.nombre == diario)
+        
+        # Ordenar por fecha más reciente
+        query = query.order_by(Noticia.fecha_publicacion.desc())
+        
+        # Paginación
+        total = query.count()
+        noticias = query.offset(offset).limit(limit).all()
+        
+        # Convertir a response model
+        result = []
+        for noticia in noticias:
+            result.append(NoticiaResponse(
+                id=noticia.id,
+                titulo=noticia.titulo,
+                contenido=noticia.contenido,
+                enlace=noticia.enlace,
+                imagen_url=noticia.imagen_url,
+                categoria=noticia.categoria,
+                fecha_publicacion=noticia.fecha_publicacion,
+                fecha_extraccion=noticia.fecha_extraccion,
+                diario_id=noticia.diario_id,
+                diario_nombre=noticia.diario.nombre
+            ))
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo noticias de redes sociales: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/noticias/generar-contenido")
