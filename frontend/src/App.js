@@ -2,8 +2,9 @@
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import styled from 'styled-components';
-import { FiFileText, FiBarChart2, FiFilter, FiRefreshCw, FiCalendar, FiSearch, FiAlertTriangle, FiTrendingUp, FiPieChart, FiChevronDown, FiRadio, FiShare2, FiLock } from 'react-icons/fi';
+import { FiFileText, FiBarChart2, FiFilter, FiRefreshCw, FiCalendar, FiSearch, FiAlertTriangle, FiTrendingUp, FiPieChart, FiChevronDown, FiRadio, FiShare2, FiLock, FiSun, FiMoon } from 'react-icons/fi';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import AuthNavbar from './components/Auth/AuthNavbar';
 import DiarioComercio from './components/DiarioComercio';
 import DiarioCorreo from './components/DiarioCorreo';
@@ -23,6 +24,7 @@ import CommunityFeed from './components/Community/CommunityFeed';
 import UnifiedNews from './components/UnifiedNews';
 import SocialMediaFeed from './components/SocialMediaFeed';
 import SubscriptionModal from './components/Subscriptions/SubscriptionModal';
+import LoginModal from './components/Auth/LoginModal';
 
 const Container = styled.div`
   width: 100%;
@@ -30,19 +32,30 @@ const Container = styled.div`
   padding: 0;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   min-height: 100vh;
-  background: #f8f9fa;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   position: relative;
 `;
 
 const Header = styled.header`
-  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-  color: white;
-  padding: 2rem 0;
+  background: var(--header-bg);
+  color: var(--text-primary);
+  padding: 1.2rem 0;
   text-align: center;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   position: sticky;
-    top: 0;
+  top: 0;
   z-index: 100;
+  will-change: background-color, color, box-shadow;
+  transition: background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1), 
+              color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+              padding 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  &[data-theme="dark"] {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    padding: 1.5rem 0;
+  }
 `;
 
 const HeaderContent = styled.div`
@@ -81,58 +94,116 @@ const Subtitle = styled.p`
 `;
 
 const Navigation = styled.nav`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 1rem 1.5rem;
-  margin-top: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(2, auto);
+  gap: 0.5rem;
+  margin-top: 0.8rem;
   width: 100%;
   padding: 0 1rem;
+  
+  @media (max-width: 1200px) {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  
+  @media (max-width: 900px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  @media (max-width: 600px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
 `;
 
 const NavButton = styled.button.withConfig({
   shouldForwardProp: (prop) => prop !== 'active',
 })`
-  background: ${props => props.active ? '#dc3545' : 'transparent'};
-  color: white;
-  border: 2px solid ${props => props.active ? '#dc3545' : 'rgba(255, 255, 255, 0.3)'};
-  padding: 0.8rem 2rem;
-  border-radius: 25px;
-  font-size: 1rem;
+  background: ${props => props.active ? '#dc3545' : 'rgba(0, 0, 0, 0.05)'};
+  color: var(--text-primary);
+  border: 2px solid ${props => props.active ? '#dc3545' : 'rgba(0, 0, 0, 0.2)'};
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  flex: 0 1 auto;
+  justify-content: center;
+  gap: 0.4rem;
+  white-space: nowrap;
 
   &:hover {
-    background: ${props => props.active ? '#c82333' : 'rgba(255, 255, 255, 0.1)'};
-    border-color: ${props => props.active ? '#c82333' : 'rgba(255, 255, 255, 0.5)'};
+    background: ${props => props.active ? '#c82333' : 'rgba(0, 0, 0, 0.1)'};
+    border-color: ${props => props.active ? '#c82333' : 'rgba(0, 0, 0, 0.4)'};
+    transform: translateY(-2px);
   }
 
-  @media (max-width: 1024px) {
-    padding: 0.7rem 1.6rem;
-    font-size: 0.95rem;
+  body[data-theme="dark"] & {
+    background: ${props => props.active ? '#dc3545' : 'rgba(255, 255, 255, 0.05)'};
+    border-color: ${props => props.active ? '#dc3545' : 'rgba(255, 255, 255, 0.2)'};
+    
+    &:hover {
+      background: ${props => props.active ? '#c82333' : 'rgba(255, 255, 255, 0.1)'};
+      border-color: ${props => props.active ? '#c82333' : 'rgba(255, 255, 255, 0.4)'};
+    }
   }
 
   @media (max-width: 768px) {
-    padding: 0.6rem 1.2rem;
-    font-size: 0.9rem;
-    border-radius: 20px;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.75rem;
+    border-radius: 15px;
+  }
+`;
+
+const ThemeToggleButton = styled.button`
+  background: rgba(0, 0, 0, 0.1);
+  color: var(--text-primary);
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: 2rem;
+  margin-right: 1rem;
+  position: relative;
+  will-change: background-color, border-color, color;
+  transition: background-color 0.1s ease, border-color 0.1s ease, color 0.1s ease, transform 0.1s ease;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.2);
+    transform: scale(1.05);
+  }
+
+  body[data-theme="dark"] & {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    
+    &:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
   }
 `;
 
 const FiltersSection = styled.div`
-  background: white;
-  padding: 1.5rem 0;
-  border-bottom: 1px solid #e9ecef;
+  background: var(--filter-bg);
+  color: var(--text-primary);
+  padding: 1.2rem 0;
+  border-bottom: 1px solid var(--border-color);
   position: sticky;
-  top: 120px;
+  top: 110px;
   z-index: 99;
   overflow: visible;
+  will-change: background-color, color, border-color;
+  transition: background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1), 
+              color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  body[data-theme="dark"] & {
+    top: 100px;
+  }
 `;
 
 const FiltersContent = styled.div`
@@ -154,13 +225,13 @@ const FilterGroup = styled.div`
 `;
 
 const FilterButton = styled.button`
-  background: white;
-  border: 2px solid #e9ecef;
+  background: var(--card-bg);
+  color: var(--text-primary);
+  border: 2px solid var(--border-color);
   padding: 0.6rem 1.2rem;
   border-radius: 20px;
   font-size: 0.9rem;
   cursor: pointer;
-  transition: all 0.3s ease;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -168,27 +239,27 @@ const FilterButton = styled.button`
   &:hover {
     border-color: #dc3545;
     color: #dc3545;
+    background: var(--bg-tertiary);
   }
 `;
 
 const DiarioFilterButton = styled.button.withConfig({
   shouldForwardProp: (prop) => prop !== 'active',
 })`
-  background: ${props => props.active ? '#dc3545' : 'white'};
-  color: ${props => props.active ? 'white' : '#333'};
-  border: 2px solid ${props => props.active ? '#dc3545' : '#e9ecef'};
+  background: ${props => props.active ? '#dc3545' : 'var(--card-bg)'};
+  color: ${props => props.active ? 'white' : 'var(--text-primary)'};
+  border: 2px solid ${props => props.active ? '#dc3545' : 'var(--border-color)'};
   padding: 0.6rem 1.2rem;
   border-radius: 20px;
   font-size: 0.9rem;
   cursor: pointer;
-  transition: all 0.3s ease;
   display: flex;
   align-items: center;
   gap: 0.5rem;
   font-weight: 600;
 
   &:hover {
-    background: ${props => props.active ? '#c82333' : '#f8f9fa'};
+    background: ${props => props.active ? '#c82333' : 'var(--bg-tertiary)'};
     border-color: #dc3545;
     color: ${props => props.active ? 'white' : '#dc3545'};
   }
@@ -203,30 +274,33 @@ const CategoriaDropdownContent = styled.div`
   position: absolute;
   top: 100%;
   left: 0;
-  background: white;
-  border: 2px solid #e9ecef;
+  background: var(--card-bg);
+  border: 2px solid var(--border-color);
   border-radius: 15px;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
   z-index: 1000;
   min-width: 200px;
   margin-top: 0.5rem;
   overflow: hidden;
+  
+  body[data-theme="dark"] & {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+  }
 `;
 
 const CategoriaOption = styled.button`
   width: 100%;
-  background: white;
+  background: var(--card-bg);
   border: none;
   padding: 0.8rem 1rem;
   text-align: left;
   cursor: pointer;
-  transition: all 0.3s ease;
   font-size: 0.9rem;
-  color: #333;
-  border-bottom: 1px solid #f1f3f4;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
 
   &:hover {
-    background: #f8f9fa;
+    background: var(--bg-tertiary);
     color: #dc3545;
   }
 
@@ -249,18 +323,17 @@ const DateFilterContainer = styled.div`
 const DateButton = styled.button.withConfig({
   shouldForwardProp: (prop) => prop !== 'active',
 })`
-  background: ${props => props.active ? '#dc3545' : 'white'};
-  color: ${props => props.active ? 'white' : '#333'};
-  border: 2px solid ${props => props.active ? '#dc3545' : '#e9ecef'};
+  background: ${props => props.active ? '#dc3545' : 'var(--card-bg)'};
+  color: ${props => props.active ? 'white' : 'var(--text-primary)'};
+  border: 2px solid ${props => props.active ? '#dc3545' : 'var(--border-color)'};
   padding: 0.6rem 1rem;
   border-radius: 15px;
   font-size: 0.9rem;
   cursor: pointer;
-  transition: all 0.3s ease;
   font-weight: 600;
 
   &:hover {
-    background: ${props => props.active ? '#c82333' : '#f8f9fa'};
+    background: ${props => props.active ? '#c82333' : 'var(--bg-tertiary)'};
     border-color: #dc3545;
   }
 `;
@@ -379,36 +452,80 @@ const TextNewsMetaSmall = styled(TextNewsMeta)`
   margin-top: 0.4rem;
 `;
 
-// Estilos para noticias relevantes
+// Estilos para noticias relevantes/premium con imágenes
 const RelevantNewsCard = styled.article`
-  background: white;
+  background: var(--card-bg);
   border-radius: 12px;
-  padding: 1rem;
+  overflow: hidden;
   box-shadow: 0 3px 12px rgba(0, 0, 0, 0.06);
-  border-left: 3px solid #28a745;
+  border-left: 3px solid #ffd700;
   transition: all 0.3s ease;
   cursor: pointer;
-  margin-bottom: 0.8rem;
+  margin-bottom: 1rem;
   position: relative;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 320px;
+  width: 100%;
   
   &:hover {
     transform: translateX(4px);
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
-    border-left-color: #20c997;
+    border-left-color: #ffed4e;
+  }
+  
+  body[data-theme="dark"] & {
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.3);
+    
+    &:hover {
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+    }
   }
 `;
 
+const RelevantNewsImage = styled.div`
+  width: 100%;
+  min-height: 180px;
+  height: 180px;
+  background: ${props => props.$imageUrl 
+    ? `url(${props.$imageUrl})` 
+    : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'};
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  position: relative;
+  flex-shrink: 0;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 40%;
+    background: linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 100%);
+  }
+`;
+
+const RelevantNewsContent = styled.div`
+  padding: 1rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100px;
+`;
+
 const RelevantNewsTitle = styled.h4`
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   font-weight: 600;
-  color: #1a1a1a;
-  margin: 0 0 0.5rem 0;
-  line-height: 1.3;
+  color: var(--text-primary);
+  margin: 0.5rem 0;
+  line-height: 1.4;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  flex: 1;
 `;
 
 const RelevantNewsMeta = styled.div`
@@ -420,7 +537,7 @@ const RelevantNewsMeta = styled.div`
 `;
 
 const RelevantNewsDate = styled.span`
-  color: #666;
+  color: var(--text-secondary);
   font-size: 0.7rem;
   font-weight: 500;
 `;
@@ -445,10 +562,10 @@ const RelevantNewsCategory = styled.span`
 `;
 
 const RelevantNewsDiario = styled.span`
-  color: #495057;
+  color: var(--text-secondary);
   font-size: 0.7rem;
   font-weight: 500;
-  background: #f8f9fa;
+  background: var(--bg-tertiary);
   padding: 0.2rem 0.4rem;
   border-radius: 6px;
 `;
@@ -950,25 +1067,31 @@ const PremiumBadge = styled.span`
 
 const PremiumOverlay = styled.div`
   position: absolute;
-  inset: 0;
-  background: rgba(20, 16, 48, 0.72);
+  bottom: 0.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(20, 16, 48, 0.85);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #f8f1ff;
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 0.75rem;
   text-align: center;
-  padding: 1.5rem;
+  padding: 0.5rem 1rem;
   z-index: 3;
-  backdrop-filter: blur(1px);
+  backdrop-filter: blur(4px);
   pointer-events: none;
+  border-radius: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  white-space: nowrap;
 
   small {
     display: block;
-    margin-top: 0.35rem;
+    margin-top: 0.2rem;
     font-weight: 500;
-    opacity: 0.85;
+    opacity: 0.9;
+    font-size: 0.65rem;
   }
 `;
 
@@ -1239,6 +1362,7 @@ function PremiumNewsView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const [pendingPremiumNews, setPendingPremiumNews] = useState(null);
   const hasActiveSubscription = subscription?.estado === 'active';
   const userIsAuthenticated = isAuthenticated();
@@ -1286,17 +1410,20 @@ function PremiumNewsView() {
   }, [token, user]); // Solo token y user, refreshSubscription es estable desde el contexto
 
   const handleNewsClick = async (noticia) => {
-    // Si no está autenticado, mostrar modal de suscripción con la noticia pendiente
+    console.log('Click en noticia premium:', noticia.titulo);
+    
+    // Si no está autenticado, mostrar modal de login primero
     if (!userIsAuthenticated) {
+      console.log('Usuario no autenticado, mostrando modal de login');
       setPendingPremiumNews(noticia);
-      modalOpenRef.current = true;
-      setShowSubscriptionModal(true);
+      setShowLoginModal(true);
       return;
     }
     
-    // Verificar suscripción activa directamente desde el endpoint para asegurar datos actualizados
+    // Si está autenticado, verificar suscripción activa
     if (token) {
       try {
+        console.log('Verificando suscripción activa...');
         const statusResponse = await axios.get('http://localhost:8000/subscriptions/status', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -1304,29 +1431,54 @@ function PremiumNewsView() {
         const hasActive = statusResponse.data?.has_active && statusResponse.data?.active_subscription;
         
         if (hasActive) {
-          // Actualizar la suscripción en el contexto
+          // Tiene suscripción activa, navegar a la noticia
+          console.log('Usuario tiene suscripción activa, navegando a noticia');
           await refreshSubscription(token);
-          // Navegar directamente a la noticia
           navigate(`/noticia/${noticia.id}`);
           return;
+        } else {
+          console.log('Usuario no tiene suscripción activa, mostrando planes');
         }
       } catch (err) {
         console.error('Error verificando suscripción:', err);
-        // Si hay error, continuar con la lógica normal
+        // En caso de error, mostrar planes de todos modos
       }
     }
     
-    // Si no tiene suscripción activa, mostrar planes
-    if (!hasActiveSubscription) {
-      setPendingPremiumNews(noticia);
-      modalOpenRef.current = true;
-      setShowSubscriptionModal(true);
-      return;
-    }
-    
-    // Si tiene suscripción activa (fallback), navegar a la noticia
-    navigate(`/noticia/${noticia.id}`);
+    // No tiene suscripción activa, mostrar planes de suscripción
+    console.log('Mostrando modal de suscripción');
+    setPendingPremiumNews(noticia);
+    modalOpenRef.current = true;
+    setShowSubscriptionModal(true);
+    return;
   };
+
+  // Cuando el usuario se loguea después de hacer click en noticia premium, mostrar planes
+  useEffect(() => {
+    // Verificar si el usuario se acaba de loguear y hay una noticia premium pendiente
+    if (isAuthenticated() && token && pendingPremiumNews) {
+      // Si el modal de login está abierto, esperar a que se cierre
+      if (showLoginModal) {
+        // El modal de login se cerrará automáticamente después del login exitoso
+        // Esperamos un momento para que se cierre antes de mostrar el modal de suscripción
+        const timer = setTimeout(() => {
+          if (!showLoginModal) {
+            setShowLoginModal(false);
+            modalOpenRef.current = true;
+            setShowSubscriptionModal(true);
+          }
+        }, 800);
+        return () => clearTimeout(timer);
+      } else if (!showSubscriptionModal) {
+        // Si el login modal ya se cerró y no hay modal de suscripción abierto, mostrar planes
+        const timer = setTimeout(() => {
+          modalOpenRef.current = true;
+          setShowSubscriptionModal(true);
+        }, 300);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [isAuthenticated, token, pendingPremiumNews, showLoginModal, showSubscriptionModal]);
 
   return (
     <div style={{
@@ -1640,6 +1792,32 @@ function PremiumNewsView() {
         )}
       </div>
 
+      {/* Modal de Login (para noticias premium) */}
+      {showLoginModal && (
+        <LoginModal
+          onClose={() => {
+            setShowLoginModal(false);
+            loginModalShownForPremiumRef.current = false;
+            // Si cierra sin loguearse, limpiar la noticia pendiente
+            if (!isAuthenticated()) {
+              setPendingPremiumNews(null);
+            }
+          }}
+          onSwitchToRegister={() => {
+            // Mantener la noticia pendiente al cambiar a registro
+            setShowLoginModal(false);
+            loginModalShownForPremiumRef.current = false;
+            // El registro también manejará la noticia pendiente
+          }}
+          skipRedirect={true}
+          onLoginSuccess={() => {
+            // Cuando el login es exitoso, el efecto detectará el cambio y mostrará el modal de suscripción
+            console.log('Login exitoso desde noticia premium, noticia pendiente:', pendingPremiumNews);
+            // El efecto se ejecutará automáticamente cuando isAuthenticated y token cambien
+          }}
+        />
+      )}
+
       {/* Modal de Suscripción */}
       {showSubscriptionModal && (
         <SubscriptionModal
@@ -1674,6 +1852,7 @@ function MainView() {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, token, subscription, fetchSubscriptionStatus, refreshSubscription } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [activeTab, setActiveTab] = useState('noticias');
   const [subscriptionNotification, setSubscriptionNotification] = useState(null);
   const [showNotification, setShowNotification] = useState(false);
@@ -1703,6 +1882,10 @@ function MainView() {
   const hasActiveSubscription = subscription?.estado === 'active';
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [pendingPremiumNews, setPendingPremiumNews] = useState(null);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  
+  // Ref para evitar que el modal se cierre automáticamente
+  const modalOpenRef = useRef(false);
 
   // Verificar estado de suscripción al loguearse
   useEffect(() => {
@@ -1752,6 +1935,35 @@ function MainView() {
     }
   }, [isAuthenticated]);
 
+  // Ref para rastrear si acabamos de mostrar el login modal para una noticia premium
+  const loginModalShownForPremiumRef = useRef(false);
+
+  // Cuando el usuario se loguea después de hacer click en noticia premium, mostrar planes
+  useEffect(() => {
+    // Verificar si el usuario se acaba de loguear y hay una noticia premium pendiente
+    if (isAuthenticated() && token && pendingPremiumNews && !showSubscriptionModal) {
+      // Si mostramos el login modal para esta noticia premium, esperar a que se cierre
+      if (loginModalShownForPremiumRef.current) {
+        // El modal de login se cerrará automáticamente después del login exitoso (800ms)
+        // Esperamos un poco más para asegurar que se cerró completamente
+        const timer = setTimeout(() => {
+          setShowLoginModal(false);
+          loginModalShownForPremiumRef.current = false;
+          modalOpenRef.current = true;
+          setShowSubscriptionModal(true);
+        }, 1000); // 800ms del login + 200ms de margen
+        return () => clearTimeout(timer);
+      } else if (!showLoginModal) {
+        // Si el login modal ya se cerró y no hay modal de suscripción abierto, mostrar planes directamente
+        const timer = setTimeout(() => {
+          modalOpenRef.current = true;
+          setShowSubscriptionModal(true);
+        }, 100);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [isAuthenticated, token, pendingPremiumNews, showLoginModal, showSubscriptionModal]);
+
   const openSubscriptionModal = (news) => {
     setPendingPremiumNews(news || null);
     setShowSubscriptionModal(true);
@@ -1762,21 +1974,61 @@ function MainView() {
     setShowSubscriptionModal(false);
   };
 
-  const handleNoticiaClick = (noticia) => {
-    if (noticia?.es_premium && !hasActiveSubscription) {
+  const handleNoticiaClick = async (noticia) => {
+    // Si es una noticia premium, manejar el flujo de suscripción
+    if (noticia?.es_premium) {
+      console.log('Click en noticia premium:', noticia.titulo);
+      
+      // Si no está autenticado, mostrar modal de login primero
       if (!isAuthenticated()) {
-        alert('Inicia sesión para suscribirte y acceder a noticias premium.');
+        console.log('Usuario no autenticado, mostrando modal de login');
+        setPendingPremiumNews(noticia);
+        loginModalShownForPremiumRef.current = true; // Marcar que mostramos login para premium
+        setShowLoginModal(true);
+        return;
       }
-      openSubscriptionModal(noticia);
+      
+      // Si está autenticado, verificar suscripción activa
+      if (token) {
+        try {
+          console.log('Verificando suscripción activa...');
+          const statusResponse = await axios.get('http://localhost:8000/subscriptions/status', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          
+          const hasActive = statusResponse.data?.has_active && statusResponse.data?.active_subscription;
+          
+          if (hasActive) {
+            // Tiene suscripción activa, navegar a la noticia
+            console.log('Usuario tiene suscripción activa, navegando a noticia');
+            await refreshSubscription(token);
+            navigate(`/noticia/${noticia.id}`);
+            return;
+          } else {
+            console.log('Usuario no tiene suscripción activa, mostrando planes');
+          }
+        } catch (err) {
+          console.error('Error verificando suscripción:', err);
+          // En caso de error, mostrar planes de todos modos
+        }
+      }
+      
+      // No tiene suscripción activa, mostrar planes de suscripción
+      console.log('Mostrando modal de suscripción');
+      setPendingPremiumNews(noticia);
+      modalOpenRef.current = true;
+      setShowSubscriptionModal(true);
       return;
     }
+    
+    // Si no es premium, navegar directamente
     navigate(`/noticia/${noticia.id}`);
   };
 
   const getPremiumStyle = (noticia) => {
-    return noticia?.es_premium && !hasActiveSubscription
-      ? { filter: 'grayscale(0.35)', opacity: 0.85 }
-      : undefined;
+    // No aplicar filtros para que las imágenes y títulos se vean claramente
+    // El overlay premium ya indica que es contenido exclusivo
+    return undefined;
   };
 
   const renderPremiumIndicators = (noticia) => {
@@ -1784,13 +2036,13 @@ function MainView() {
     const locked = !hasActiveSubscription;
     return (
       <>
-        <PremiumBadge>Premium</PremiumBadge>
+        <PremiumBadge>⭐ Premium</PremiumBadge>
         {locked && (
           <PremiumOverlay>
             <div>
               <FiLock style={{ fontSize: '1.4rem', marginBottom: '0.3rem' }} />
-              <div>Contenido exclusivo</div>
-              <small>Haz clic para suscribirte</small>
+              <div>🔒 Suscríbete para leer</div>
+              <small>Haz clic para ver los planes</small>
             </div>
           </PremiumOverlay>
         )}
@@ -2341,150 +2593,156 @@ function MainView() {
           </button>
         </div>
       )}
-        <Header>
+        <Header $theme={theme}>
         <HeaderContent>
           <HeaderLeft>
             <Title>Diarios Peruanos</Title>
             <Subtitle>Plataforma de noticias con Web Scraping</Subtitle>
           </HeaderLeft>
           <HeaderRight>
+            <ThemeToggleButton onClick={toggleTheme}>
+              {theme === 'dark' ? <FiSun /> : <FiMoon />}
+              {theme === 'dark' ? 'Modo Día' : 'Modo Noche'}
+            </ThemeToggleButton>
             <AuthNavbar />
           </HeaderRight>
         </HeaderContent>
         <HeaderContent>
           <Navigation>
-        <NavButton 
-          active={location.pathname === '/'}
-          onClick={() => navigate('/')}
-        >
-          <FiFileText />
-          Noticias
-        </NavButton>
-        <NavButton 
-          active={location.pathname === '/trending'}
-          onClick={() => navigate('/trending')}
-        >
-          <FiTrendingUp />
-          Trending
-        </NavButton>
-        <NavButton 
-          active={location.pathname === '/buscar'}
-          onClick={() => navigate('/buscar')}
-        >
-          <FiSearch />
-          Búsqueda
-        </NavButton>
-        <NavButton 
-          active={location.pathname === '/analytics'}
-          onClick={() => navigate('/analytics')}
-        >
-          <FiPieChart />
-          Analytics
-        </NavButton>
-        <NavButton 
-          active={location.pathname === '/alertas'}
-          onClick={() => navigate('/alertas')}
-        >
-          <FiAlertTriangle />
-          Alertas
-        </NavButton>
-        <NavButton 
-          active={location.pathname === '/comparativa'}
-          onClick={() => navigate('/comparativa')}
-        >
-          <FiBarChart2 />
-          Comparativa
-        </NavButton>
-        <NavButton 
-          active={location.pathname === '/filtro-fechas'}
-          onClick={() => navigate('/filtro-fechas')}
-        >
-          <FiCalendar />
-          Filtro Fechas
-        </NavButton>
-        <NavButton 
-          active={location.pathname === '/comunidad'}
-          onClick={() => navigate('/comunidad')}
-          style={{
-            background: location.pathname === '/comunidad' 
-              ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
-              : 'transparent',
-            border: location.pathname === '/comunidad'
-              ? '2px solid #667eea'
-              : '2px solid rgba(255, 255, 255, 0.3)',
-            position: 'relative'
-          }}
-        >
-          🌐 COMUNIDAD
-          <span style={{
-            background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-            color: 'white',
-            padding: '0.2rem 0.5rem',
-            borderRadius: '10px',
-            fontSize: '0.7rem',
-            fontWeight: '700',
-            marginLeft: '0.5rem',
-            boxShadow: '0 2px 8px rgba(245, 87, 108, 0.4)'
-          }}>
-            NUEVO!
-          </span>
-        </NavButton>
-        <NavButton 
-          active={location.pathname === '/noticias-unificadas'}
-          onClick={() => navigate('/noticias-unificadas')}
-          style={{
-            background: location.pathname === '/noticias-unificadas'
-              ? 'linear-gradient(135deg, #2d8f47 0%, #1e6b35 100%)'
-              : 'transparent',
-            border: location.pathname === '/noticias-unificadas'
-              ? '2px solid #2d8f47'
-              : '2px solid rgba(255, 255, 255, 0.3)',
-            position: 'relative'
-          }}
-        >
-          <FiRadio />
-          Noticias Unificadas
-          <span style={{
-            background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
-            color: 'white',
-            padding: '0.2rem 0.5rem',
-            borderRadius: '10px',
-            fontSize: '0.7rem',
-            fontWeight: '700',
-            marginLeft: '0.5rem',
-            boxShadow: '0 2px 8px rgba(40, 167, 69, 0.4)'
-          }}>
-            FUSIÓN
-          </span>
-        </NavButton>
-        <NavButton 
-          active={location.pathname === '/redes-sociales'}
-          onClick={() => navigate('/redes-sociales')}
-          style={{
-            background: location.pathname === '/redes-sociales'
-              ? 'linear-gradient(135deg, #1da1f2 0%, #0084ff 100%)'
-              : 'transparent',
-            border: location.pathname === '/redes-sociales'
-              ? '2px solid #1da1f2'
-              : '2px solid rgba(255, 255, 255, 0.3)',
-            position: 'relative'
-          }}
-        >
-          <FiShare2 />
-          Redes Sociales
-          <span style={{
-            background: 'linear-gradient(135deg, #1da1f2 0%, #0084ff 100%)',
-            color: 'white',
-            padding: '0.2rem 0.5rem',
-            borderRadius: '10px',
-            fontSize: '0.7rem',
-            fontWeight: '700',
-            marginLeft: '0.5rem',
-            boxShadow: '0 2px 8px rgba(29, 161, 242, 0.4)'
-          }}>
-            NUEVO!
-          </span>
-        </NavButton>
+            {/* Primera fila - 6 botones principales */}
+            <NavButton 
+              active={location.pathname === '/'}
+              onClick={() => navigate('/')}
+            >
+              <FiFileText />
+              Noticias
+            </NavButton>
+            <NavButton 
+              active={location.pathname === '/trending'}
+              onClick={() => navigate('/trending')}
+            >
+              <FiTrendingUp />
+              Trending
+            </NavButton>
+            <NavButton 
+              active={location.pathname === '/buscar'}
+              onClick={() => navigate('/buscar')}
+            >
+              <FiSearch />
+              Búsqueda
+            </NavButton>
+            <NavButton 
+              active={location.pathname === '/analytics'}
+              onClick={() => navigate('/analytics')}
+            >
+              <FiPieChart />
+              Analytics
+            </NavButton>
+            <NavButton 
+              active={location.pathname === '/alertas'}
+              onClick={() => navigate('/alertas')}
+            >
+              <FiAlertTriangle />
+              Alertas
+            </NavButton>
+            <NavButton 
+              active={location.pathname === '/comparativa'}
+              onClick={() => navigate('/comparativa')}
+            >
+              <FiBarChart2 />
+              Comparativa
+            </NavButton>
+            {/* Segunda fila - 4 botones adicionales */}
+            <NavButton 
+              active={location.pathname === '/filtro-fechas'}
+              onClick={() => navigate('/filtro-fechas')}
+            >
+              <FiCalendar />
+              Filtro Fechas
+            </NavButton>
+            <NavButton 
+              active={location.pathname === '/comunidad'}
+              onClick={() => navigate('/comunidad')}
+              style={{
+                background: location.pathname === '/comunidad' 
+                  ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
+                  : 'transparent',
+                border: location.pathname === '/comunidad'
+                  ? '2px solid #667eea'
+                  : 'var(--border-color)',
+                position: 'relative'
+              }}
+            >
+              🌐 COMUNIDAD
+              <span style={{
+                background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                color: 'white',
+                padding: '0.2rem 0.5rem',
+                borderRadius: '10px',
+                fontSize: '0.7rem',
+                fontWeight: '700',
+                marginLeft: '0.5rem',
+                boxShadow: '0 2px 8px rgba(245, 87, 108, 0.4)'
+              }}>
+                NUEVO!
+              </span>
+            </NavButton>
+            <NavButton 
+              active={location.pathname === '/noticias-unificadas'}
+              onClick={() => navigate('/noticias-unificadas')}
+              style={{
+                background: location.pathname === '/noticias-unificadas'
+                  ? 'linear-gradient(135deg, #2d8f47 0%, #1e6b35 100%)'
+                  : 'transparent',
+                border: location.pathname === '/noticias-unificadas'
+                  ? '2px solid #2d8f47'
+                  : 'var(--border-color)',
+                position: 'relative'
+              }}
+            >
+              <FiRadio />
+              Noticias Unificadas
+              <span style={{
+                background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
+                color: 'white',
+                padding: '0.2rem 0.5rem',
+                borderRadius: '10px',
+                fontSize: '0.7rem',
+                fontWeight: '700',
+                marginLeft: '0.5rem',
+                boxShadow: '0 2px 8px rgba(40, 167, 69, 0.4)'
+              }}>
+                FUSIÓN
+              </span>
+            </NavButton>
+            <NavButton 
+              active={location.pathname === '/redes-sociales'}
+              onClick={() => navigate('/redes-sociales')}
+              style={{
+                background: location.pathname === '/redes-sociales'
+                  ? 'linear-gradient(135deg, #1da1f2 0%, #0084ff 100%)'
+                  : 'transparent',
+                border: location.pathname === '/redes-sociales'
+                  ? '2px solid #1da1f2'
+                  : 'var(--border-color)',
+                position: 'relative'
+              }}
+            >
+              <FiShare2 />
+              Redes Sociales
+              <span style={{
+                background: 'linear-gradient(135deg, #1da1f2 0%, #0084ff 100%)',
+                color: 'white',
+                padding: '0.2rem 0.5rem',
+                borderRadius: '10px',
+                fontSize: '0.7rem',
+                fontWeight: '700',
+                marginLeft: '0.5rem',
+                boxShadow: '0 2px 8px rgba(29, 161, 242, 0.4)'
+              }}>
+                NUEVO!
+              </span>
+            </NavButton>
           </Navigation>
         </HeaderContent>
       </Header>
@@ -2561,7 +2819,13 @@ function MainView() {
             </CategoriaDropdown>
             
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.9rem', color: '#666', fontWeight: '600' }}>Navegar a:</span>
+              <span style={{ 
+                fontSize: '0.9rem', 
+                color: 'var(--text-secondary)', 
+                fontWeight: '600' 
+              }}>
+                Navegar a:
+              </span>
               <DiarioFilterButton 
                 active={location.pathname === '/'}
                 onClick={() => handleDiarioFilter('todos')}
@@ -2598,7 +2862,7 @@ function MainView() {
                 style={{
                   background: location.pathname === '/premium' 
                     ? 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)' 
-                    : 'linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%)',
+                    : 'var(--card-bg)',
                   color: '#ffd700',
                   border: '2px solid #ffd700',
                   fontWeight: 'bold',
@@ -2618,8 +2882,8 @@ function MainView() {
 
       {/* Barra de herramientas con filtros y acciones */}
       <div style={{
-        background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
-        borderBottom: '1px solid #dee2e6',
+        background: 'var(--bg-tertiary)',
+        borderBottom: '1px solid var(--border-color)',
         padding: '1rem 0',
         marginBottom: '1rem'
       }}>
@@ -2640,13 +2904,13 @@ function MainView() {
               alignItems: 'center',
               gap: '0.5rem',
               padding: '0.5rem 1rem',
-              background: 'white',
+              background: 'var(--card-bg)',
               borderRadius: '25px',
               boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-              border: '1px solid #e9ecef',
-              transition: 'all 0.2s ease',
+              border: '1px solid var(--border-color)',
               cursor: 'pointer',
-              minWidth: '200px'
+              minWidth: '200px',
+              color: 'var(--text-primary)'
             }}
             onClick={() => {
               if (showDateDropdown) {
@@ -2665,20 +2929,20 @@ function MainView() {
               e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = '#e9ecef';
-              e.currentTarget.style.color = '#495057';
+              e.currentTarget.style.borderColor = 'var(--border-color)';
+              e.currentTarget.style.color = 'var(--text-primary)';
               e.currentTarget.style.transform = 'translateY(0)';
               e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
             }}
             >
               <FiCalendar style={{ color: '#6f42c1', fontSize: '1.1rem' }} />
-              <span style={{ fontSize: '0.9rem', fontWeight: '600', color: '#495057' }}>
+              <span style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-primary)' }}>
                 {getDateFilterButtonText()}
               </span>
               <span style={{ 
                 fontSize: '0.8rem', 
-                color: '#6c757d',
-                background: '#f8f9fa',
+                color: 'var(--text-secondary)',
+                background: 'var(--bg-tertiary)',
                 padding: '2px 6px',
                 borderRadius: '10px'
               }}>
@@ -2699,8 +2963,8 @@ function MainView() {
                 top: '100%',
                 left: '0',
                 right: '0',
-                background: 'white',
-                border: '1px solid #e5e7eb',
+                background: 'var(--card-bg)',
+                border: '1px solid var(--border-color)',
                 borderRadius: '12px',
                 boxShadow: '0 8px 25px -8px rgba(0, 0, 0, 0.2)',
                 marginTop: '8px',
@@ -2716,7 +2980,9 @@ function MainView() {
                     fontWeight: '600',
                     color: '#6f42c1',
                     padding: '6px 8px',
-                    borderBottom: '1px solid #f3f4f6',
+                    borderBottom: theme === 'dark' 
+                      ? '1px solid rgba(255, 255, 255, 0.1)' 
+                      : '1px solid #f3f4f6',
                     marginBottom: '4px',
                     display: 'flex',
                     alignItems: 'center',
@@ -2747,17 +3013,19 @@ function MainView() {
                         display: 'flex',
                         alignItems: 'center',
                         gap: '6px',
-                        backgroundColor: '#f8f9fa',
-                        border: '1px solid #e9ecef',
+                        backgroundColor: theme === 'dark' ? '#1a1a1a' : '#f8f9fa',
+                        border: theme === 'dark' 
+                          ? '1px solid rgba(255, 255, 255, 0.2)' 
+                          : '1px solid #e9ecef',
                         marginBottom: '4px',
                         fontSize: '0.8rem',
-                        color: '#6c757d'
+                        color: theme === 'dark' ? '#cccccc' : '#6c757d'
                       }}
                       onMouseEnter={(e) => {
-                        e.target.style.backgroundColor = '#e9ecef';
+                        e.target.style.backgroundColor = theme === 'dark' ? '#2a2a2a' : '#e9ecef';
                       }}
                       onMouseLeave={(e) => {
-                        e.target.style.backgroundColor = '#f8f9fa';
+                        e.target.style.backgroundColor = theme === 'dark' ? '#1a1a1a' : '#f8f9fa';
                       }}
                     >
                       ← Volver
@@ -2782,12 +3050,14 @@ function MainView() {
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        backgroundColor: selectedYear === year.year ? '#f3f4f6' : 'transparent',
+                        backgroundColor: selectedYear === year.year 
+                          ? (theme === 'dark' ? 'rgba(111, 66, 193, 0.2)' : '#f3f4f6') 
+                          : 'transparent',
                         border: selectedYear === year.year ? '1px solid #6f42c1' : '1px solid transparent'
                       }}
                       onMouseEnter={(e) => {
                         if (selectedYear !== year.year) {
-                          e.target.style.backgroundColor = '#f8f9fa';
+                          e.target.style.backgroundColor = theme === 'dark' ? '#1a1a1a' : '#f8f9fa';
                         }
                       }}
                       onMouseLeave={(e) => {
@@ -2796,13 +3066,13 @@ function MainView() {
                         }
                       }}
                     >
-                      <span style={{ fontSize: '0.85rem', color: '#374151' }}>
+                      <span style={{ fontSize: '0.85rem', color: theme === 'dark' ? '#ffffff' : '#374151' }}>
                         {year.year}
                       </span>
                       <span style={{ 
                         fontSize: '0.75rem', 
-                        color: '#6c757d',
-                        background: '#e5e7eb',
+                        color: theme === 'dark' ? '#cccccc' : '#6c757d',
+                        background: theme === 'dark' ? '#1a1a1a' : '#e5e7eb',
                         padding: '2px 6px',
                         borderRadius: '4px'
                       }}>
@@ -2827,12 +3097,14 @@ function MainView() {
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        backgroundColor: selectedMonthInYear === month.month ? '#f3f4f6' : 'transparent',
+                        backgroundColor: selectedMonthInYear === month.month 
+                          ? (theme === 'dark' ? 'rgba(111, 66, 193, 0.2)' : '#f3f4f6') 
+                          : 'transparent',
                         border: selectedMonthInYear === month.month ? '1px solid #6f42c1' : '1px solid transparent'
                       }}
                       onMouseEnter={(e) => {
                         if (selectedMonthInYear !== month.month) {
-                          e.target.style.backgroundColor = '#f8f9fa';
+                          e.target.style.backgroundColor = theme === 'dark' ? '#1a1a1a' : '#f8f9fa';
                         }
                       }}
                       onMouseLeave={(e) => {
@@ -2841,13 +3113,13 @@ function MainView() {
                         }
                       }}
                     >
-                      <span style={{ fontSize: '0.85rem', color: '#374151' }}>
+                      <span style={{ fontSize: '0.85rem', color: theme === 'dark' ? '#ffffff' : '#374151' }}>
                         {month.monthName}
                       </span>
                       <span style={{ 
                         fontSize: '0.75rem', 
-                        color: '#6c757d',
-                        background: '#e5e7eb',
+                        color: theme === 'dark' ? '#cccccc' : '#6c757d',
+                        background: theme === 'dark' ? '#1a1a1a' : '#e5e7eb',
                         padding: '2px 6px',
                         borderRadius: '4px'
                       }}>
@@ -2873,12 +3145,14 @@ function MainView() {
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        backgroundColor: selectedDate === day.date ? '#f3f4f6' : 'transparent',
+                        backgroundColor: selectedDate === day.date 
+                          ? (theme === 'dark' ? 'rgba(111, 66, 193, 0.2)' : '#f3f4f6') 
+                          : 'transparent',
                         border: selectedDate === day.date ? '1px solid #6f42c1' : '1px solid transparent'
                       }}
                       onMouseEnter={(e) => {
                         if (selectedDate !== day.date) {
-                          e.target.style.backgroundColor = '#f8f9fa';
+                          e.target.style.backgroundColor = theme === 'dark' ? '#1a1a1a' : '#f8f9fa';
                         }
                       }}
                       onMouseLeave={(e) => {
@@ -2887,13 +3161,13 @@ function MainView() {
                         }
                       }}
                     >
-                      <span style={{ fontSize: '0.85rem', color: '#374151' }}>
+                      <span style={{ fontSize: '0.85rem', color: theme === 'dark' ? '#ffffff' : '#374151' }}>
                         {day.fecha_formateada}
                       </span>
                       <span style={{ 
                         fontSize: '0.75rem', 
-                        color: '#6c757d',
-                        background: '#e5e7eb',
+                        color: theme === 'dark' ? '#cccccc' : '#6c757d',
+                        background: theme === 'dark' ? '#1a1a1a' : '#e5e7eb',
                         padding: '2px 6px',
                         borderRadius: '4px'
                       }}>
@@ -2911,12 +3185,12 @@ function MainView() {
             alignItems: 'center',
             gap: '0.5rem',
             padding: '0.5rem 1rem',
-            background: 'white',
+            background: 'var(--card-bg)',
             borderRadius: '25px',
             boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-            border: '1px solid #e9ecef',
-            transition: 'all 0.2s ease',
-            cursor: 'pointer'
+            border: '1px solid var(--border-color)',
+            cursor: 'pointer',
+            color: 'var(--text-primary)'
           }}
           onClick={handleRefresh}
           onMouseEnter={(e) => {
@@ -2926,14 +3200,14 @@ function MainView() {
             e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = '#e9ecef';
-            e.currentTarget.style.color = '#495057';
+            e.currentTarget.style.borderColor = 'var(--border-color)';
+            e.currentTarget.style.color = 'var(--text-primary)';
             e.currentTarget.style.transform = 'translateY(0)';
             e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
           }}
           >
             <FiRefreshCw style={{ color: '#28a745', fontSize: '1.1rem' }} />
-            <span style={{ fontSize: '0.9rem', fontWeight: '600', color: '#495057' }}>Actualizar</span>
+            <span style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-primary)' }}>Actualizar</span>
           </div>
 
           <div style={{
@@ -2941,12 +3215,12 @@ function MainView() {
             alignItems: 'center',
             gap: '0.5rem',
             padding: '0.5rem 1rem',
-            background: 'white',
+            background: 'var(--card-bg)',
             borderRadius: '25px',
             boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-            border: '1px solid #e9ecef',
-            transition: 'all 0.2s ease',
-            cursor: 'pointer'
+            border: '1px solid var(--border-color)',
+            cursor: 'pointer',
+            color: 'var(--text-primary)'
           }}
           onClick={fetchTodasLasNoticias}
           onMouseEnter={(e) => {
@@ -2956,14 +3230,14 @@ function MainView() {
             e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = '#e9ecef';
-            e.currentTarget.style.color = '#495057';
+            e.currentTarget.style.borderColor = 'var(--border-color)';
+            e.currentTarget.style.color = 'var(--text-primary)';
             e.currentTarget.style.transform = 'translateY(0)';
             e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
           }}
           >
             <FiRefreshCw style={{ color: '#007bff', fontSize: '1.1rem' }} />
-            <span style={{ fontSize: '0.9rem', fontWeight: '600', color: '#495057' }}>Recargar Todas</span>
+            <span style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-primary)' }}>Recargar Todas</span>
           </div>
 
           <div style={{
@@ -2971,10 +3245,10 @@ function MainView() {
             alignItems: 'center',
             gap: '0.5rem',
             padding: '0.5rem 1rem',
-            background: 'white',
+            background: 'var(--card-bg)',
             borderRadius: '25px',
             boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-            border: '1px solid #e9ecef'
+            border: '1px solid var(--border-color)'
           }}>
             <GeographicFilter 
               onFilterChange={setGeographicFilter}
@@ -3024,7 +3298,7 @@ function MainView() {
           <>
             {/* Panel izquierdo - Noticias Relevantes de Días Anteriores */}
             <LeftPanel>
-              <LeftPanelTitle>🕒 Noticias Relevantes</LeftPanelTitle>
+              <LeftPanelTitle>⭐ Noticias Premium</LeftPanelTitle>
               {noticiasRelevantes.length > 0 ? (
                 noticiasRelevantes.map((noticia, index) => (
                   <RelevantNewsCard 
@@ -3032,19 +3306,23 @@ function MainView() {
                     onClick={() => handleNoticiaClick(noticia)}
                     style={getPremiumStyle(noticia)}
                   >
-                    {renderPremiumIndicators(noticia)}
-                    <RelevantNewsMeta>
-                      <RelevantNewsDate>
-                        {formatRelativeDate(noticia.fecha_publicacion)}
-                      </RelevantNewsDate>
-                      <RelevantNewsCategory categoria={noticia.categoria}>
-                        {noticia.categoria}
-                      </RelevantNewsCategory>
-                    </RelevantNewsMeta>
-                    <RelevantNewsTitle>{noticia.titulo}</RelevantNewsTitle>
-                    <RelevantNewsDiario>
-                      {noticia.diario_nombre}
-                    </RelevantNewsDiario>
+                    <RelevantNewsImage $imageUrl={noticia.imagen_url}>
+                      {renderPremiumIndicators(noticia)}
+                    </RelevantNewsImage>
+                    <RelevantNewsContent>
+                      <RelevantNewsMeta>
+                        <RelevantNewsDate>
+                          {formatRelativeDate(noticia.fecha_publicacion)}
+                        </RelevantNewsDate>
+                        <RelevantNewsCategory categoria={noticia.categoria}>
+                          {noticia.categoria}
+                        </RelevantNewsCategory>
+                      </RelevantNewsMeta>
+                      <RelevantNewsTitle>{noticia.titulo}</RelevantNewsTitle>
+                      <RelevantNewsDiario>
+                        {noticia.diario_nombre}
+                      </RelevantNewsDiario>
+                    </RelevantNewsContent>
                   </RelevantNewsCard>
                 ))
               ) : (
@@ -3054,7 +3332,7 @@ function MainView() {
                   color: '#666',
                   fontStyle: 'italic'
                 }}>
-                  No hay noticias relevantes disponibles
+                  No hay noticias premium disponibles
                 </div>
               )}
               
@@ -3552,9 +3830,10 @@ function MainView() {
 // Componente principal con rutas
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <Routes>
+    <ThemeProvider>
+      <AuthProvider>
+        <Router>
+          <Routes>
           <Route path="/" element={<MainView />} />
           <Route path="/diario/el-comercio" element={<DiarioComercio />} />
           <Route path="/diario/diario-correo" element={<DiarioCorreo />} />
@@ -3574,9 +3853,10 @@ function App() {
           <Route path="/noticias-unificadas" element={<UnifiedNews />} />
           <Route path="/redes-sociales" element={<SocialMediaFeed />} />
           <Route path="/premium" element={<PremiumNewsView />} />
-        </Routes>
-      </Router>
-    </AuthProvider>
+          </Routes>
+        </Router>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

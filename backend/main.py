@@ -445,7 +445,7 @@ async def get_noticias_relevantes_anteriores(
     excluir_fecha: Optional[str] = Query(None, description="Fecha a excluir en formato YYYY-MM-DD"),
     db: Session = Depends(get_db)
 ):
-    """Obtener noticias relevantes de días anteriores, ordenadas por relevancia"""
+    """Obtener noticias PREMIUM relevantes de días anteriores, ordenadas por relevancia"""
     from datetime import datetime, timedelta
     from sqlalchemy import func, case, desc
     
@@ -453,8 +453,10 @@ async def get_noticias_relevantes_anteriores(
     fecha_limite = datetime.now() - timedelta(days=dias)
     
     # Construir query base con eager loading de la relación diario
+    # FILTRAR SOLO NOTICIAS PREMIUM
     query = db.query(Noticia).join(Diario).filter(
-        Noticia.fecha_publicacion >= fecha_limite
+        Noticia.fecha_publicacion >= fecha_limite,
+        Noticia.es_premium == True  # Solo noticias premium
     ).options(joinedload(Noticia.diario))
     
     # Excluir fecha específica si se proporciona

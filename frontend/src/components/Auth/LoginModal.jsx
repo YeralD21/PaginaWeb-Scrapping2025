@@ -219,7 +219,7 @@ const SwitchButton = styled.button`
   }
 `;
 
-function LoginModal({ onClose, onSwitchToRegister, skipRedirect = false }) {
+function LoginModal({ onClose, onSwitchToRegister, skipRedirect = false, onLoginSuccess }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -246,6 +246,13 @@ function LoginModal({ onClose, onSwitchToRegister, skipRedirect = false }) {
     
     if (result.success) {
       setSuccess('¡Inicio de sesión exitoso!');
+      
+      // Llamar al callback de éxito si existe ANTES de cerrar el modal
+      if (onLoginSuccess) {
+        onLoginSuccess();
+      }
+      
+      // Cerrar el modal después de un breve delay para permitir que el callback se ejecute
       setTimeout(() => {
         onClose();
         // Solo redirigir si no se especifica skipRedirect
@@ -262,7 +269,7 @@ function LoginModal({ onClose, onSwitchToRegister, skipRedirect = false }) {
             navigate('/user-dashboard', { replace: true });
           }
         }
-      }, 1000);
+      }, 800); // Reducido a 800ms para que el modal se cierre más rápido
     } else {
       setError(result.error);
     }
