@@ -37,6 +37,8 @@ class Noticia(Base):
     tiempo_lectura_min = Column(Integer)
     popularidad_score = Column(Float, default=0.0)
     es_trending = Column(Boolean, default=False)
+    es_premium = Column(Boolean, default=False)  # Contenido exclusivo para suscriptores
+    premium_score = Column(Float, default=0.0)
     palabras_clave = Column(JSON)  # Lista de palabras clave como JSON
     resumen_auto = Column(Text)  # Resumen automático
     idioma = Column(String(5), default='es')
@@ -174,6 +176,56 @@ class TrendingKeywords(Base):
     periodo = Column(String(20), default='diario')  # diario, semanal, mensual
     score_trending = Column(Float, default=0.0)
 
+
+class SubscriptionPlan(Base):
+    """Planes de suscripción disponibles"""
+    __tablename__ = "subscription_plans"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String(100), unique=True, nullable=False)
+    descripcion = Column(Text)
+    precio = Column(Float, nullable=False)
+    periodo = Column(String(20), nullable=False)  # semanal, mensual, anual, trimestral, personalizado
+    # Campos para período personalizado
+    periodo_tipo = Column(String(20), nullable=True)  # minutos, horas, dias, semanas, meses, años
+    periodo_cantidad = Column(Integer, nullable=True)  # Cantidad del período personalizado
+    beneficios = Column(JSON)  # Lista de perks visibles para el usuario
+    es_activo = Column(Boolean, default=True)
+    creado_en = Column(DateTime, default=datetime.utcnow)
+
+    # Relación con suscripciones
+    suscripciones = relationship("UserSubscription", back_populates="plan")
+
+
+class UserSubscription(Base):
+    """Suscripciones contratadas por los usuarios"""
+    __tablename__ = "user_subscriptions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    plan_id = Column(Integer, ForeignKey("subscription_plans.id"), nullable=False)
+    estado = Column(String(20), default="pending")  # pending, active, cancelled, expired, rejected
+    referencia_pago = Column(String(100))
+    fecha_inicio = Column(DateTime, default=datetime.utcnow)
+    fecha_fin = Column(DateTime, nullable=True)
+    renovacion_automatica = Column(Boolean, default=False)
+    ultimo_recordatorio = Column(DateTime, nullable=True)
+    creado_en = Column(DateTime, default=datetime.utcnow)
+    
+    # Campos para gestión de pagos
+    motivo_rechazo = Column(Text, nullable=True)
+    fecha_pago_notificado = Column(DateTime, nullable=True)
+    revisado_por = Column(Integer, ForeignKey("users.id"), nullable=True)
+    fecha_revision = Column(DateTime, nullable=True)
+    
+    # Campos para cancelación
+    motivo_cancelacion = Column(Text, nullable=True)
+    fecha_cancelacion = Column(DateTime, nullable=True)
+    cancelado_por = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    # Relaciones
+    plan = relationship("SubscriptionPlan", back_populates="suscripciones")
+    user = relationship("User", foreign_keys=[user_id], back_populates="subscriptions")
 class SiteMonitoring(Base):
     """Monitoreo de salud de sitios web"""
     __tablename__ = "site_monitoring"

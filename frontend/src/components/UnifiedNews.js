@@ -108,9 +108,12 @@ const ImageOverlay = styled.div`
   bottom: 0;
   left: 0;
   right: 0;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
-  padding: 1rem;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.55));
+  padding: 0.75rem 1rem;
   color: white;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
 `;
 
 const NewsBadge = styled.div`
@@ -119,9 +122,9 @@ const NewsBadge = styled.div`
   left: 1rem;
   background: ${props => props.type === 'scrapping' ? 'rgba(102, 126, 234, 0.9)' : 'rgba(118, 75, 162, 0.9)'};
   color: white;
-  padding: 0.3rem 0.8rem;
-  border-radius: 20px;
-  font-size: 0.8rem;
+  padding: 0.25rem 0.7rem;
+  border-radius: 18px;
+  font-size: 0.75rem;
   font-weight: 600;
   backdrop-filter: blur(10px);
   display: flex;
@@ -135,9 +138,9 @@ const SourceBadge = styled.div`
   right: 1rem;
   background: rgba(220, 53, 69, 0.9);
   color: white;
-  padding: 0.3rem 0.8rem;
-  border-radius: 20px;
-  font-size: 0.8rem;
+  padding: 0.25rem 0.7rem;
+  border-radius: 18px;
+  font-size: 0.75rem;
   font-weight: 600;
   backdrop-filter: blur(10px);
 `;
@@ -151,12 +154,14 @@ const NewsCategory = styled.span`
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 1px;
-  margin-bottom: 0.5rem;
   display: inline-block;
 `;
 
 const NewsCardContent = styled.div`
   padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 `;
 
 const NewsTitle = styled.h3`
@@ -273,7 +278,9 @@ function UnifiedNews() {
           type: 'scrapping',
           source: n.diario_nombre || n.diario || 'Diario',
           date: n.fecha_publicacion,
-          category: n.categoria
+          category: n.categoria,
+          title: n.titulo || n.title,
+          imageUrl: n.imagen_url || n.image_url || n.imageUrl || null
         }));
       }
 
@@ -405,10 +412,7 @@ function UnifiedNews() {
                     {item.type === 'scrapping' ? '📰 Medio' : '👥 Comunidad'}
                   </NewsBadge>
                   <SourceBadge>{item.source}</SourceBadge>
-                  <ImageOverlay>
-                    <NewsCategory>{item.category}</NewsCategory>
-                    <NewsTitle onImage>{item.title || item.titulo}</NewsTitle>
-                  </ImageOverlay>
+                  <ImageOverlay />
                 </NewsImage>
               )}
               {!item.imageUrl && (
@@ -417,22 +421,17 @@ function UnifiedNews() {
                 </NewsBadge>
               )}
               <NewsCardContent>
-                {!item.imageUrl && (
-                  <>
-                    <SourceBadge style={{ position: 'relative', top: '0', right: '0', marginBottom: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  {!item.imageUrl && (
+                    <SourceBadge style={{ position: 'relative', top: '0', right: '0', marginBottom: '0' }}>
                       {item.source}
                     </SourceBadge>
-                    <NewsCategory style={{ display: 'inline-block', marginBottom: '0.5rem' }}>
-                      {item.category}
-                    </NewsCategory>
-                    <NewsTitle>{item.title || item.titulo}</NewsTitle>
-                  </>
-                )}
-                {item.imageUrl && (
-                  <NewsTitle style={{ marginBottom: '1rem' }}>
-                    {item.title || item.titulo}
-                  </NewsTitle>
-                )}
+                  )}
+                  <NewsCategory>
+                    {item.category}
+                  </NewsCategory>
+                </div>
+                <NewsTitle>{item.title || item.titulo}</NewsTitle>
                 <NewsMeta>
                   <NewsDate>
                     <FiCalendar />

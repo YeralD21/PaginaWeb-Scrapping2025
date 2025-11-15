@@ -50,6 +50,92 @@ code {
   background: #555;
 }
 
+/* SweetAlert2 Custom Styles */
+.swal2-popup-custom {
+  border-radius: 20px !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2) !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  z-index: 10000 !important; /* Asegurar que aparezca sobre el modal del formulario */
+}
+
+.swal2-container {
+  z-index: 10000 !important; /* Asegurar que el contenedor también esté por encima */
+}
+
+.swal2-title-custom {
+  font-size: 1.5rem !important;
+  font-weight: 700 !important;
+  color: #2d1b69 !important;
+  margin-bottom: 1rem !important;
+}
+
+.swal2-confirm-custom {
+  border-radius: 10px !important;
+  padding: 0.75rem 2rem !important;
+  font-weight: 600 !important;
+  font-size: 1rem !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
+}
+
+.swal2-confirm-custom:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3) !important;
+}
+
+.swal2-cancel-custom {
+  border-radius: 10px !important;
+  padding: 0.75rem 2rem !important;
+  font-weight: 600 !important;
+  font-size: 1rem !important;
+  transition: all 0.3s ease !important;
+}
+
+.swal2-cancel-custom:hover {
+  transform: translateY(-2px) !important;
+}
+
+.swal2-html-container {
+  font-size: 1rem !important;
+  color: #605f7d !important;
+  line-height: 1.6 !important;
+}
+
+.swal2-icon {
+  width: 5rem !important;
+  height: 5rem !important;
+  margin: 1.5rem auto 1rem !important;
+}
+
+.swal2-icon.swal2-success {
+  border-color: #51cf66 !important;
+  color: #51cf66 !important;
+}
+
+.swal2-icon.swal2-error {
+  border-color: #ff6b6b !important;
+  color: #ff6b6b !important;
+}
+
+.swal2-icon.swal2-warning {
+  border-color: #ffd43b !important;
+  color: #ffd43b !important;
+}
+
+.swal2-icon.swal2-question {
+  border-color: #667eea !important;
+  color: #667eea !important;
+}
+
+.swal2-icon.swal2-info {
+  border-color: #667eea !important;
+  color: #667eea !important;
+}
+
+.swal2-timer-progress-bar {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+}
+
 .dark ::-webkit-scrollbar-thumb:hover {
   background: #6b7280;
 }
@@ -60,5 +146,19 @@ code {
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* Animación para desplegar beneficios */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    max-height: 1000px;
+    transform: translateY(0);
+  }
 }
 

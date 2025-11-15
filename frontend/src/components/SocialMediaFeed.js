@@ -8,6 +8,7 @@ function SocialMediaFeed() {
   const [error, setError] = useState(null);
   const [activeFilter, setActiveFilter] = useState('all');
   const [scraping, setScraping] = useState(false);
+  const [scrapingYoutube, setScrapingYoutube] = useState(false);
   const [counts, setCounts] = useState({ twitter: 0, facebook: 0, instagram: 0, youtube: 0, total: 0 });
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('darkMode');
@@ -15,6 +16,7 @@ function SocialMediaFeed() {
   });
   const [expandedPosts, setExpandedPosts] = useState({});
   const [brokenImages, setBrokenImages] = useState(new Set());
+  const [playingVideos, setPlayingVideos] = useState({});
 
   useEffect(() => {
     localStorage.setItem('darkMode', JSON.stringify(darkMode));
@@ -22,19 +24,20 @@ function SocialMediaFeed() {
   }, [darkMode]);
 
   useEffect(() => {
-    fetchSocialNews();
+    fetchSocialNews(activeFilter);
     fetchAllNewsForCounts();
   }, [activeFilter]);
 
-  const fetchSocialNews = async () => {
+  const fetchSocialNews = async (filterOverride = null) => {
     setLoading(true);
     setError(null);
+    const filterToUse = filterOverride ?? activeFilter;
     
     try {
       let url = 'http://localhost:8000/social-media?limit=100';
-      if (activeFilter !== 'all') {
-        const platformName = activeFilter === 'youtube' ? 'YouTube' : 
-                            activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1);
+      if (filterToUse !== 'all') {
+        const platformName = filterToUse === 'youtube' ? 'YouTube' : 
+                            filterToUse.charAt(0).toUpperCase() + filterToUse.slice(1);
         url += `&diario=${platformName}`;
       }
       
@@ -45,6 +48,7 @@ function SocialMediaFeed() {
       } else {
         setNews([]);
       }
+      setPlayingVideos({});
     } catch (err) {
       console.error('Error fetching social news:', err);
       setError('Error al cargar las noticias de redes sociales');
@@ -95,6 +99,26 @@ function SocialMediaFeed() {
     }
   };
 
+  const handleYoutubeRefresh = async () => {
+    setScrapingYoutube(true);
+    setError(null);
+    try {
+      const scrapResponse = await axios.post('http://localhost:8000/scraping/social-media/youtube/ejecutar');
+      console.log('Scraping YouTube result:', scrapResponse.data);
+
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      setActiveFilter('youtube');
+      await fetchSocialNews('youtube');
+      await fetchAllNewsForCounts();
+    } catch (err) {
+      console.error('Error scraping YouTube:', err);
+      setError('Error al actualizar los videos de YouTube');
+    } finally {
+      setScrapingYoutube(false);
+    }
+  };
+
   const handleFilterChange = (filter) => {
     setActiveFilter(filter);
   };
@@ -106,11 +130,41 @@ function SocialMediaFeed() {
     }));
   };
 
+  const toggleVideoPlayback = (newsId) => {
+    setPlayingVideos(prev => {
+      const isPlaying = !!prev[newsId];
+      if (isPlaying) {
+        return {};
+      }
+      return { [newsId]: true };
+    });
+  };
+
+  const handlePlayButtonClick = (event, newsId) => {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    toggleVideoPlayback(newsId);
+  };
+
   const handleNewsClick = (url) => {
     if (url) {
       console.log('Opening URL:', url);
       window.open(url, '_blank', 'noopener,noreferrer');
     }
+  };
+
+  const handleMediaCardClick = (event, item) => {
+    if (event) {
+      event.preventDefault();
+    }
+    if (isYouTubeItem(item)) {
+      event.stopPropagation();
+      toggleVideoPlayback(item.id);
+      return;
+    }
+    handleNewsClick(item.enlace);
   };
 
   const handleImageError = (newsId) => {
@@ -125,18 +179,61 @@ function SocialMediaFeed() {
     });
   };
 
-  // Separar noticias con y sin imagen
-  const newsWithImages = news.filter(item => 
-    item.imagen_url && !brokenImages.has(item.id) && 
-    !item.imagen_url.includes('default') && 
-    item.imagen_url.length > 0
-  );
+  const isYouTubeItem = (item) => {
+    if (!item) return false;
+    const source = (item.diario_nombre || item.diario || '').toLowerCase();
+    const url = item.enlace || '';
+    return source === 'youtube' || url.includes('youtube.com') || url.includes('youtu.be');
+  };
+
+  const extractYouTubeId = (url = '') => {
+    if (!url) return null;
+    try {
+      const patterns = [
+        /youtube\.com\/watch\?v=([^&]+)/,
+        /youtu\.be\/([^?&]+)/,
+        /youtube\.com\/embed\/([^?&]+)/,
+        /youtube\.com\/shorts\/([^?&]+)/
+      ];
+      for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match && match[1]) {
+          return match[1];
+        }
+      }
+      const parsed = new URL(url);
+      if (parsed.hostname.includes('youtube') && parsed.searchParams.get('v')) {
+        return parsed.searchParams.get('v');
+      }
+    } catch (error) {
+      console.warn('No se pudo extraer el ID de YouTube para la URL:', url);
+    }
+    return null;
+  };
+
+  const getYouTubeThumbnail = (item) => {
+    if (!item) return null;
+    if (item.thumbnail_url) return item.thumbnail_url;
+    if (item.imagen_url) return item.imagen_url;
+    const videoId = extractYouTubeId(item.enlace);
+    if (!videoId) return null;
+    return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+  };
+
+  const hasValidMedia = (item) => {
+    if (!item) return false;
+    if (isYouTubeItem(item) && extractYouTubeId(item.enlace)) {
+      return true;
+    }
+    return item.imagen_url && !brokenImages.has(item.id) &&
+      !item.imagen_url.includes('default') &&
+      item.imagen_url.length > 0;
+  };
+
+  // Separar noticias con multimedia y solo texto
+  const newsWithMedia = news.filter(hasValidMedia);
   
-  const newsWithoutImages = news.filter(item => 
-    !item.imagen_url || brokenImages.has(item.id) || 
-    item.imagen_url.includes('default') || 
-    item.imagen_url.length === 0
-  );
+  const newsWithoutImages = news.filter(item => !hasValidMedia(item));
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Fecha no disponible';
@@ -241,6 +338,15 @@ function SocialMediaFeed() {
             {scraping ? 'Actualizando...' : 'Actualizar Noticias'}
           </button>
 
+          <button
+            className="youtube-refresh-button"
+            onClick={handleYoutubeRefresh}
+            disabled={scrapingYoutube}
+          >
+            <span className={`refresh-icon youtube ${scrapingYoutube ? 'spinning' : ''}`}>▶️</span>
+            {scrapingYoutube ? 'Obteniendo videos...' : 'Actualizar solo YouTube'}
+          </button>
+
           <div className="filter-section">
             <h3 className="filter-title">Filtros</h3>
             
@@ -327,29 +433,87 @@ function SocialMediaFeed() {
 
           {!loading && !error && news.length > 0 && (
             <>
-              {/* Sección de noticias CON imagen */}
-              {newsWithImages.length > 0 && (
+              {/* Sección de noticias CON multimedia */}
+              {newsWithMedia.length > 0 && (
                 <div className="news-section">
                   <h2 className="section-title">
                     <span className="section-icon">🖼️</span>
-                    Noticias con Multimedia ({newsWithImages.length})
+                    Noticias con Multimedia ({newsWithMedia.length})
                   </h2>
                   <div className="news-grid">
-                    {newsWithImages.map((item) => (
+                    {newsWithMedia.map((item) => {
+                      const isYouTube = isYouTubeItem(item);
+                      const videoId = isYouTube ? extractYouTubeId(item.enlace) : null;
+                      const isPlaying = isYouTube && playingVideos[item.id];
+                      const displayImage = isYouTube ? (getYouTubeThumbnail(item) || item.imagen_url) : item.imagen_url;
+
+                      return (
                       <article 
                         key={item.id} 
                         className="news-card"
-                        onClick={() => handleNewsClick(item.enlace)}
+                        onClick={(event) => handleMediaCardClick(event, item)}
                       >
-                        {/* Image */}
-                        <div className="news-image-container">
-                          <img 
-                            src={item.imagen_url} 
-                            alt={item.titulo}
-                            className="news-image"
-                            onError={() => handleImageError(item.id)}
-                            onLoad={() => handleImageLoad(item.id)}
-                          />
+                        {/* Multimedia */}
+                        <div className={`news-image-container ${isYouTube ? 'youtube' : ''}`}>
+                          {isYouTube && videoId ? (
+                            isPlaying ? (
+                              <div className="youtube-embed-wrapper">
+                                <iframe
+                                  src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`}
+                                  title={item.titulo}
+                                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                  allowFullScreen
+                                  loading="lazy"
+                                  referrerPolicy="strict-origin-when-cross-origin"
+                                />
+                                <button
+                                  className="youtube-close-button"
+                                  type="button"
+                                  aria-label="Cerrar video"
+                                  onClick={(e) => handlePlayButtonClick(e, item.id)}
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            ) : (
+                              <>
+                                {displayImage ? (
+                                  <img 
+                                    src={displayImage} 
+                                    alt={item.titulo}
+                                    className="news-image"
+                                    loading="lazy"
+                                    onError={() => handleImageError(item.id)}
+                                    onLoad={() => handleImageLoad(item.id)}
+                                  />
+                                ) : (
+                                  <div className="youtube-thumbnail-placeholder">
+                                    <span>Video de YouTube</span>
+                                  </div>
+                                )}
+                                <div className="youtube-play-overlay">
+                                  <button
+                                    className="youtube-play-button"
+                                    type="button"
+                                    aria-label="Reproducir video"
+                                    onClick={(e) => handlePlayButtonClick(e, item.id)}
+                                  >
+                                    ▶
+                                  </button>
+                                  <span className="youtube-play-label">Ver video</span>
+                                </div>
+                              </>
+                            )
+                          ) : (
+                            <img 
+                              src={item.imagen_url || ''}
+                              alt={item.titulo}
+                              className="news-image"
+                              loading="lazy"
+                              onError={() => handleImageError(item.id)}
+                              onLoad={() => handleImageLoad(item.id)}
+                            />
+                          )}
                           <div className="news-category-badge">
                             {item.categoria || 'General'}
                           </div>
@@ -411,11 +575,12 @@ function SocialMediaFeed() {
                               handleNewsClick(item.enlace);
                             }}
                           >
-                            Leer más 🔗
+                            {isYouTube ? 'Ver en YouTube 🔗' : 'Leer más 🔗'}
                           </button>
                         </div>
                       </article>
-                    ))}
+                    );
+                    })}
                   </div>
                 </div>
               )}

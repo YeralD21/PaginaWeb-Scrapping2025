@@ -1,0 +1,129 @@
+================================================================================
+CÓMO OBTENER LOS CHANNEL_IDS CORRECTOS DE YOUTUBE
+================================================================================
+
+Los IDs de canales en youtube_channels.py son EJEMPLOS y NO FUNCIONAN.
+Debes obtener los IDs REALES de los canales que quieres scrapear.
+
+================================================================================
+MÉTODO 1: DESDE LA URL DEL CANAL (EL MÁS FÁCIL)
+================================================================================
+
+1. Abre YouTube en tu navegador
+2. Busca el canal (ejemplo: "RPP Noticias")
+3. Entra al canal OFICIAL (verificado con ✓)
+4. Mira la URL en la barra de direcciones:
+
+   CASO A - Si la URL es así:
+   https://www.youtube.com/@RPPNoticias
+   
+   → El handle es: @RPPNoticias
+   → Cópialo INCLUYENDO el @
+
+   CASO B - Si la URL es así:
+   https://www.youtube.com/channel/UCAbcdef123456789
+   
+   → El channel_id es: UCAbcdef123456789
+   → Copia TODO desde "UC" hasta el final
+
+5. Pega el handle o channel_id en youtube_channels.py
+
+================================================================================
+MÉTODO 2: HERRAMIENTA ONLINE (RECOMENDADO SI EL MÉTODO 1 NO FUNCIONA)
+================================================================================
+
+1. Ve a: https://commentpicker.com/youtube-channel-id.php
+
+2. Pega la URL completa del canal de YouTube
+
+3. La herramienta te dará el Channel ID correcto
+
+4. Copia el ID que empieza con "UC"
+
+5. Pégalo en youtube_channels.py en el campo "channel_id"
+
+================================================================================
+MÉTODO 3: DESDE EL CÓDIGO FUENTE DE LA PÁGINA
+================================================================================
+
+1. Entra al canal en YouTube
+2. Clic derecho en cualquier parte de la página
+3. Selecciona "Ver código fuente de la página"
+4. Presiona Ctrl+F para buscar
+5. Busca: "channelId"
+6. Encontrarás algo como: "channelId":"UCAbcdef123456789"
+7. Copia el ID que está entre las comillas
+
+================================================================================
+EJEMPLO REAL - CNN EN ESPAÑOL
+================================================================================
+
+1. Busca "CNN en Español" en YouTube
+2. Entra al canal oficial (con verificación ✓)
+3. URL: https://www.youtube.com/@cnnee
+4. En youtube_channels.py pondría:
+
+{
+    "channel_id": "UCpwvZwUam-URkxB7g4USgeA",  # ← Este ID lo obtienes del método 2 o 3
+    "handle": "@cnnee",                         # ← Este lo sacas de la URL (método 1)
+    "diario_nombre": "CNN en Español",
+    "url": "https://www.youtube.com/@cnnee"
+}
+
+================================================================================
+VERIFICAR QUE LOS IDS SON CORRECTOS
+================================================================================
+
+Después de actualizar los IDs en scraping/youtube_channels.py:
+
+1. Ejecuta el script de verificación:
+   python scraping/verificar_canales_youtube.py
+
+2. Deberías ver:
+   [OK] Canal valido con videos
+
+3. Si ves [ERROR]:
+   - Verifica el ID otra vez
+   - Asegúrate de copiar TODO el ID (no cortes ninguna letra)
+   - Verifica que el canal tiene videos públicos
+   - Intenta con el método 2 (herramienta online)
+
+================================================================================
+SUGERENCIAS DE CANALES DE NOTICIAS PERUANAS
+================================================================================
+
+Te recomiendo buscar estos canales en YouTube y obtener SUS IDs REALES:
+
+1. RPP Noticias (canal verificado ✓)
+2. América TV Noticias  
+3. ATV Noticias
+4. Panamericana Televisión
+5. Canal N (noticias 24/7)
+6. TV Perú Noticias
+
+IMPORTANTE: Busca los canales OFICIALES (con ✓ de verificación)
+
+================================================================================
+RESUMEN RÁPIDO
+================================================================================
+
+1. Busca el canal en YouTube
+2. Copia la URL del canal
+3. Si tiene @handle, úsalo tal cual
+4. Si no, usa https://commentpicker.com/youtube-channel-id.php
+5. Actualiza scraping/youtube_channels.py
+6. Ejecuta: python scraping/verificar_canales_youtube.py
+7. Confirma que dice [OK] Canal valido con videos
+
+================================================================================
+AYUDA
+================================================================================
+
+Si tienes problemas:
+1. Asegúrate de copiar el ID COMPLETO
+2. Verifica que el canal tiene videos públicos
+3. Usa canales verificados (✓) para mejor confiabilidad
+4. Lee el archivo CONFIGURAR_CANALES_YOUTUBE.md para más detalles
+
+================================================================================
+

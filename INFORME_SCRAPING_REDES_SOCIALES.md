@@ -890,6 +890,44 @@ El sistema de scraping de redes sociales es una solución completa que:
 6. ✅ **Clasifica automáticamente** por categoría y geografía
 7. ✅ **Logs detallados** para debugging
 
+---
+
+## 14. Comparación entre scraping de diarios y redes sociales
+
+Para garantizar que el scraping de redes sociales complemente al scraping tradicional de las páginas web, se añadió un **módulo de comparación** que identifica noticias capturadas en redes sociales que no aparecen en los diarios web.
+
+### 14.1 Endpoint de comparación
+
+- **Ruta**: `GET /scraping/comparacion-diarios-redes`
+- **Parámetros**:
+  - `dias` (1-7, por defecto 2): Ventana de tiempo utilizada para comparar.
+  - `limite` (10-200, por defecto 50): Máximo de noticias sociales sin cobertura a devolver.
+- **Respuesta**:
+  - `total_social_checked`: Noticias de redes sociales evaluadas en la ventana de tiempo.
+  - `total_daily_reference`: Noticias de diarios usadas como referencia.
+  - `total_social_only`: Noticias de redes sociales que no tienen una coincidencia similar en los diarios.
+  - `items`: Lista de noticias sociales sin cobertura con metadatos (plataforma, categoría, autor, enlace) y coincidencias aproximadas en diarios (si las hay, con porcentaje de similitud).
+
+### 14.2 Lógica de comparación
+
+1. Se recopilan las noticias de redes sociales y las noticias de diarios dentro de la ventana solicitada.
+2. Se utilizan los hashes (`titulo_hash`, `similarity_hash`) generados por el `DuplicateDetector` para detectar coberturas equivalentes en los diarios.
+3. Si no se encuentra un hash equivalente, se calcula una similitud difusa (>= 0.6) con los títulos de los diarios para ofrecer coincidencias aproximadas.
+4. Las noticias sociales sin cobertura se devuelven con información detallada para que el equipo pueda evaluar si deben incorporarse al scraping de diarios o considerarse contenido exclusivo de redes sociales.
+
+### 14.3 Visualización en frontend
+
+- **Ubicación**: Página principal de diarios (`MainView`), panel derecho.
+- **Sección**: “Comparacion de noticias SCRAPING DIARIOS Y RED SOCIAL”.
+- **Contenido**:
+  - Resumen con totales (noticias sociales analizadas, noticias de diarios usadas, noticias sociales sin cobertura).
+  - Cards de noticias sociales sin equivalente en diarios, indicando plataforma, categoría, autor, enlace y coincidencias aproximadas en los diarios (si existen) con el porcentaje de similitud.
+  - Mensajes de estado para cargas, errores o el caso positivo en el que todo el contenido social sí tiene cobertura web.
+
+Este apartado permite priorizar nuevas reglas de scraping en los diarios o detectar contenido que solo vive en redes sociales y que podría convertirse en un diferencial del proyecto.
+
+---
+
 **Mejoras futuras posibles**:
 - Implementar autenticación para Instagram
 - Paralelizar scraping de múltiples plataformas

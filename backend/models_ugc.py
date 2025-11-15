@@ -37,6 +37,7 @@ class User(Base):
     # Relaciones
     posts = relationship("Post", back_populates="user", cascade="all, delete-orphan")
     ingresos = relationship("Ingreso", back_populates="user", cascade="all, delete-orphan")
+    subscriptions = relationship("UserSubscription", foreign_keys="UserSubscription.user_id", back_populates="user", cascade="all, delete-orphan")
     
     def set_password(self, password: str):
         """Encriptar y establecer contraseña"""

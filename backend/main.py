@@ -2,7 +2,7 @@
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 from typing import List, Optional, Dict
 from datetime import datetime, timedelta, timezone
@@ -53,6 +53,14 @@ except ImportError as e:
     except ImportError:
         logger.warning("⚠️  Ningún módulo UGC disponible")
 
+try:
+    from subscription_routes import router as subscription_router
+    SUBSCRIPTIONS_ENABLED = True
+    logger.info("✅ Rutas de suscripciones cargadas")
+except ImportError as e:
+    SUBSCRIPTIONS_ENABLED = False
+    logger.warning(f"⚠️  Rutas de suscripciones no disponibles: {e}")
+
 class NoticiaResponse(BaseModel):
     id: int
     titulo: str
@@ -84,6 +92,9 @@ class NoticiaResponse(BaseModel):
     geographic_type: Optional[str] = None
     geographic_confidence: Optional[float] = None
     geographic_keywords: Optional[Dict] = None
+    
+    # Campo premium
+    es_premium: Optional[bool] = None
     
     class Config:
         from_attributes = True
@@ -197,6 +208,10 @@ if UGC_ENABLED:
     app.include_router(admin_router)
     logger.info("✅ Rutas UGC integradas: /auth, /ugc, /admin")
 
+if SUBSCRIPTIONS_ENABLED:
+    app.include_router(subscription_router)
+    logger.info("✅ Rutas de suscripciones disponibles: /subscriptions")
+
 @app.get("/")
 async def root():
     return {"message": "API de Scraping de Diarios Peruanos", "version": "1.0.0"}
@@ -206,11 +221,12 @@ async def get_noticias(
     categoria: Optional[str] = Query(None),
     diario: Optional[str] = Query(None),
     geographic_type: Optional[str] = Query(None, description="Filtrar por tipo geográfico: internacional, nacional, regional, local"),
+    es_premium: Optional[bool] = Query(None, description="Filtrar por noticias premium"),
     limit: int = Query(100),
     offset: int = Query(0),
     db: Session = Depends(get_db)
 ):
-    query = db.query(Noticia).join(Diario)
+    query = db.query(Noticia).join(Diario).options(joinedload(Noticia.diario))
     
     if categoria:
         query = query.filter(Noticia.categoria == categoria)
@@ -218,11 +234,14 @@ async def get_noticias(
         query = query.filter(Diario.nombre == diario)
     if geographic_type:
         query = query.filter(Noticia.geographic_type == geographic_type)
+    if es_premium is not None:
+        query = query.filter(Noticia.es_premium == es_premium)
     
     noticias = query.order_by(Noticia.fecha_extraccion.desc()).offset(offset).limit(limit).all()
     
     result = []
     for noticia in noticias:
+        diario_nombre = noticia.diario.nombre if noticia.diario else "Desconocido"
         result.append(NoticiaResponse(
             id=noticia.id,
             titulo=noticia.titulo,
@@ -233,7 +252,8 @@ async def get_noticias(
             fecha_publicacion=noticia.fecha_publicacion,
             fecha_extraccion=noticia.fecha_extraccion,
             diario_id=noticia.diario_id,
-            diario_nombre=noticia.diario.nombre
+            diario_nombre=diario_nombre,
+            es_premium=getattr(noticia, 'es_premium', False)
         ))
     
     return result
@@ -412,7 +432,8 @@ async def get_noticias_recientes(
             fecha_publicacion=noticia.fecha_publicacion,
             fecha_extraccion=noticia.fecha_extraccion,
             diario_id=noticia.diario_id,
-            diario_nombre=noticia.diario.nombre
+            diario_nombre=noticia.diario.nombre,
+            es_premium=getattr(noticia, 'es_premium', False)
         ))
     
     return result
@@ -431,10 +452,10 @@ async def get_noticias_relevantes_anteriores(
     # Calcular fecha límite
     fecha_limite = datetime.now() - timedelta(days=dias)
     
-    # Construir query base
+    # Construir query base con eager loading de la relación diario
     query = db.query(Noticia).join(Diario).filter(
         Noticia.fecha_publicacion >= fecha_limite
-    )
+    ).options(joinedload(Noticia.diario))
     
     # Excluir fecha específica si se proporciona
     if excluir_fecha:
@@ -465,6 +486,8 @@ async def get_noticias_relevantes_anteriores(
     
     result = []
     for noticia in noticias:
+        # Asegurarse de que el diario esté cargado
+        diario_nombre = noticia.diario.nombre if noticia.diario else "Desconocido"
         result.append(NoticiaResponse(
             id=noticia.id,
             titulo=noticia.titulo,
@@ -475,7 +498,8 @@ async def get_noticias_relevantes_anteriores(
             fecha_publicacion=noticia.fecha_publicacion,
             fecha_extraccion=noticia.fecha_extraccion,
             diario_id=noticia.diario_id,
-            diario_nombre=noticia.diario.nombre
+            diario_nombre=diario_nombre,
+            es_premium=getattr(noticia, 'es_premium', False)
         ))
     
     return result
@@ -1205,6 +1229,31 @@ async def ejecutar_social_scraping():
         return result
     except Exception as e:
         logger.error(f"Error en scraping de redes sociales: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/scraping/social-media/youtube/ejecutar")
+async def ejecutar_scraping_youtube():
+    """Ejecutar scraping exclusivo de YouTube"""
+    try:
+        scraping_service = ScrapingService()
+        result = scraping_service.execute_youtube_scraping()
+        return result
+    except Exception as e:
+        logger.error(f"Error en scraping de YouTube: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/scraping/comparacion-diarios-redes")
+async def comparacion_diarios_redes(
+    dias: int = Query(2, ge=1, le=7, description="Ventana de días para comparar"),
+    limite: int = Query(50, ge=10, le=200, description="Número máximo de noticias sociales sin cobertura a devolver")
+):
+    """Comparar noticias de redes sociales con noticias de diarios y detectar vacíos de cobertura."""
+    try:
+        scraping_service = ScrapingService()
+        comparison = scraping_service.compare_social_vs_diarios(days=dias, limit=limite)
+        return comparison
+    except Exception as e:
+        logger.error(f"Error generando comparación diarios vs redes: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/social-media", response_model=List[NoticiaResponse])

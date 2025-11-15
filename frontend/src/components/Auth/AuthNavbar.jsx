@@ -89,6 +89,18 @@ const UserRole = styled.span`
   font-size: 0.7rem;
   text-transform: uppercase;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+`;
+
+const SubscriptionTag = styled.span`
+  background: rgba(255, 215, 0, 0.2);
+  color: #ffd700;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  letter-spacing: 0.5px;
 `;
 
 const DropdownMenu = styled.div`
@@ -170,7 +182,7 @@ function AuthNavbar() {
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   
-  const { user, isAuthenticated, isAdmin, logout } = useAuth();
+  const { user, isAuthenticated, isAdmin, logout, subscription } = useAuth();
   const navigate = useNavigate();
 
   const handleLoginClick = () => {
@@ -199,7 +211,8 @@ function AuthNavbar() {
   const handleLogout = () => {
     logout();
     setShowUserMenu(false);
-    navigate('/');
+    // Usar replace para evitar que el usuario pueda volver atrás después del logout
+    navigate('/', { replace: true });
   };
 
   const handleDashboardClick = () => {
@@ -275,7 +288,12 @@ function AuthNavbar() {
           </UserAvatar>
           <UserDetails>
             <UserEmail>{user?.email}</UserEmail>
-            <UserRole>{user?.role}</UserRole>
+            <UserRole>
+              {user?.role}
+              {subscription?.estado === 'active' && (
+                <SubscriptionTag>Premium</SubscriptionTag>
+              )}
+            </UserRole>
           </UserDetails>
         </UserInfo>
 

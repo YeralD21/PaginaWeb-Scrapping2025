@@ -9,9 +9,11 @@ from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from datetime import datetime, timezone
 import logging
-from typing import List, Dict
+from typing import List, Dict, Optional
 import time
 from hashlib import md5
+
+from scraping.youtube_channels import YOUTUBE_CHANNELS
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -20,25 +22,78 @@ class ScraperYouTubeSelenium:
     def __init__(self):
         self.base_url = "https://www.youtube.com"
         
-        # Canales de noticias peruanas (usando URLs completas de canales verificados)
+        # Configuración centralizada de canales (IDs, handles y nombres)
+        self.channel_sources = YOUTUBE_CHANNELS
         self.news_channels = [
-            'channel/UCyjzd3PHwG6TgCZCHHZWBYA',  # El Comercio (canal verificado)
-            'channel/UCuRsgsgZXkgjhHhbKEwJ1_A',  # Diario Correo (canal verificado)
-            'channel/UChOF38ucKKJm7BZqrB_55LA',  # RPP Noticias (canal verificado)
-            'channel/UC4vzdGCAYyE4DLKJZQC3cZQ',  # Perú21 (canal verificado)
-            'channel/UCQi90C5nDOa5qe6OOmytdCA'   # CNN en Español (canal verificado)
+            self._build_channel_path(source.get('channel_id'))
+            for source in self.channel_sources
+            if source.get('channel_id')
         ]
-        
-        # Mapeo de canales a nombres de diarios
-        self.channel_to_diario = {
-            'channel/UCyjzd3PHwG6TgCZCHHZWBYA': 'El Comercio',
-            'channel/UCuRsgsgZXkgjhHhbKEwJ1_A': 'Diario Correo',
-            'channel/UChOF38ucKKJm7BZqrB_55LA': 'RPP',
-            'channel/UC4vzdGCAYyE4DLKJZQC3cZQ': 'Perú21',
-            'channel/UCQi90C5nDOa5qe6OOmytdCA': 'CNN en Español'
-        }
+
+        # Mapeo para obtener nombres de diarios a partir de diferentes identificadores
+        self.channel_to_diario: Dict[str, str] = {}
+        self.channel_lookup: Dict[str, Dict] = {}
+        for source in self.channel_sources:
+            channel_id = source.get('channel_id')
+            nombre = source.get('diario_nombre', 'YouTube')
+            handle = source.get('handle')
+
+            if channel_id:
+                path = self._build_channel_path(channel_id)
+                variants = {
+                    channel_id,
+                    channel_id.upper(),
+                    channel_id.lower(),
+                    path,
+                    path.lower(),
+                }
+                for key in variants:
+                    self.channel_to_diario[key] = nombre
+                    self.channel_lookup[key] = source
+
+            if handle:
+                variants = {
+                    handle,
+                    handle.lower(),
+                    handle.lstrip('@'),
+                    handle.lstrip('@').lower(),
+                }
+                for key in variants:
+                    self.channel_to_diario[key] = nombre
+                    self.channel_lookup[key] = source
         
         self.driver = None
+    
+    def _build_channel_path(self, channel_id: Optional[str]) -> str:
+        if not channel_id:
+            return ''
+        if channel_id.startswith('channel/'):
+            return channel_id
+        if channel_id.startswith('UC'):
+            return f'channel/{channel_id}'
+        return channel_id
+
+    def _get_channel_config(self, identifier: Optional[str]) -> Optional[Dict]:
+        if not identifier:
+            return None
+
+        config = self.channel_lookup.get(identifier)
+        if config:
+            return config
+
+        lower = identifier.lower()
+        if lower in self.channel_lookup:
+            return self.channel_lookup[lower]
+
+        if identifier.startswith('channel/'):
+            trimmed = identifier.split('/', 1)[-1]
+            return self._get_channel_config(trimmed)
+
+        if identifier.startswith('UC'):
+            upper = identifier.upper()
+            return self.channel_lookup.get(upper) or self.channel_lookup.get(upper.lower())
+
+        return None
     
     def _setup_driver(self):
         """Configura el WebDriver de Chrome"""
@@ -58,6 +113,35 @@ class ScraperYouTubeSelenium:
             logger.error(f"❌ Error inicializando ChromeDriver: {e}")
             raise
     
+    def _validate_channel_exists(self, url: str, display_name: str) -> bool:
+        """Valida si un canal de YouTube existe y es accesible"""
+        try:
+            self.driver.get(url)
+            wait = WebDriverWait(self.driver, 10)
+            
+            # Verificar si aparece mensaje de error "Este canal no existe"
+            try:
+                error_elem = self.driver.find_element(By.CSS_SELECTOR, 'yt-formatted-string.ytd-background-promo-renderer')
+                error_text = error_elem.text.lower()
+                if 'no existe' in error_text or 'doesn\'t exist' in error_text or 'not found' in error_text:
+                    logger.error(f"❌ El canal {display_name} no existe o fue eliminado")
+                    return False
+            except NoSuchElementException:
+                pass  # No hay mensaje de error, el canal probablemente existe
+            
+            # Verificar si hay contenido del canal (nombre, videos, etc.)
+            try:
+                wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'ytd-channel-name, #channel-name')))
+                logger.info(f"✅ Canal {display_name} validado correctamente")
+                return True
+            except TimeoutException:
+                logger.warning(f"⚠️ No se pudo validar el canal {display_name}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"❌ Error validando canal {display_name}: {e}")
+            return False
+
     def _scrape_channel_real(self, channel: str, max_videos: int = 5) -> List[Dict]:
         """
         Scrapea videos REALES de un canal de YouTube usando Selenium
@@ -65,10 +149,22 @@ class ScraperYouTubeSelenium:
         videos = []
         
         try:
-            url = f"{self.base_url}/{channel}/videos"
-            logger.info(f"📄 Accediendo a {url}")
+            config = self._get_channel_config(channel)
+            channel_id = (config or {}).get('channel_id')
+            channel_path = self._build_channel_path(channel_id or channel)
+            display_name = (config or {}).get('diario_nombre', channel)
+
+            url = f"{self.base_url}/{channel_path}/videos"
+            logger.info(f"📄 Accediendo a {url} ({display_name})")
             
-            self.driver.get(url)
+            # Primero validar si el canal existe
+            if not self._validate_channel_exists(url, display_name):
+                logger.warning(f"⏭️ Saltando canal inválido: {display_name}")
+                return self.generate_mock_videos(channel=channel, count=2)
+            
+            # Si existe, navegar a la página de videos
+            videos_url = f"{url}/videos" if not url.endswith('/videos') else url
+            self.driver.get(videos_url)
             
             wait = WebDriverWait(self.driver, 20)
             
@@ -77,8 +173,8 @@ class ScraperYouTubeSelenium:
                 wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'ytd-rich-item-renderer')))
                 logger.info("✅ Videos detectados")
             except TimeoutException:
-                logger.warning("⚠️ No se encontraron videos")
-                return videos
+                logger.warning(f"⚠️ No se encontraron videos en {display_name}")
+                return self.generate_mock_videos(channel=channel, count=2)
             
             # Scroll para cargar más videos
             self.driver.execute_script("window.scrollTo(0, 1000);")
@@ -90,7 +186,7 @@ class ScraperYouTubeSelenium:
             
             for idx, video_elem in enumerate(video_elements[:max_videos]):
                 try:
-                    video_data = self._extract_video_data(video_elem, channel, idx)
+                    video_data = self._extract_video_data(video_elem, channel, idx, config)
                     if video_data:
                         videos.append(video_data)
                         logger.info(f"✅ Video {idx+1}: {video_data.get('titulo', 'Sin título')[:60]}...")
@@ -105,9 +201,15 @@ class ScraperYouTubeSelenium:
         
         return videos if videos else self.generate_mock_videos(channel=channel, count=2)
     
-    def _extract_video_data(self, video_elem, channel: str, idx: int) -> Dict:
+    def _extract_video_data(self, video_elem, channel: str, idx: int, config: Optional[Dict] = None) -> Dict:
         """Extrae datos de un video de YouTube"""
         try:
+            config = config or self._get_channel_config(channel)
+            autor = (config or {}).get('diario_nombre') or self.channel_to_diario.get(channel, channel)
+            channel_id = (config or {}).get('channel_id') or channel.split('/', 1)[-1]
+            handle = (config or {}).get('handle')
+            channel_url = (config or {}).get('url') or f"{self.base_url}/{self._build_channel_path(channel_id)}"
+
             # Título
             titulo = "Sin título"
             try:
@@ -147,23 +249,38 @@ class ScraperYouTubeSelenium:
             except NoSuchElementException:
                 pass
             
-            # Canal
-            autor = self.channel_to_diario.get(channel, channel)
+            # Validar que tengamos URL del video
+            if not video_url or not video_url.startswith('http'):
+                logger.warning(f"Video sin URL válida: {titulo[:50]}")
+                return None
+            
+            # Extraer video ID de la URL
+            video_id = None
+            if 'watch?v=' in video_url:
+                video_id = video_url.split('watch?v=')[1].split('&')[0]
             
             # Categoría (clasificación básica)
             categoria = self.classify_video(titulo, descripcion)
             
+            logger.info(f"Video extraído: {titulo[:50]}... | URL: {video_url[:60]}...")
+            
             return {
                 'titulo': titulo[:200],
                 'contenido': descripcion[:500] if descripcion else f"Video de {autor}",
-                'enlace': video_url,
+                'enlace': video_url,  # CRÍTICO: URL completa del video de YouTube
                 'imagen_url': imagen_url,
                 'categoria': categoria,
                 'fecha_publicacion': datetime.now(timezone.utc),
                 'fecha_extraccion': datetime.now(timezone.utc).isoformat(),
-                'diario': 'YouTube',
-                'diario_nombre': autor,
-                'autor': autor
+                'diario': 'YouTube',  # CRÍTICO: Debe ser exactamente 'YouTube'
+                'diario_nombre': autor,  # El nombre del canal
+                'autor': autor,
+                'metadata': {
+                    'youtube_channel_id': channel_id,
+                    'youtube_handle': handle,
+                    'youtube_channel_url': channel_url,
+                    'video_id': video_id  # Agregar video ID para facilitar embed
+                }
             }
             
         except Exception as e:
@@ -223,29 +340,45 @@ class ScraperYouTubeSelenium:
         }
         
         categorias = ['Política', 'Economía', 'Deportes', 'Espectáculos', 'Tecnología']
-        diario_nombre = self.channel_to_diario.get(channel, 'YouTube')
+        config = self._get_channel_config(channel)
+        diario_nombre = (config or {}).get('diario_nombre') or self.channel_to_diario.get(channel, 'YouTube')
+        channel_id = (config or {}).get('channel_id') or channel.split('/', 1)[-1]
+        handle = (config or {}).get('handle')
+        channel_url = (config or {}).get('url') or f"{self.base_url}/{self._build_channel_path(channel_id)}"
         
         for i in range(count):
-            unique_id = md5(f'{channel}_{i}_{datetime.now().timestamp()}'.encode()).hexdigest()[:10]
+            unique_id = md5(f'{channel_id}_{i}_{datetime.now().timestamp()}'.encode()).hexdigest()[:10]
             categoria = categorias[i % len(categorias)]
             titulos_disponibles = titulos_por_categoria.get(categoria, ['Noticias de actualidad'])
             titulo_base = titulos_disponibles[i % len(titulos_disponibles)]
             
             # Generar ID único para imagen usando timestamp + índice + channel
-            image_seed = int(datetime.now().timestamp() * 1000) + i * 100 + hash(channel) % 1000
+            image_seed = int(datetime.now().timestamp() * 1000) + i * 100 + hash(channel_id) % 1000
+            
+            # Generar video ID simulado (11 caracteres como YouTube)
+            video_id = md5(f'{channel_id}_{i}_{categoria}_{datetime.now().timestamp()}'.encode()).hexdigest()[:11]
+            enlace_video = f'https://www.youtube.com/watch?v={video_id}'
             
             mock_videos.append({
                 'titulo': f'{categoria}: {titulo_base} según {diario_nombre}',
                 'contenido': f'Desde {diario_nombre}: {titulo_base}. Video informativo con las últimas actualizaciones en {categoria.lower()}.',
-                'enlace': f'https://www.youtube.com/{channel}/videos',  # Redirigir al canal real
+                'enlace': enlace_video,  # URL del video para embed
                 'imagen_url': f'https://picsum.photos/1280/720?random={image_seed}',
                 'categoria': categoria,
                 'fecha_publicacion': datetime.now(timezone.utc),
                 'fecha_extraccion': datetime.now(timezone.utc).isoformat(),
-                'diario': 'YouTube',
-                'diario_nombre': diario_nombre,
-                'autor': diario_nombre
+                'diario': 'YouTube',  # CRÍTICO: Debe ser exactamente 'YouTube'
+                'diario_nombre': diario_nombre,  # Nombre del canal
+                'autor': diario_nombre,
+                'metadata': {
+                    'youtube_channel_id': channel_id,
+                    'youtube_handle': handle,
+                    'youtube_channel_url': channel_url,
+                    'video_id': video_id  # ID del video para embed
+                }
             })
+            
+            logger.info(f"Video mock generado: {categoria} | {titulo_base} | Video ID: {video_id}")
         
         return mock_videos
     

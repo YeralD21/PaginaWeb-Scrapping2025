@@ -219,7 +219,7 @@ const SwitchButton = styled.button`
   }
 `;
 
-function LoginModal({ onClose, onSwitchToRegister }) {
+function LoginModal({ onClose, onSwitchToRegister, skipRedirect = false }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -248,11 +248,19 @@ function LoginModal({ onClose, onSwitchToRegister }) {
       setSuccess('¡Inicio de sesión exitoso!');
       setTimeout(() => {
         onClose();
-        // Redirigir según el rol del usuario
-        if (isAdmin()) {
-          navigate('/admin-dashboard');
-        } else {
-          navigate('/user-dashboard');
+        // Solo redirigir si no se especifica skipRedirect
+        if (!skipRedirect) {
+          // Usar el rol del usuario del resultado del login, no del contexto
+          // para evitar problemas de timing con el estado anterior
+          const userRole = result.user?.role;
+          const isUserAdmin = userRole === 'admin' || userRole === 'ADMIN';
+          
+          // Redirigir según el rol del usuario que acaba de loguearse
+          if (isUserAdmin) {
+            navigate('/admin-dashboard', { replace: true });
+          } else {
+            navigate('/user-dashboard', { replace: true });
+          }
         }
       }, 1000);
     } else {

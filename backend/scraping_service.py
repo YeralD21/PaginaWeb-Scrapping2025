@@ -1,6 +1,6 @@
 ﻿import sys
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Dict
 import logging
 
@@ -10,6 +10,15 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from scraping.main_scraper import MainScraper
 from database import get_db
 from models import Diario, Noticia, EstadisticaScraping
+# Importar modelos de UGC para que SQLAlchemy pueda resolver las relaciones
+# (UserSubscription necesita User)
+try:
+    from models_ugc_enhanced import User
+except ImportError:
+    try:
+        from models_ugc import User
+    except ImportError:
+        pass  # Si no existe, no pasa nada, solo evitamos el error de relación
 from duplicate_detector import DuplicateDetector
 from content_generator import generate_content_for_news
 from geographic_classifier import get_geographic_classification
@@ -19,6 +28,7 @@ except ImportError:
     # Usar versión simplificada si hay problemas con email
     from alert_system_simple import AlertSystemSimple as AlertSystem
 from sqlalchemy.orm import Session
+from premium_service import update_premium_scores
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +69,7 @@ class ScrapingService:
             logger.info(f"Scraping completado: {result['total_saved']} noticias guardadas, "
                        f"{result['duplicates_detected']} duplicados detectados, "
                        f"{result['alerts_triggered']} alertas activadas en {duration}s")
+            self.refresh_premium_scores()
             
         except Exception as e:
             result['error'] = str(e)
@@ -108,12 +119,61 @@ class ScrapingService:
             logger.info(f"✅ Scraping de redes sociales completado: {result['total_saved']} noticias guardadas, "
                        f"{result['duplicates_detected']} duplicados detectados, "
                        f"{result['alerts_triggered']} alertas activadas en {duration}s")
+            self.refresh_premium_scores()
             
         except Exception as e:
             result['error'] = str(e)
             result['duration_seconds'] = int((datetime.now() - start_time).total_seconds())
             logger.error(f"❌ Error en scraping de redes sociales: {e}", exc_info=True)
         
+        return result
+
+    def execute_youtube_scraping(self) -> Dict:
+        """Ejecutar scraping exclusivamente de YouTube"""
+        start_time = datetime.now()
+        result = {
+            'success': False,
+            'total_extracted': 0,
+            'total_saved': 0,
+            'duplicates_detected': 0,
+            'alerts_triggered': 0,
+            'duration_seconds': 0,
+            'error': None,
+            'errors': []
+        }
+
+        try:
+            youtube_scraper = self.main_scraper.social_scrapers.get('youtube')
+            if not youtube_scraper:
+                raise RuntimeError("Scraper de YouTube no configurado")
+
+            logger.info("▶️ Iniciando scraping específico de YouTube...")
+
+            if hasattr(youtube_scraper, 'get_all_news') and getattr(self.main_scraper, 'use_real_scraping', False):
+                youtube_news = youtube_scraper.get_all_news(use_real=self.main_scraper.use_real_scraping)
+            else:
+                youtube_news = youtube_scraper.get_all_news()
+
+            result['total_extracted'] = len(youtube_news)
+            logger.info(f"📺 Videos obtenidos de YouTube: {len(youtube_news)}")
+
+            save_result = self.save_news_to_database_enhanced(youtube_news)
+            result.update(save_result)
+
+            duration = int((datetime.now() - start_time).total_seconds())
+            result['duration_seconds'] = duration
+            result['success'] = True
+
+            logger.info(
+                f"✅ Scraping de YouTube completado: {result['total_saved']} videos guardados, "
+                f"{result['duplicates_detected']} duplicados, {result['alerts_triggered']} alertas en {duration}s"
+            )
+
+        except Exception as e:
+            result['error'] = str(e)
+            result['duration_seconds'] = int((datetime.now() - start_time).total_seconds())
+            logger.error("❌ Error en scraping de YouTube: %s", e, exc_info=True)
+
         return result
     
     def save_news_to_database_enhanced(self, news: List[Dict]) -> Dict:
@@ -253,6 +313,14 @@ class ScrapingService:
             db.close()
         
         return result
+
+    def refresh_premium_scores(self) -> None:
+        """Recalcular puntajes premium tras nuevas inserciones."""
+        try:
+            db = next(get_db())
+            update_premium_scores(db, hours_window=168, auto_mark=False)
+        except Exception as e:
+            logger.warning(f"No se pudieron actualizar puntajes premium: {e}")
     
     def save_news_to_database(self, news: List[Dict]) -> int:
         """Método legacy mantenido para compatibilidad"""
@@ -312,6 +380,93 @@ class ScrapingService:
     def get_alert_stats(self, days: int = 7) -> Dict:
         """Obtener estadísticas de alertas"""
         return self.alert_system.get_alert_statistics(next(get_db()), days)
+    
+    def compare_social_vs_diarios(self, days: int = 2, limit: int = 50) -> Dict:
+        """Comparar noticias de redes sociales vs noticias de diarios web."""
+        db_generator = get_db()
+        db = next(db_generator)
+        social_platforms = ['Facebook', 'Twitter', 'Instagram', 'YouTube']
+        cutoff = datetime.now() - timedelta(days=days)
+        try:
+            # Noticias de diarios tradicionales en la ventana de tiempo
+            daily_news = db.query(Noticia).join(Diario).filter(
+                ~Diario.nombre.in_(social_platforms),
+                Noticia.fecha_extraccion >= cutoff
+            ).all()
+            daily_title_hashes = {n.titulo_hash for n in daily_news if n.titulo_hash}
+            daily_similarity_hashes = {n.similarity_hash for n in daily_news if n.similarity_hash}
+            # Noticias de redes sociales en la ventana
+            social_rows = db.query(Noticia, Diario).join(Diario).filter(
+                Diario.nombre.in_(social_platforms),
+                Noticia.fecha_extraccion >= cutoff
+            ).order_by(Noticia.fecha_extraccion.desc()).all()
+            comparison_items = []
+            for noticia, diario in social_rows:
+                if len(comparison_items) >= limit:
+                    break
+                # Comprobar si ya existe cobertura similar en diarios
+                matched = False
+                if noticia.similarity_hash and noticia.similarity_hash in daily_similarity_hashes:
+                    matched = True
+                if not matched and noticia.titulo_hash and noticia.titulo_hash in daily_title_hashes:
+                    matched = True
+                if matched:
+                    continue
+                # Buscar coincidencias parciales para referencia
+                candidate_matches = []
+                for daily in daily_news:
+                    similarity_score = self.duplicate_detector.calculate_similarity(noticia.titulo, daily.titulo)
+                    if similarity_score >= 0.6:
+                        candidate_matches.append({
+                            'id': daily.id,
+                            'titulo': daily.titulo,
+                            'diario': daily.diario.nombre if daily.diario else None,
+                            'categoria': daily.categoria,
+                            'fecha_publicacion': daily.fecha_publicacion.isoformat() if daily.fecha_publicacion else None,
+                            'similaridad': round(similarity_score, 2)
+                        })
+                candidate_matches.sort(key=lambda c: c['similaridad'], reverse=True)
+                candidate_matches = candidate_matches[:3]
+                comparison_items.append({
+                    'id': noticia.id,
+                    'titulo': noticia.titulo,
+                    'categoria': noticia.categoria,
+                    'plataforma': diario.nombre,
+                    'autor': noticia.autor,
+                    'fecha_publicacion': noticia.fecha_publicacion.isoformat() if noticia.fecha_publicacion else None,
+                    'fecha_extraccion': noticia.fecha_extraccion.isoformat() if noticia.fecha_extraccion else None,
+                    'enlace': noticia.enlace,
+                    'imagen_url': noticia.imagen_url,
+                    'palabras_clave': noticia.palabras_clave,
+                    'coincidencias_diarios': candidate_matches
+                })
+            return {
+                'generated_at': datetime.now().isoformat(),
+                'days_window': days,
+                'cutoff': cutoff.isoformat(),
+                'total_social_checked': len(social_rows),
+                'total_daily_reference': len(daily_news),
+                'total_social_only': len(comparison_items),
+                'items': comparison_items
+            }
+        except Exception as exc:
+            logger.error(f"Error comparando noticias de redes vs diarios: {exc}", exc_info=True)
+            return {
+                'generated_at': datetime.now().isoformat(),
+                'days_window': days,
+                'cutoff': cutoff.isoformat(),
+                'error': str(exc),
+                'items': []
+            }
+        finally:
+            try:
+                db.close()
+            except Exception:
+                pass
+            try:
+                db_generator.close()
+            except Exception:
+                pass
     
     def create_custom_alert(self, alert_data: Dict) -> Dict:
         """Crear una alerta personalizada"""

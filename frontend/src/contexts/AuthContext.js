@@ -16,6 +16,8 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
+  const [subscription, setSubscription] = useState(null);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Verificar si hay token guardado al cargar la app
@@ -39,6 +41,7 @@ export const AuthProvider = ({ children }) => {
       });
       setUser(response.data);
       setToken(tokenToVerify);
+      await fetchSubscription(tokenToVerify);
     } catch (error) {
       console.error('Token inválido:', error);
       logout();
@@ -61,6 +64,7 @@ export const AuthProvider = ({ children }) => {
       
       setToken(access_token);
       setUser(userData);
+      await fetchSubscription(access_token);
       
       return { success: true, user: userData };
     } catch (error) {
@@ -90,28 +94,75 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    localStorage.removeItem('access_token');
+    // Limpiar completamente el estado antes de eliminar del localStorage
     setToken(null);
     setUser(null);
+    setSubscription(null);
+    // Limpiar localStorage después de limpiar el estado
+    localStorage.removeItem('access_token');
+    // Forzar un pequeño delay para asegurar que el estado se limpia completamente
+    // Esto evita problemas de timing cuando se cambia de usuario rápidamente
   };
 
   const isAdmin = () => {
-    return user?.role === 'ADMIN';
+    return user?.role === 'admin' || user?.role === 'ADMIN';
   };
 
   const isAuthenticated = () => {
     return !!token && !!user;
   };
 
+  const fetchSubscription = async (tokenValue = token) => {
+    if (!tokenValue) {
+      setSubscription(null);
+      return;
+    }
+    setSubscriptionLoading(true);
+    try {
+      const response = await axios.get(`${API_BASE}/subscriptions/me`, {
+        headers: {
+          Authorization: `Bearer ${tokenValue}`
+        }
+      });
+      setSubscription(response.data || null);
+    } catch (error) {
+      console.error('Error obteniendo suscripción:', error.response?.data || error.message);
+      setSubscription(null);
+    } finally {
+      setSubscriptionLoading(false);
+    }
+  };
+
+  const fetchSubscriptionStatus = async (tokenValue = token) => {
+    if (!tokenValue) {
+      return null;
+    }
+    try {
+      const response = await axios.get(`${API_BASE}/subscriptions/status`, {
+        headers: {
+          Authorization: `Bearer ${tokenValue}`
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error obteniendo estado de suscripción:', error.response?.data || error.message);
+      return null;
+    }
+  };
+
   const value = {
     user,
     token,
     loading,
+    subscription,
+    subscriptionLoading,
     login,
     register,
     logout,
     isAdmin,
-    isAuthenticated
+    isAuthenticated,
+    refreshSubscription: fetchSubscription,
+    fetchSubscriptionStatus
   };
 
   return (

@@ -1,9 +1,9 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import styled from 'styled-components';
-import { FiFileText, FiBarChart2, FiFilter, FiRefreshCw, FiCalendar, FiSearch, FiAlertTriangle, FiTrendingUp, FiPieChart, FiChevronDown, FiRadio, FiShare2 } from 'react-icons/fi';
-import { AuthProvider } from './contexts/AuthContext';
+import { FiFileText, FiBarChart2, FiFilter, FiRefreshCw, FiCalendar, FiSearch, FiAlertTriangle, FiTrendingUp, FiPieChart, FiChevronDown, FiRadio, FiShare2, FiLock } from 'react-icons/fi';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import AuthNavbar from './components/Auth/AuthNavbar';
 import DiarioComercio from './components/DiarioComercio';
 import DiarioCorreo from './components/DiarioCorreo';
@@ -22,6 +22,7 @@ import AppUGC from './AppUGC';
 import CommunityFeed from './components/Community/CommunityFeed';
 import UnifiedNews from './components/UnifiedNews';
 import SocialMediaFeed from './components/SocialMediaFeed';
+import SubscriptionModal from './components/Subscriptions/SubscriptionModal';
 
 const Container = styled.div`
   width: 100%;
@@ -82,8 +83,12 @@ const Subtitle = styled.p`
 const Navigation = styled.nav`
   display: flex;
   justify-content: center;
-  gap: 2rem;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem 1.5rem;
   margin-top: 1.5rem;
+  width: 100%;
+  padding: 0 1rem;
 `;
 
 const NavButton = styled.button.withConfig({
@@ -101,10 +106,22 @@ const NavButton = styled.button.withConfig({
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  flex: 0 1 auto;
 
   &:hover {
     background: ${props => props.active ? '#c82333' : 'rgba(255, 255, 255, 0.1)'};
     border-color: ${props => props.active ? '#c82333' : 'rgba(255, 255, 255, 0.5)'};
+  }
+
+  @media (max-width: 1024px) {
+    padding: 0.7rem 1.6rem;
+    font-size: 0.95rem;
+  }
+
+  @media (max-width: 768px) {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+    border-radius: 20px;
   }
 `;
 
@@ -299,6 +316,8 @@ const TextNewsCard = styled.article`
   border-left: 4px solid #dc3545;
   transition: all 0.3s ease;
   cursor: pointer;
+  position: relative;
+  overflow: hidden;
   
   &:hover {
     transform: translateY(-2px);
@@ -370,6 +389,8 @@ const RelevantNewsCard = styled.article`
   transition: all 0.3s ease;
   cursor: pointer;
   margin-bottom: 0.8rem;
+  position: relative;
+  overflow: hidden;
   
   &:hover {
     transform: translateX(4px);
@@ -688,6 +709,8 @@ const NewsListItem = styled.article`
   transition: all 0.3s ease;
   cursor: pointer;
   border-left: 4px solid transparent;
+  position: relative;
+  overflow: hidden;
 
   &:hover {
     transform: translateY(-3px);
@@ -880,6 +903,7 @@ const NewsCard = styled.article`
   box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
   cursor: pointer;
+  position: relative;
   
   &:hover {
     transform: translateY(-5px);
@@ -906,6 +930,46 @@ const NewsOverlay = styled.div`
   background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
   padding: 1.5rem;
   color: white;
+`;
+
+const PremiumBadge = styled.span`
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  background: linear-gradient(135deg, #ffd43b 0%, #f08c00 100%);
+  color: #2d1b69;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  z-index: 2;
+  box-shadow: 0 8px 18px rgba(255, 167, 36, 0.25);
+`;
+
+const PremiumOverlay = styled.div`
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 16, 48, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #f8f1ff;
+  font-weight: 600;
+  font-size: 1rem;
+  text-align: center;
+  padding: 1.5rem;
+  z-index: 3;
+  backdrop-filter: blur(1px);
+  pointer-events: none;
+
+  small {
+    display: block;
+    margin-top: 0.35rem;
+    font-weight: 500;
+    opacity: 0.85;
+  }
 `;
 
 const NewsTimeBadge = styled.div`
@@ -977,11 +1041,643 @@ const ErrorMessage = styled.div`
   text-align: center;
 `;
 
+const ComparisonSection = styled.section`
+  background: white;
+  border-radius: 18px;
+  padding: 2rem;
+  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.12);
+  border: 1px solid #e9ecef;
+  margin-bottom: 3rem;
+  position: relative;
+  overflow: hidden;
+`;
+
+const ComparisonTitle = styled.h2`
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1b1f3b;
+  margin: 0 0 1.5rem 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+`;
+
+const ComparisonHighlight = styled.span`
+  background: linear-gradient(135deg, #dc3545 0%, #ff9a44 100%);
+  color: white;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+`;
+
+const ComparisonSummaryGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+`;
+
+const ComparisonSummaryCard = styled.div`
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  border-radius: 15px;
+  padding: 1rem 1.5rem;
+  border: 1px solid rgba(220, 53, 69, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+`;
+
+const ComparisonSummaryValue = styled.span`
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #dc3545;
+`;
+
+const ComparisonSummaryLabel = styled.span`
+  font-size: 0.85rem;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+`;
+
+const ComparisonGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+`;
+
+const ComparisonCard = styled.article`
+  border-radius: 15px;
+  border: 1px solid rgba(220, 53, 69, 0.2);
+  box-shadow: 0 8px 20px rgba(220, 53, 69, 0.08);
+  padding: 1.5rem;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, #fff 100%);
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  position: relative;
+  overflow: hidden;
+
+  &:before {
+    content: '';
+    position: absolute;
+    top: -40px;
+    right: -40px;
+    width: 120px;
+    height: 120px;
+    background: radial-gradient(circle at center, rgba(220, 53, 69, 0.12), transparent 60%);
+    pointer-events: none;
+  }
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 30px rgba(220, 53, 69, 0.18);
+  }
+`;
+
+const ComparisonBadge = styled.span`
+  align-self: flex-start;
+  background: linear-gradient(135deg, #1da1f2 0%, #0084ff 100%);
+  color: white;
+  padding: 0.3rem 0.8rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  box-shadow: 0 4px 12px rgba(0, 132, 255, 0.3);
+`;
+
+const ComparisonCardTitle = styled.h4`
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #212529;
+  margin: 0;
+  line-height: 1.4;
+`;
+
+const ComparisonMeta = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: #6c757d;
+`;
+
+const ComparisonLink = styled.a`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: #dc3545;
+  font-weight: 600;
+  text-decoration: none;
+  margin-top: 0.5rem;
+
+  &:hover {
+    text-decoration: underline;
+  }
+`;
+
+const ComparisonMatches = styled.div`
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 0.8rem;
+  border: 1px solid rgba(99, 110, 114, 0.1);
+  font-size: 0.8rem;
+`;
+
+const ComparisonMatchesTitle = styled.div`
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 0.4rem;
+`;
+
+const ComparisonMatchItem = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.2rem 0;
+  gap: 0.5rem;
+  color: #6c757d;
+
+  span {
+    font-size: 0.75rem;
+  }
+`;
+
+const ComparisonEmpty = styled.div`
+  text-align: center;
+  padding: 2rem 1rem;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 1px dashed #ced4da;
+  color: #6c757d;
+  font-size: 0.95rem;
+`;
+
+const ComparisonError = styled.div`
+  text-align: center;
+  padding: 1rem;
+  border-radius: 10px;
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+  margin-bottom: 1rem;
+`;
+
+// Componente para la vista de noticias Premium
+function PremiumNewsView() {
+  const navigate = useNavigate();
+  const { isAuthenticated, subscription, refreshSubscription, token, user } = useAuth();
+  const [premiumNews, setPremiumNews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [pendingPremiumNews, setPendingPremiumNews] = useState(null);
+  const hasActiveSubscription = subscription?.estado === 'active';
+  const userIsAuthenticated = isAuthenticated();
+  
+  // Ref para evitar refrescar suscripción múltiples veces
+  const subscriptionRefreshed = useRef(false);
+  
+  // Ref para evitar que el modal se cierre automáticamente
+  const modalOpenRef = useRef(false);
+
+  // Función para cargar noticias premium (memoizada para evitar recreaciones)
+  const fetchPremiumNews = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await axios.get('http://localhost:8000/noticias?es_premium=true&limit=100');
+      setPremiumNews(response.data);
+    } catch (err) {
+      console.error('Error fetching premium news:', err);
+      setError('Error al cargar noticias premium');
+    } finally {
+      setLoading(false);
+    }
+  }, []); // Sin dependencias = función estable
+
+  // Cargar noticias premium solo una vez al montar el componente
+  useEffect(() => {
+    fetchPremiumNews();
+  }, [fetchPremiumNews]); // Ahora fetchPremiumNews es estable gracias a useCallback
+
+  // Refrescar suscripción solo cuando el usuario se autentica o cambia el token
+  useEffect(() => {
+    // Solo refrescar si hay token y usuario (usuario autenticado)
+    if (token && user) {
+      // Usar el token actual como clave para evitar refrescar múltiples veces
+      const currentToken = token;
+      if (!subscriptionRefreshed.current || subscriptionRefreshed.current !== currentToken) {
+        subscriptionRefreshed.current = currentToken;
+        refreshSubscription(currentToken);
+      }
+    } else {
+      // Resetear el flag si el usuario se desautentica
+      subscriptionRefreshed.current = null;
+    }
+  }, [token, user]); // Solo token y user, refreshSubscription es estable desde el contexto
+
+  const handleNewsClick = async (noticia) => {
+    // Si no está autenticado, mostrar modal de suscripción con la noticia pendiente
+    if (!userIsAuthenticated) {
+      setPendingPremiumNews(noticia);
+      modalOpenRef.current = true;
+      setShowSubscriptionModal(true);
+      return;
+    }
+    
+    // Verificar suscripción activa directamente desde el endpoint para asegurar datos actualizados
+    if (token) {
+      try {
+        const statusResponse = await axios.get('http://localhost:8000/subscriptions/status', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        const hasActive = statusResponse.data?.has_active && statusResponse.data?.active_subscription;
+        
+        if (hasActive) {
+          // Actualizar la suscripción en el contexto
+          await refreshSubscription(token);
+          // Navegar directamente a la noticia
+          navigate(`/noticia/${noticia.id}`);
+          return;
+        }
+      } catch (err) {
+        console.error('Error verificando suscripción:', err);
+        // Si hay error, continuar con la lógica normal
+      }
+    }
+    
+    // Si no tiene suscripción activa, mostrar planes
+    if (!hasActiveSubscription) {
+      setPendingPremiumNews(noticia);
+      modalOpenRef.current = true;
+      setShowSubscriptionModal(true);
+      return;
+    }
+    
+    // Si tiene suscripción activa (fallback), navegar a la noticia
+    navigate(`/noticia/${noticia.id}`);
+  };
+
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0f0f0f 100%)',
+      padding: '2rem 0',
+      color: '#fff'
+    }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1rem' }}>
+        {/* Botón Volver al Menú Principal */}
+        <div style={{ marginBottom: '2rem' }}>
+          <button
+            onClick={() => navigate('/')}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.75rem 1.5rem',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '25px',
+              fontSize: '1rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
+              transition: 'all 0.3s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.transform = 'translateY(-2px)';
+              e.target.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.6)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.transform = 'translateY(0)';
+              e.target.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.4)';
+            }}
+          >
+            ← Volver al Menú Principal
+          </button>
+        </div>
+
+        {/* Header Premium */}
+        <div style={{
+          textAlign: 'center',
+          marginBottom: '3rem',
+          padding: '2rem',
+          background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 215, 0, 0.05) 100%)',
+          borderRadius: '20px',
+          border: '2px solid rgba(255, 215, 0, 0.3)'
+        }}>
+          <h1 style={{
+            fontSize: '3rem',
+            margin: '0 0 1rem 0',
+            background: 'linear-gradient(135deg, #ffd700 0%, #ffed4e 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            fontWeight: 'bold'
+          }}>
+            ⭐ Noticias Premium
+          </h1>
+          <p style={{ fontSize: '1.2rem', color: '#ccc', margin: '0' }}>
+            Contenido exclusivo de alto impacto y análisis profundo
+          </p>
+          {!hasActiveSubscription && (
+            <div style={{
+              marginTop: '1.5rem',
+              padding: '1rem',
+              background: 'rgba(255, 215, 0, 0.1)',
+              borderRadius: '10px',
+              border: '1px solid rgba(255, 215, 0, 0.3)'
+            }}>
+              <p style={{ margin: '0 0 1rem 0', color: '#ffd700' }}>
+                🔒 Suscríbete para acceder a todo el contenido premium
+              </p>
+              <button
+                onClick={() => {
+                  setPendingPremiumNews(null); // No hay noticia específica, solo ver planes
+                  modalOpenRef.current = true;
+                  setShowSubscriptionModal(true);
+                }}
+                style={{
+                  padding: '0.75rem 2rem',
+                  background: 'linear-gradient(135deg, #ffd700 0%, #ffed4e 100%)',
+                  color: '#000',
+                  border: 'none',
+                  borderRadius: '25px',
+                  fontSize: '1rem',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 15px rgba(255, 215, 0, 0.4)',
+                  transition: 'transform 0.2s'
+                }}
+                onMouseEnter={(e) => e.target.style.transform = 'scale(1.05)'}
+                onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
+              >
+                Ver Planes Premium
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Grid de Noticias Premium */}
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '3rem', color: '#ffd700' }}>
+            <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⏳</div>
+            <div>Cargando noticias premium...</div>
+          </div>
+        ) : error ? (
+          <div style={{ textAlign: 'center', padding: '3rem', color: '#ff6b6b' }}>
+            <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>❌</div>
+            <div>{error}</div>
+          </div>
+        ) : premiumNews.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '3rem', color: '#ccc' }}>
+            <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>📰</div>
+            <div>No hay noticias premium disponibles en este momento</div>
+          </div>
+        ) : (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+            gap: '1.5rem',
+            marginBottom: '2rem'
+          }}>
+            {premiumNews.map((noticia) => (
+              <div
+                key={noticia.id}
+                onClick={() => handleNewsClick(noticia)}
+                style={{
+                  background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.08) 0%, rgba(255, 215, 0, 0.03) 100%)',
+                  border: '2px solid rgba(255, 215, 0, 0.4)',
+                  borderRadius: '18px',
+                  padding: 0,
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  boxShadow: '0 4px 20px rgba(255, 215, 0, 0.15)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  height: '100%'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-8px)';
+                  e.currentTarget.style.boxShadow = '0 15px 40px rgba(255, 215, 0, 0.4)';
+                  e.currentTarget.style.borderColor = 'rgba(255, 215, 0, 0.8)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 20px rgba(255, 215, 0, 0.15)';
+                  e.currentTarget.style.borderColor = 'rgba(255, 215, 0, 0.4)';
+                }}
+              >
+                {/* Badge Premium */}
+                <div style={{
+                  position: 'absolute',
+                  top: '1rem',
+                  right: '1rem',
+                  background: 'linear-gradient(135deg, #ffd700 0%, #ffed4e 100%)',
+                  color: '#000',
+                  padding: '0.5rem 1rem',
+                  borderRadius: '25px',
+                  fontSize: '0.8rem',
+                  fontWeight: 'bold',
+                  boxShadow: '0 4px 15px rgba(255, 215, 0, 0.6)',
+                  zIndex: 5,
+                  border: '2px solid rgba(0, 0, 0, 0.1)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  ⭐ PREMIUM
+                </div>
+
+                {/* Imagen - Mejorada */}
+                {noticia.imagen_url && (
+                  <div style={{
+                    width: '100%',
+                    height: '220px',
+                    overflow: 'hidden',
+                    position: 'relative'
+                  }}>
+                    <img
+                      src={noticia.imagen_url}
+                      alt={noticia.titulo}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        transition: 'transform 0.3s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'scale(1.05)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'scale(1)';
+                      }}
+                    />
+                    {/* Overlay sutil en la imagen */}
+                    <div style={{
+                      position: 'absolute',
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      height: '60px',
+                      background: 'linear-gradient(to top, rgba(0, 0, 0, 0.6) 0%, transparent 100%)'
+                    }} />
+                  </div>
+                )}
+
+                {/* Contenido */}
+                <div style={{ 
+                  padding: '1.5rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  flex: 1,
+                  position: 'relative'
+                }}>
+                  {/* Título - Mejorado */}
+                  <h3 style={{
+                    color: '#ffd700',
+                    margin: '0 0 1rem 0',
+                    fontSize: '1.3rem',
+                    fontWeight: '700',
+                    lineHeight: '1.4',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 3,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    minHeight: '4.2rem',
+                    flexShrink: 0
+                  }}>
+                    {noticia.titulo}
+                  </h3>
+
+                  {/* Spacer para empujar el contenido hacia abajo */}
+                  <div style={{ flex: 1 }} />
+
+                  {/* Categoría y Fecha - Mejorado */}
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    fontSize: '0.85rem',
+                    color: '#ccc',
+                    paddingTop: '1rem',
+                    paddingBottom: (!userIsAuthenticated || !hasActiveSubscription) ? '4rem' : '0',
+                    borderTop: '1px solid rgba(255, 215, 0, 0.2)',
+                    flexWrap: 'wrap',
+                    gap: '0.5rem',
+                    flexShrink: 0
+                  }}>
+                    <span style={{
+                      background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.25) 0%, rgba(255, 215, 0, 0.15) 100%)',
+                      padding: '0.4rem 1rem',
+                      borderRadius: '20px',
+                      color: '#ffd700',
+                      fontWeight: '600',
+                      border: '1px solid rgba(255, 215, 0, 0.3)',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {noticia.categoria}
+                    </span>
+                    {noticia.fecha_publicacion && (
+                      <span style={{
+                        color: '#aaa',
+                        fontSize: '0.8rem',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {new Date(noticia.fecha_publicacion).toLocaleDateString('es-ES', { 
+                          day: 'numeric', 
+                          month: 'short',
+                          year: 'numeric'
+                        })}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Badge de suscripción requerida - siempre en la misma posición */}
+                  {(!userIsAuthenticated || !hasActiveSubscription) && (
+                    <div style={{
+                      position: 'absolute',
+                      bottom: '1rem',
+                      left: '1.5rem',
+                      right: '1.5rem',
+                      background: 'linear-gradient(135deg, rgba(255, 107, 107, 0.95) 0%, rgba(255, 71, 87, 0.95) 100%)',
+                      color: 'white',
+                      padding: '0.6rem 1rem',
+                      borderRadius: '12px',
+                      fontSize: '0.85rem',
+                      fontWeight: 'bold',
+                      boxShadow: '0 4px 15px rgba(255, 107, 107, 0.5)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      pointerEvents: 'none',
+                      backdropFilter: 'blur(10px)',
+                      border: '2px solid rgba(255, 255, 255, 0.3)',
+                      textAlign: 'center',
+                      flexShrink: 0
+                    }}>
+                      <span>🔒</span>
+                      <span>Suscríbete para leer</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Modal de Suscripción */}
+      {showSubscriptionModal && (
+        <SubscriptionModal
+          isOpen={showSubscriptionModal}
+          pendingNews={pendingPremiumNews}
+          onClose={() => {
+            modalOpenRef.current = false;
+            setShowSubscriptionModal(false);
+            setPendingPremiumNews(null);
+          }}
+          onSubscriptionSuccess={() => {
+            modalOpenRef.current = false;
+            setShowSubscriptionModal(false);
+            setPendingPremiumNews(null);
+            if (token) {
+              refreshSubscription(token);
+            }
+            fetchPremiumNews();
+            // Si hay una noticia pendiente y ahora tiene suscripción, navegar a ella
+            if (pendingPremiumNews) {
+              navigate(`/noticia/${pendingPremiumNews.id}`);
+            }
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
 // Componente para la vista principal
 function MainView() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAuthenticated, token, subscription, fetchSubscriptionStatus, refreshSubscription } = useAuth();
   const [activeTab, setActiveTab] = useState('noticias');
+  const [subscriptionNotification, setSubscriptionNotification] = useState(null);
+  const [showNotification, setShowNotification] = useState(false);
+  const notificationCheckedRef = useRef(false);
   const [noticias, setNoticias] = useState([]);
   const [fechasDisponibles, setFechasDisponibles] = useState([]);
   const [fechaSeleccionada, setFechaSeleccionada] = useState(null);
@@ -1001,6 +1697,120 @@ function MainView() {
   const [dateFilterLevel, setDateFilterLevel] = useState('year'); // 'year', 'month', 'day'
   const [categoriasDisponibles, setCategoriasDisponibles] = useState([]);
   const [noticiasRelevantes, setNoticiasRelevantes] = useState([]);
+  const [comparisonData, setComparisonData] = useState(null);
+  const [comparisonLoading, setComparisonLoading] = useState(false);
+  const [comparisonError, setComparisonError] = useState(null);
+  const hasActiveSubscription = subscription?.estado === 'active';
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [pendingPremiumNews, setPendingPremiumNews] = useState(null);
+
+  // Verificar estado de suscripción al loguearse
+  useEffect(() => {
+    const checkSubscriptionStatus = async () => {
+      if (isAuthenticated() && token && !notificationCheckedRef.current) {
+        notificationCheckedRef.current = true;
+        try {
+          const status = await fetchSubscriptionStatus(token);
+          if (status) {
+            if (status.has_active && status.active_subscription) {
+              // Usuario tiene suscripción activa recién aprobada
+              const planNombre = status.active_subscription.plan?.nombre || 'Premium';
+              setSubscriptionNotification({
+                type: 'success',
+                title: `¡Tu cuenta ahora pertenece al Plan ${planNombre}!`,
+                message: 'Ya puedes acceder a todas las noticias premium.',
+                show: true
+              });
+              setShowNotification(true);
+              await refreshSubscription();
+            } else if (status.has_rejected && status.rejected_subscription) {
+              // Usuario tiene suscripción rechazada
+              setSubscriptionNotification({
+                type: 'error',
+                title: 'Tu Actualización premium ha sido rechazada',
+                message: `Motivo: ${status.rejected_subscription.motivo_rechazo}`,
+                show: true
+              });
+              setShowNotification(true);
+            }
+          }
+        } catch (error) {
+          console.error('Error verificando estado de suscripción:', error);
+        }
+      }
+    };
+    
+    checkSubscriptionStatus();
+  }, [isAuthenticated, token, fetchSubscriptionStatus, refreshSubscription]);
+
+  // Resetear el ref cuando el usuario cierra sesión
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      notificationCheckedRef.current = false;
+      setShowNotification(false);
+      setSubscriptionNotification(null);
+    }
+  }, [isAuthenticated]);
+
+  const openSubscriptionModal = (news) => {
+    setPendingPremiumNews(news || null);
+    setShowSubscriptionModal(true);
+  };
+
+  const closeSubscriptionModal = () => {
+    setPendingPremiumNews(null);
+    setShowSubscriptionModal(false);
+  };
+
+  const handleNoticiaClick = (noticia) => {
+    if (noticia?.es_premium && !hasActiveSubscription) {
+      if (!isAuthenticated()) {
+        alert('Inicia sesión para suscribirte y acceder a noticias premium.');
+      }
+      openSubscriptionModal(noticia);
+      return;
+    }
+    navigate(`/noticia/${noticia.id}`);
+  };
+
+  const getPremiumStyle = (noticia) => {
+    return noticia?.es_premium && !hasActiveSubscription
+      ? { filter: 'grayscale(0.35)', opacity: 0.85 }
+      : undefined;
+  };
+
+  const renderPremiumIndicators = (noticia) => {
+    if (!noticia?.es_premium) return null;
+    const locked = !hasActiveSubscription;
+    return (
+      <>
+        <PremiumBadge>Premium</PremiumBadge>
+        {locked && (
+          <PremiumOverlay>
+            <div>
+              <FiLock style={{ fontSize: '1.4rem', marginBottom: '0.3rem' }} />
+              <div>Contenido exclusivo</div>
+              <small>Haz clic para suscribirte</small>
+            </div>
+          </PremiumOverlay>
+        )}
+      </>
+    );
+  };
+
+  const fetchComparisonData = useCallback(async (diasVentana = 2) => {
+    setComparisonLoading(true);
+    try {
+      const response = await axios.get(`http://localhost:8000/scraping/comparacion-diarios-redes?dias=${diasVentana}&limite=60`);
+      setComparisonData(response.data);
+      setComparisonError(null);
+    } catch (error) {
+      console.error('Error fetching comparación diarios vs redes:', error);
+      setComparisonError('No se pudo cargar la comparación entre redes sociales y diarios.');
+    } finally {
+      setComparisonLoading(false);
+    }
+  }, []);
 
   // Función para procesar fechas de manera jerárquica
   const processHierarchicalDates = (fechas) => {
@@ -1112,7 +1922,8 @@ function MainView() {
       fetchCategoriasDisponibles();
       fetchNoticiasRelevantes(); // Cargar noticias relevantes al inicio
       fetchTodasLasNoticias(); // Cargar todas las noticias para el filtro de fechas
-  }, []);
+      fetchComparisonData();
+  }, [fetchComparisonData]);
 
   // Efecto para recargar noticias cuando cambian los filtros
   useEffect(() => {
@@ -1252,6 +2063,7 @@ function MainView() {
     if (fechaSeleccionada) {
       fetchNoticiasPorFecha(fechaSeleccionada);
     }
+    fetchComparisonData();
   };
 
   const handleDiarioFilter = (diario) => {
@@ -1426,6 +2238,109 @@ function MainView() {
 
   return (
     <Container>
+      {/* Notificación de estado de suscripción */}
+      {showNotification && subscriptionNotification && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          zIndex: 10000,
+          background: subscriptionNotification.type === 'success' 
+            ? 'linear-gradient(135deg, #51cf66 0%, #2f9e44 100%)'
+            : 'linear-gradient(135deg, #ff6b6b 0%, #ff4757 100%)',
+          color: 'white',
+          padding: '1.5rem 2rem',
+          borderRadius: '16px',
+          boxShadow: '0 8px 30px rgba(0, 0, 0, 0.3)',
+          maxWidth: '450px',
+          animation: 'slideIn 0.3s ease-out'
+        }}>
+          <style>{`
+            @keyframes slideIn {
+              from {
+                transform: translateX(100%);
+                opacity: 0;
+              }
+              to {
+                transform: translateX(0);
+                opacity: 1;
+              }
+            }
+          `}</style>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            gap: '1rem'
+          }}>
+            <div style={{ flex: 1 }}>
+              <h3 style={{
+                margin: '0 0 0.5rem 0',
+                fontSize: '1.2rem',
+                fontWeight: '700',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}>
+                {subscriptionNotification.type === 'success' ? '✅' : '❌'}
+                {subscriptionNotification.title}
+              </h3>
+              <p style={{
+                margin: 0,
+                fontSize: '0.95rem',
+                opacity: 0.95,
+                lineHeight: '1.5'
+              }}>
+                {subscriptionNotification.message}
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setShowNotification(false);
+                setSubscriptionNotification(null);
+              }}
+              style={{
+                background: 'rgba(255, 255, 255, 0.2)',
+                border: 'none',
+                color: 'white',
+                fontSize: '1.5rem',
+                cursor: 'pointer',
+                padding: '0.25rem 0.5rem',
+                borderRadius: '8px',
+                lineHeight: 1,
+                transition: 'background 0.2s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.3)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'}
+            >
+              ×
+            </button>
+          </div>
+          <button
+            onClick={() => {
+              setShowNotification(false);
+              setSubscriptionNotification(null);
+            }}
+            style={{
+              marginTop: '1rem',
+              width: '100%',
+              padding: '0.75rem',
+              background: 'rgba(255, 255, 255, 0.2)',
+              border: 'none',
+              color: 'white',
+              borderRadius: '8px',
+              fontSize: '0.95rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'background 0.2s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.3)'}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'}
+          >
+            Continuar
+          </button>
+        </div>
+      )}
         <Header>
         <HeaderContent>
           <HeaderLeft>
@@ -1676,6 +2591,23 @@ function MainView() {
                 onClick={() => handleDiarioFilter('CNN en Español')}
               >
                 CNN Español
+              </DiarioFilterButton>
+              <DiarioFilterButton 
+                active={location.pathname === '/premium'}
+                onClick={() => navigate('/premium')}
+                style={{
+                  background: location.pathname === '/premium' 
+                    ? 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)' 
+                    : 'linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%)',
+                  color: '#ffd700',
+                  border: '2px solid #ffd700',
+                  fontWeight: 'bold',
+                  boxShadow: location.pathname === '/premium' 
+                    ? '0 4px 15px rgba(255, 215, 0, 0.4)' 
+                    : 'none'
+                }}
+              >
+                ⭐ Premium
               </DiarioFilterButton>
             </div>
           </FilterGroup>
@@ -2097,8 +3029,10 @@ function MainView() {
                 noticiasRelevantes.map((noticia, index) => (
                   <RelevantNewsCard 
                     key={`relevant-${noticia.id}`} 
-                    onClick={() => navigate(`/noticia/${noticia.id}`)}
+                    onClick={() => handleNoticiaClick(noticia)}
+                    style={getPremiumStyle(noticia)}
                   >
+                    {renderPremiumIndicators(noticia)}
                     <RelevantNewsMeta>
                       <RelevantNewsDate>
                         {formatRelativeDate(noticia.fecha_publicacion)}
@@ -2136,7 +3070,12 @@ function MainView() {
                                     cardType === 1 ? TextNewsMeta : TextNewsMetaSmall;
                 
                 return (
-                  <CardComponent key={index} onClick={() => navigate(`/noticia/${noticia.id}`)}>
+                  <CardComponent
+                    key={index}
+                    onClick={() => handleNoticiaClick(noticia)}
+                    style={getPremiumStyle(noticia)}
+                  >
+                    {renderPremiumIndicators(noticia)}
                     <TitleComponent>{noticia.titulo}</TitleComponent>
                     {/* Indicadores geográficos y de alerta */}
                     <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
@@ -2287,8 +3226,10 @@ function MainView() {
                 {noticiaPrincipal && (
                   <MainFeaturedCard 
                     imageUrl={noticiaPrincipal.imagen_url}
-                    onClick={() => navigate(`/noticia/${noticiaPrincipal.id}`)}
+                    onClick={() => handleNoticiaClick(noticiaPrincipal)}
+                    style={getPremiumStyle(noticiaPrincipal)}
                   >
+                    {renderPremiumIndicators(noticiaPrincipal)}
                     <TimeBadge>
                       {formatTime(noticiaPrincipal.fecha_publicacion)}
                     </TimeBadge>
@@ -2311,8 +3252,10 @@ function MainView() {
                   <SmallFeaturedCard 
                     key={index}
                     imageUrl={noticia.imagen_url}
-                    onClick={() => navigate(`/noticia/${noticia.id}`)}
+                    onClick={() => handleNoticiaClick(noticia)}
+                    style={getPremiumStyle(noticia)}
                   >
+                    {renderPremiumIndicators(noticia)}
                     <SmallTimeBadge>
                       {formatTime(noticia.fecha_publicacion)}
                     </SmallTimeBadge>
@@ -2337,7 +3280,12 @@ function MainView() {
               <ListTitle>Últimas Noticias</ListTitle>
               <NewsListGrid>
                 {noticiasSecundarias.slice(4, 12).map((noticia, index) => (
-                  <NewsListItem key={index} onClick={() => navigate(`/noticia/${noticia.id}`)}>
+                  <NewsListItem
+                    key={index}
+                    onClick={() => handleNoticiaClick(noticia)}
+                    style={getPremiumStyle(noticia)}
+                  >
+                    {renderPremiumIndicators(noticia)}
                     <NewsListImage imageUrl={noticia.imagen_url} />
                     <NewsListContent>
                       <div>
@@ -2358,6 +3306,100 @@ function MainView() {
               </NewsListGrid>
             </ListSection>
 
+            <ComparisonSection>
+              <ComparisonTitle>
+                Comparacion de noticias SCRAPING DIARIOS Y RED SOCIAL
+                <ComparisonHighlight>nuevo</ComparisonHighlight>
+              </ComparisonTitle>
+              {comparisonError && (
+                <ComparisonError>{comparisonError}</ComparisonError>
+              )}
+              {comparisonData?.error && !comparisonError && (
+                <ComparisonError>{comparisonData.error}</ComparisonError>
+              )}
+              {comparisonLoading ? (
+                <ComparisonEmpty>Analizando cobertura entre diarios y redes sociales...</ComparisonEmpty>
+              ) : (
+                <>
+                  {comparisonData ? (
+                    <>
+                      <ComparisonSummaryGrid>
+                        <ComparisonSummaryCard>
+                          <ComparisonSummaryValue>{comparisonData.total_social_only || 0}</ComparisonSummaryValue>
+                          <ComparisonSummaryLabel>Noticias sociales sin cobertura web</ComparisonSummaryLabel>
+                        </ComparisonSummaryCard>
+                        <ComparisonSummaryCard>
+                          <ComparisonSummaryValue>{comparisonData.total_social_checked || 0}</ComparisonSummaryValue>
+                          <ComparisonSummaryLabel>Noticias sociales evaluadas</ComparisonSummaryLabel>
+                        </ComparisonSummaryCard>
+                        <ComparisonSummaryCard>
+                          <ComparisonSummaryValue>{comparisonData.total_daily_reference || 0}</ComparisonSummaryValue>
+                          <ComparisonSummaryLabel>Noticias web usadas como referencia</ComparisonSummaryLabel>
+                        </ComparisonSummaryCard>
+                        <ComparisonSummaryCard>
+                          <ComparisonSummaryValue>{comparisonData.days_window || 2} días</ComparisonSummaryValue>
+                          <ComparisonSummaryLabel>Ventana de comparación</ComparisonSummaryLabel>
+                        </ComparisonSummaryCard>
+                      </ComparisonSummaryGrid>
+                      {(comparisonData.items || []).length > 0 ? (
+                        <ComparisonGrid>
+                          {comparisonData.items.slice(0, 9).map((item) => (
+                            <ComparisonCard key={`cmp-${item.id}`}>
+                              <ComparisonBadge>{item.plataforma}</ComparisonBadge>
+                              <ComparisonCardTitle>{item.titulo}</ComparisonCardTitle>
+                              <ComparisonMeta>
+                                {item.categoria && (
+                                  <span>#{item.categoria}</span>
+                                )}
+                                {item.autor && (
+                                  <span>Autor: {item.autor}</span>
+                                )}
+                                {item.fecha_publicacion ? (
+                                  <span>{formatDate(item.fecha_publicacion)}</span>
+                                ) : null}
+                              </ComparisonMeta>
+                              {item.enlace && (
+                                <ComparisonLink href={item.enlace} target="_blank" rel="noopener noreferrer">
+                                  Ver publicación original ↗
+                                </ComparisonLink>
+                              )}
+                              {item.coincidencias_diarios && item.coincidencias_diarios.length > 0 ? (
+                                <ComparisonMatches>
+                                  <ComparisonMatchesTitle>Coincidencias aproximadas en diarios:</ComparisonMatchesTitle>
+                                  {item.coincidencias_diarios.map(match => (
+                                    <ComparisonMatchItem key={`match-${match.id}`}>
+                                      <div style={{ flex: 1 }}>
+                                        <strong>{match.diario}</strong>
+                                        <div style={{ fontSize: '0.7rem', color: '#868e96' }}>{match.titulo}</div>
+                                      </div>
+                                      <span>{`${Math.round((match.similaridad || 0) * 100)}%`}</span>
+                                    </ComparisonMatchItem>
+                                  ))}
+                                </ComparisonMatches>
+                              ) : (
+                                <ComparisonMatches>
+                                  <ComparisonMatchesTitle>Sin coincidencias detectadas en diarios web</ComparisonMatchesTitle>
+                                  <div style={{ fontSize: '0.75rem', color: '#868e96' }}>
+                                    Esta noticia proviene de redes sociales y no se encontró cobertura similar en el scraping de diarios.
+                                  </div>
+                                </ComparisonMatches>
+                              )}
+                            </ComparisonCard>
+                          ))}
+                        </ComparisonGrid>
+                      ) : (
+                        <ComparisonEmpty>
+                          ¡Buen trabajo! Todas las noticias recientes de redes sociales tienen cobertura similar en los diarios web.
+                        </ComparisonEmpty>
+                      )}
+                    </>
+                  ) : (
+                    <ComparisonEmpty>No hay datos de comparación disponibles todavía.</ComparisonEmpty>
+                  )}
+                </>
+              )}
+            </ComparisonSection>
+
             {/* Sección de Grid Compacto (Estilo Segunda Imagen) */}
             <CompactSection>
               <CompactTitle>Noticias Destacadas</CompactTitle>
@@ -2366,8 +3408,10 @@ function MainView() {
                   <CompactCard 
                     key={index}
                     imageUrl={noticia.imagen_url}
-                    onClick={() => navigate(`/noticia/${noticia.id}`)}
+                    onClick={() => handleNoticiaClick(noticia)}
+                    style={getPremiumStyle(noticia)}
                   >
+                    {renderPremiumIndicators(noticia)}
                     <CompactBadge>{noticia.categoria}</CompactBadge>
                     <CompactOverlay>
                       <CompactCardTitle>{noticia.titulo}</CompactCardTitle>
@@ -2393,7 +3437,12 @@ function MainView() {
                     // Si la noticia tiene imagen, usar el diseño con imagen
                     if (noticia.imagen_url && noticia.imagen_url.trim() !== '') {
                       return (
-                        <NewsCard key={index} onClick={() => navigate(`/noticia/${noticia.id}`)}>
+                        <NewsCard
+                          key={index}
+                          onClick={() => handleNoticiaClick(noticia)}
+                          style={getPremiumStyle(noticia)}
+                        >
+                          {renderPremiumIndicators(noticia)}
                           <NewsImage imageUrl={noticia.imagen_url}>
                             <NewsTimeBadge>
                               {formatTime(noticia.fecha_publicacion)}
@@ -2423,7 +3472,12 @@ function MainView() {
                                           cardType === 1 ? TextNewsMeta : TextNewsMetaSmall;
                       
                       return (
-                        <CardComponent key={index} onClick={() => navigate(`/noticia/${noticia.id}`)}>
+                        <CardComponent
+                          key={index}
+                          onClick={() => handleNoticiaClick(noticia)}
+                          style={getPremiumStyle(noticia)}
+                        >
+                          {renderPremiumIndicators(noticia)}
                           <TitleComponent>{noticia.titulo}</TitleComponent>
                           {/* Nuevos indicadores */}
                           {(noticia.es_alerta || noticia.sentimiento) && (
@@ -2482,6 +3536,15 @@ function MainView() {
         </>
       )}
       </MainContent>
+      <SubscriptionModal
+        isOpen={showSubscriptionModal}
+        onClose={closeSubscriptionModal}
+        pendingNews={pendingPremiumNews}
+        onSubscriptionSuccess={() => {
+          closeSubscriptionModal();
+          refreshSubscription();
+        }}
+      />
     </Container>
   );
 }
@@ -2510,6 +3573,7 @@ function App() {
           <Route path="/comunidad" element={<CommunityFeed />} />
           <Route path="/noticias-unificadas" element={<UnifiedNews />} />
           <Route path="/redes-sociales" element={<SocialMediaFeed />} />
+          <Route path="/premium" element={<PremiumNewsView />} />
         </Routes>
       </Router>
     </AuthProvider>

@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 import axios from 'axios';
-import Login from './components/UGC/Login';
+import { useAuth } from './contexts/AuthContext';
 import CreatePost from './components/UGC/CreatePost';
 import MyPosts from './components/UGC/MyPosts';
 import AdminDashboard from './components/UGC/AdminDashboard';
 import MonetizationProgress from './components/UGC/MonetizationProgress';
 import EarningsPanel from './components/UGC/EarningsPanel';
+import MyPlans from './components/UGC/MyPlans';
 
 const API_BASE = 'http://localhost:8000';
 
@@ -71,6 +73,33 @@ const LogoutButton = styled.button`
   }
 `;
 
+const BackButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 25px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+
+  &:hover {
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
 const MainContent = styled.main`
   max-width: 1200px;
   margin: 0 auto;
@@ -103,25 +132,47 @@ const Tab = styled.button`
 `;
 
 function AppUGC() {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user, token, logout, isAuthenticated, isAdmin: checkIsAdmin, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState('create');
   const [monetizationEnabled, setMonetizationEnabled] = useState(false);
 
-  // Cargar usuario desde localStorage al iniciar
+  // Redirigir si no está autenticado
   useEffect(() => {
-    const storedToken = localStorage.getItem('ugc_token');
-    const storedUser = localStorage.getItem('ugc_user');
-    
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
+    if (!authLoading && !isAuthenticated()) {
+      navigate('/');
     }
-  }, []);
+  }, [authLoading, isAuthenticated, navigate]);
+
+  // Establecer tab inicial según rol cuando el usuario se carga
+  useEffect(() => {
+    if (user && token && !authLoading) {
+      // Verificar el rol directamente del objeto user para evitar problemas de timing
+      const userRole = user?.role;
+      const isUserAdmin = userRole === 'admin' || userRole === 'ADMIN';
+      const currentPath = location.pathname;
+      
+      // Redirigir según la ruta y el rol
+      if (isUserAdmin) {
+        // Si es admin, asegurar que esté en admin-dashboard y mostrar tab admin
+        if (currentPath === '/user-dashboard' || currentPath === '/ugc-feed') {
+          navigate('/admin-dashboard', { replace: true });
+        }
+        setActiveTab('admin');
+      } else {
+        // Si es usuario normal, asegurar que esté en user-dashboard y mostrar tab create
+        if (currentPath === '/admin-dashboard') {
+          navigate('/user-dashboard', { replace: true });
+        }
+        setActiveTab('create');
+      }
+    }
+  }, [user, token, authLoading, navigate, location.pathname]);
 
   // Verificar estado de monetización cuando hay usuario
   useEffect(() => {
-    if (token && user && user.role === 'user') {
+    if (token && user && user.role !== 'admin' && user.role !== 'ADMIN') {
       checkMonetizationStatus();
     }
   }, [token, user]);
@@ -137,24 +188,13 @@ function AppUGC() {
     }
   };
 
-  const handleLogin = (userData, userToken) => {
-    setUser(userData);
-    setToken(userToken);
-    
-    // Establecer tab por defecto según rol
-    if (userData.role === 'admin') {
-      setActiveTab('admin');
-    } else {
-      setActiveTab('create');
-    }
-  };
-
   const handleLogout = () => {
-    localStorage.removeItem('ugc_token');
-    localStorage.removeItem('ugc_user');
-    setUser(null);
-    setToken(null);
+    // Limpiar el estado local primero
     setActiveTab('create');
+    // Luego hacer logout y navegar
+    logout();
+    // Usar replace para evitar que el usuario pueda volver atrás
+    navigate('/', { replace: true });
   };
 
   const handlePostCreated = () => {
@@ -162,12 +202,25 @@ function AppUGC() {
     setActiveTab('my-posts');
   };
 
-  // Si no hay usuario, mostrar login
-  if (!user || !token) {
-    return <Login onLoginSuccess={handleLogin} />;
+  // Mostrar loading mientras se verifica autenticación
+  if (authLoading) {
+    return (
+      <AppContainer>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+          <div>Cargando...</div>
+        </div>
+      </AppContainer>
+    );
   }
 
-  const isAdmin = user.role === 'admin';
+  // Si no está autenticado, no mostrar nada (el useEffect redirigirá)
+  if (!isAuthenticated() || !user || !token) {
+    return null;
+  }
+
+  // Verificar el rol directamente del objeto user para evitar problemas de timing
+  const userRole = user?.role;
+  const isAdmin = userRole === 'admin' || userRole === 'ADMIN';
 
   return (
     <AppContainer>
@@ -187,6 +240,11 @@ function AppUGC() {
       </Header>
 
       <MainContent>
+        {/* Botón Volver al Menú Principal */}
+        <BackButton onClick={() => navigate('/')}>
+          ← Volver al Menú Principal
+        </BackButton>
+
         <TabContainer>
           {!isAdmin && (
             <>
@@ -212,6 +270,17 @@ function AppUGC() {
                 }}
               >
                 💰 Ingresos
+              </Tab>
+              <Tab 
+                $active={activeTab === 'plans'} 
+                onClick={() => setActiveTab('plans')}
+                style={{
+                  background: activeTab === 'plans' 
+                    ? 'linear-gradient(135deg, #ffd43b 0%, #ffa94d 100%)' 
+                    : 'transparent'
+                }}
+              >
+                ⭐ Mis Planes
               </Tab>
             </>
           )}
@@ -246,6 +315,10 @@ function AppUGC() {
               }} 
             />
           )
+        )}
+
+        {activeTab === 'plans' && !isAdmin && (
+          <MyPlans token={token} />
         )}
 
         {activeTab === 'admin' && isAdmin && (

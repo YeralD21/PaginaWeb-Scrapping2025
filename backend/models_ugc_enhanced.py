@@ -91,6 +91,7 @@ class User(Base):
     ingresos = relationship("Ingreso", back_populates="user", cascade="all, delete-orphan")
     reportes_enviados = relationship("Report", back_populates="reporter", foreign_keys="Report.reporter_id")
     notificaciones = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
+    subscriptions = relationship("UserSubscription", foreign_keys="UserSubscription.user_id", back_populates="user", cascade="all, delete-orphan")
     
     def set_password(self, password: str):
         """Encriptar y establecer contraseña"""

@@ -6,6 +6,15 @@ sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backen
 from scraping.main_scraper import MainScraper
 from backend.database import get_db
 from backend.models import Noticia, Diario
+# Importar modelos de UGC para que SQLAlchemy pueda resolver las relaciones
+# (UserSubscription necesita User)
+try:
+    from backend.models_ugc_enhanced import User
+except ImportError:
+    try:
+        from backend.models_ugc import User
+    except ImportError:
+        pass  # Si no existe, no pasa nada, solo evitamos el error de relación
 from datetime import datetime
 import logging
 

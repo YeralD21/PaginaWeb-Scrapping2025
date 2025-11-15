@@ -243,7 +243,7 @@ const Requirement = styled.div`
   }
 `;
 
-function RegisterModal({ onClose, onSwitchToLogin }) {
+function RegisterModal({ onClose, onSwitchToLogin, skipRedirect = false }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -253,7 +253,7 @@ function RegisterModal({ onClose, onSwitchToLogin }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const { register } = useAuth();
+  const { register, login } = useAuth();
 
   // Validaciones de contraseña
   const passwordValidations = {
@@ -292,10 +292,28 @@ function RegisterModal({ onClose, onSwitchToLogin }) {
     const result = await register(email, password);
     
     if (result.success) {
-      setSuccess('¡Registro exitoso! Ahora puedes iniciar sesión.');
-      setTimeout(() => {
-        onSwitchToLogin();
-      }, 2000);
+      setSuccess('¡Registro exitoso!');
+      
+      // Si skipRedirect está activo, iniciar sesión automáticamente
+      if (skipRedirect) {
+        setTimeout(async () => {
+          const loginResult = await login(email, password);
+          if (loginResult.success) {
+            setSuccess('¡Registro e inicio de sesión exitosos!');
+            setTimeout(() => {
+              onClose();
+            }, 1000);
+          } else {
+            // Si el login automático falla, cambiar a login manual
+            onSwitchToLogin();
+          }
+        }, 1000);
+      } else {
+        // Comportamiento normal: cambiar a login
+        setTimeout(() => {
+          onSwitchToLogin();
+        }, 2000);
+      }
     } else {
       setError(result.error);
     }
