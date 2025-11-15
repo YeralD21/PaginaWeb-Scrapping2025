@@ -4,6 +4,10 @@ from datetime import datetime
 import logging
 from typing import List, Dict
 import re
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from image_extractor import extract_image_from_element
 
 class ScraperCNNFinal:
     def __init__(self):
@@ -118,25 +122,9 @@ class ScraperCNNFinal:
                         title == category or title in ['Economía', 'Mundo', 'Deportes']):
                         continue
                     
-                    # Buscar imagen
-                    img_elem = None
+                    # Buscar imagen usando el extractor mejorado
                     parent = link.find_parent()
-                    
-                    # Buscar imagen en diferentes niveles
-                    for elem in [link, parent, parent.find_parent() if parent else None]:
-                        if elem:
-                            img_elem = elem.find('img')
-                            if img_elem:
-                                break
-                    
-                    imagen_url = None
-                    if img_elem:
-                        imagen_url = img_elem.get('src') or img_elem.get('data-src') or img_elem.get('data-lazy-src')
-                        if imagen_url and not imagen_url.startswith('http'):
-                            if imagen_url.startswith('//'):
-                                imagen_url = 'https:' + imagen_url
-                            else:
-                                imagen_url = self.base_url + imagen_url
+                    imagen_url = extract_image_from_element(parent or link, article_url=full_url, base_url=self.base_url, session=self.session)
                     
                     # Obtener contenido básico
                     content = ""

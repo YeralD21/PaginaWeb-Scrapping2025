@@ -8,7 +8,9 @@ import os
 import time
 import re
 from urllib.parse import urljoin, urlparse
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'backend'))
+from image_extractor import extract_image_from_element
 from date_extraction_utils import get_publication_date
 
 class ScraperCorreoOptimized:
@@ -322,16 +324,12 @@ class ScraperCorreoOptimized:
         return ""
     
     def extract_image(self, element) -> Optional[str]:
-        """Extrae la imagen de un elemento"""
-        for selector in self.image_selectors:
-            img_elem = element.find('img')
-            if img_elem:
-                img_url = img_elem.get('src') or img_elem.get('data-src') or img_elem.get('data-lazy-src')
-                if img_url:
-                    if img_url.startswith('/'):
-                        return self.base_url + img_url
-                    elif img_url.startswith('http'):
-                        return img_url
+        """Extrae la imagen de un elemento usando el extractor mejorado"""
+        # Obtener el enlace del artículo primero
+        link = self.extract_link(element)
+        if link:
+            # Usar el extractor mejorado que obtiene la imagen del artículo individual
+            return extract_image_from_element(element, article_url=link, base_url=self.base_url, session=self.session)
         return None
     
     def extract_basic_content(self, element) -> str:

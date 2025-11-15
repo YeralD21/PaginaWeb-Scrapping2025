@@ -3,6 +3,10 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 import logging
 from typing import List, Dict
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from image_extractor import extract_image_from_element
 
 class ScraperComercio:
     def __init__(self):
@@ -115,13 +119,8 @@ class ScraperComercio:
                             content_elem = article.find('p')
                             content = content_elem.get_text(strip=True) if content_elem else ""
                         
-                        # Buscar imagen
-                        imagen_url = None
-                        img_elem = article.find('img')
-                        if img_elem:
-                            imagen_url = img_elem.get('src') or img_elem.get('data-src')
-                            if imagen_url and not imagen_url.startswith('http'):
-                                imagen_url = self.base_url + imagen_url
+                        # Buscar imagen usando el extractor mejorado (usa la sesión para mejor rendimiento)
+                        imagen_url = extract_image_from_element(article, article_url=link, base_url=self.base_url, session=self.session)
                         
                         # Para El Comercio, asumir que las noticias son del día actual
                         # ya que no tienen fechas específicas en la página principal
@@ -191,13 +190,8 @@ class ScraperComercio:
                             content_elem = article.find('p')
                             content = content_elem.get_text(strip=True) if content_elem else ""
                         
-                        # Buscar imagen
-                        imagen_url = None
-                        img_elem = article.find('img')
-                        if img_elem:
-                            imagen_url = img_elem.get('src') or img_elem.get('data-src')
-                            if imagen_url and not imagen_url.startswith('http'):
-                                imagen_url = self.base_url + imagen_url
+                        # Buscar imagen usando el extractor mejorado (usa la sesión para mejor rendimiento)
+                        imagen_url = extract_image_from_element(article, article_url=link, base_url=self.base_url, session=self.session)
                         
                         # Para El Comercio, asumir que las noticias son del día actual
                         fecha_actual = datetime.now().date()
@@ -266,13 +260,8 @@ class ScraperComercio:
                             content_elem = article.find('p')
                             content = content_elem.get_text(strip=True) if content_elem else ""
                         
-                        # Buscar imagen
-                        imagen_url = None
-                        img_elem = article.find('img')
-                        if img_elem:
-                            imagen_url = img_elem.get('src') or img_elem.get('data-src')
-                            if imagen_url and not imagen_url.startswith('http'):
-                                imagen_url = self.base_url + imagen_url
+                        # Buscar imagen usando el extractor mejorado (usa la sesión para mejor rendimiento)
+                        imagen_url = extract_image_from_element(article, article_url=link, base_url=self.base_url, session=self.session)
                         
                         # Para El Comercio, asumir que las noticias son del día actual
                         fecha_actual = datetime.now().date()
@@ -336,12 +325,8 @@ class ScraperComercio:
                             content_elem = article.find('p')
                             content = content_elem.get_text(strip=True) if content_elem else ""
                         
-                        imagen_url = None
-                        img_elem = article.find('img')
-                        if img_elem:
-                            imagen_url = img_elem.get('src') or img_elem.get('data-src')
-                            if imagen_url and not imagen_url.startswith('http'):
-                                imagen_url = self.base_url + imagen_url
+                        # Buscar imagen usando el extractor mejorado (usa la sesión para mejor rendimiento)
+                        imagen_url = extract_image_from_element(article, article_url=link, base_url=self.base_url, session=self.session)
                         
                         fecha_actual = datetime.now().date()
                         
@@ -403,12 +388,8 @@ class ScraperComercio:
                             content_elem = article.find('p')
                             content = content_elem.get_text(strip=True) if content_elem else ""
                         
-                        imagen_url = None
-                        img_elem = article.find('img')
-                        if img_elem:
-                            imagen_url = img_elem.get('src') or img_elem.get('data-src')
-                            if imagen_url and not imagen_url.startswith('http'):
-                                imagen_url = self.base_url + imagen_url
+                        # Buscar imagen usando el extractor mejorado (usa la sesión para mejor rendimiento)
+                        imagen_url = extract_image_from_element(article, article_url=link, base_url=self.base_url, session=self.session)
                         
                         fecha_actual = datetime.now().date()
                         

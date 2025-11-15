@@ -2,7 +2,7 @@
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import styled from 'styled-components';
-import { FiFileText, FiBarChart2, FiFilter, FiRefreshCw, FiCalendar, FiSearch, FiAlertTriangle, FiTrendingUp, FiPieChart, FiChevronDown, FiRadio, FiShare2, FiLock, FiSun, FiMoon } from 'react-icons/fi';
+import { FiFileText, FiBarChart2, FiFilter, FiRefreshCw, FiCalendar, FiSearch, FiAlertTriangle, FiTrendingUp, FiPieChart, FiChevronDown, FiRadio, FiShare2, FiLock, FiSun, FiMoon, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import AuthNavbar from './components/Auth/AuthNavbar';
@@ -140,11 +140,13 @@ const NavButton = styled.button.withConfig({
 
   body[data-theme="dark"] & {
     background: ${props => props.active ? '#dc3545' : 'rgba(255, 255, 255, 0.05)'};
-    border-color: ${props => props.active ? '#dc3545' : 'rgba(255, 255, 255, 0.2)'};
+    color: ${props => props.active ? 'white' : 'var(--filter-text-color)'};
+    border-color: ${props => props.active ? '#dc3545' : 'rgba(97, 218, 251, 0.3)'};
     
-    &:hover {
+    &:hover:not(:disabled) {
       background: ${props => props.active ? '#c82333' : 'rgba(255, 255, 255, 0.1)'};
-      border-color: ${props => props.active ? '#c82333' : 'rgba(255, 255, 255, 0.4)'};
+      color: ${props => props.active ? 'white' : 'var(--filter-text-hover)'};
+      border-color: ${props => props.active ? '#c82333' : 'rgba(97, 218, 251, 0.5)'};
     }
   }
 
@@ -226,10 +228,18 @@ const FilterGroup = styled.div`
 
 const FilterButton = styled.button`
   background: var(--card-bg);
-  color: var(--text-primary);
+  color: var(--filter-text-color);
   border: 2px solid var(--border-color);
   padding: 0.6rem 1.2rem;
   border-radius: 20px;
+  
+  body[data-theme="dark"] & {
+    color: var(--filter-text-color);
+    
+    &:hover {
+      color: var(--filter-text-hover);
+    }
+  }
   font-size: 0.9rem;
   cursor: pointer;
   display: flex;
@@ -247,8 +257,16 @@ const DiarioFilterButton = styled.button.withConfig({
   shouldForwardProp: (prop) => prop !== 'active',
 })`
   background: ${props => props.active ? '#dc3545' : 'var(--card-bg)'};
-  color: ${props => props.active ? 'white' : 'var(--text-primary)'};
+  color: ${props => props.active ? 'white' : 'var(--filter-text-color)'};
   border: 2px solid ${props => props.active ? '#dc3545' : 'var(--border-color)'};
+  
+  body[data-theme="dark"] & {
+    color: ${props => props.active ? 'white' : 'var(--filter-text-color)'};
+    
+    &:hover:not(:disabled) {
+      color: ${props => props.active ? 'white' : 'var(--filter-text-hover)'};
+    }
+  }
   padding: 0.6rem 1.2rem;
   border-radius: 20px;
   font-size: 0.9rem;
@@ -296,8 +314,17 @@ const CategoriaOption = styled.button`
   text-align: left;
   cursor: pointer;
   font-size: 0.9rem;
-  color: var(--text-primary);
+  color: var(--filter-text-color);
   border-bottom: 1px solid var(--border-color);
+
+  body[data-theme="dark"] & {
+    color: var(--filter-text-color);
+    
+    &:hover {
+      background: var(--bg-tertiary);
+      color: var(--filter-text-hover);
+    }
+  }
 
   &:hover {
     background: var(--bg-tertiary);
@@ -324,8 +351,16 @@ const DateButton = styled.button.withConfig({
   shouldForwardProp: (prop) => prop !== 'active',
 })`
   background: ${props => props.active ? '#dc3545' : 'var(--card-bg)'};
-  color: ${props => props.active ? 'white' : 'var(--text-primary)'};
+  color: ${props => props.active ? 'white' : 'var(--filter-text-color)'};
   border: 2px solid ${props => props.active ? '#dc3545' : 'var(--border-color)'};
+  
+  body[data-theme="dark"] & {
+    color: ${props => props.active ? 'white' : 'var(--filter-text-color)'};
+    
+    &:hover:not(:disabled) {
+      color: ${props => props.active ? 'white' : 'var(--filter-text-hover)'};
+    }
+  }
   padding: 0.6rem 1rem;
   border-radius: 15px;
   font-size: 0.9rem;
@@ -798,7 +833,7 @@ const ListSection = styled.section`
 const ListTitle = styled.h2`
   font-size: 1.8rem;
   font-weight: 700;
-  color: #333;
+  color: var(--text-primary);
   margin-bottom: 2rem;
   border-bottom: 3px solid #dc3545;
   padding-bottom: 0.5rem;
@@ -820,7 +855,7 @@ const NewsListItem = styled.article`
   display: flex;
   gap: 1rem;
   padding: 1.5rem;
-  background: white;
+  background: var(--card-bg);
   border-radius: 12px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
@@ -828,6 +863,15 @@ const NewsListItem = styled.article`
   border-left: 4px solid transparent;
   position: relative;
   overflow: hidden;
+  border: 1px solid var(--border-color);
+
+  body[data-theme="dark"] & {
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    
+    &:hover {
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+    }
+  }
 
   &:hover {
     transform: translateY(-3px);
@@ -861,8 +905,8 @@ const NewsListMeta = styled.div`
 `;
 
 const NewsListDate = styled.span`
-  background: #f8f9fa;
-  color: #666;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
   padding: 0.2rem 0.6rem;
   border-radius: 12px;
   font-size: 0.8rem;
@@ -882,7 +926,7 @@ const NewsListCategory = styled.span`
 const NewsListTitle = styled.h3`
   font-size: 1.1rem;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
   line-height: 1.4;
   margin: 0 0 0.5rem 0;
   display: -webkit-box;
@@ -893,7 +937,7 @@ const NewsListTitle = styled.h3`
 
 const NewsListAuthor = styled.span`
   font-size: 0.9rem;
-  color: #666;
+  color: var(--text-secondary);
   font-weight: 500;
 `;
 
@@ -1342,6 +1386,73 @@ const ComparisonEmpty = styled.div`
   border: 1px dashed #ced4da;
   color: #6c757d;
   font-size: 0.95rem;
+`;
+
+const PaginationContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 3rem 0 2rem;
+  padding: 1.5rem;
+  flex-wrap: wrap;
+`;
+
+const PaginationButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-primary);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 40px;
+  height: 40px;
+
+  &:hover:not(:disabled) {
+    background: var(--bg-secondary);
+    border-color: #667eea;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-color: #667eea;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  }
+
+  body[data-theme="dark"] & {
+    border-color: rgba(255, 255, 255, 0.2);
+    
+    &:hover:not(:disabled) {
+      border-color: #667eea;
+    }
+  }
+`;
+
+const PaginationInfo = styled.div`
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin: 0 1rem;
+  white-space: nowrap;
+  
+  @media (max-width: 768px) {
+    width: 100%;
+    text-align: center;
+    margin: 0.5rem 0;
+  }
 `;
 
 const ComparisonError = styled.div`
@@ -1886,6 +1997,10 @@ function MainView() {
   
   // Ref para evitar que el modal se cierre automáticamente
   const modalOpenRef = useRef(false);
+  
+  // Estado de paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const NEWS_PER_PAGE = 20; // Número óptimo de noticias por página
 
   // Verificar estado de suscripción al loguearse
   useEffect(() => {
@@ -2483,9 +2598,20 @@ function MainView() {
   
   // Para el grid secundario: usar TODAS las noticias restantes (con y sin imagen)
   // Si hay noticia principal con imagen, quitar esa del array
-  const noticiasSecundarias = noticiaPrincipal && noticiasConImagen.length > 0 
+  const allNoticiasSecundarias = noticiaPrincipal && noticiasConImagen.length > 0 
     ? noticiasAMostrar.filter(n => n.id !== noticiaPrincipal.id)
     : noticiasAMostrar.slice(1);
+  
+  // Calcular paginación
+  const totalPages = Math.max(1, Math.ceil(allNoticiasSecundarias.length / NEWS_PER_PAGE));
+  const startIndex = (currentPage - 1) * NEWS_PER_PAGE;
+  const endIndex = startIndex + NEWS_PER_PAGE;
+  const noticiasSecundarias = allNoticiasSecundarias.slice(startIndex, endIndex);
+  
+  // Resetear a página 1 cuando cambian los filtros
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [categoriaSeleccionada, diarioFiltro, geographicFilter, fechaSeleccionada]);
 
 
   return (
@@ -2923,20 +3049,25 @@ function MainView() {
               setShowDateDropdown(!showDateDropdown);
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = '#6f42c1';
-              e.currentTarget.style.color = '#6f42c1';
+              if (theme === 'dark') {
+                e.currentTarget.style.borderColor = 'rgba(97, 218, 251, 0.5)';
+                e.currentTarget.style.color = 'var(--filter-text-hover)';
+              } else {
+                e.currentTarget.style.borderColor = '#6f42c1';
+                e.currentTarget.style.color = '#6f42c1';
+              }
               e.currentTarget.style.transform = 'translateY(-1px)';
               e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.borderColor = 'var(--border-color)';
-              e.currentTarget.style.color = 'var(--text-primary)';
+              e.currentTarget.style.color = theme === 'dark' ? 'var(--filter-text-color)' : 'var(--text-primary)';
               e.currentTarget.style.transform = 'translateY(0)';
               e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
             }}
             >
-              <FiCalendar style={{ color: '#6f42c1', fontSize: '1.1rem' }} />
-              <span style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-primary)' }}>
+              <FiCalendar style={{ color: theme === 'dark' ? 'var(--filter-text-color)' : '#6f42c1', fontSize: '1.1rem' }} />
+              <span style={{ fontSize: '0.9rem', fontWeight: '600', color: theme === 'dark' ? 'var(--filter-text-color)' : 'var(--text-primary)' }}>
                 {getDateFilterButtonText()}
               </span>
               <span style={{ 
@@ -2949,7 +3080,7 @@ function MainView() {
                 {getDateFilterCount()} noticias
               </span>
               <FiChevronDown style={{ 
-                color: '#6f42c1', 
+                color: theme === 'dark' ? 'var(--filter-text-color)' : '#6f42c1', 
                 fontSize: '0.9rem',
                 transform: showDateDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
                 transition: 'transform 0.2s ease'
@@ -2978,7 +3109,7 @@ function MainView() {
                   <div style={{
                     fontSize: '0.8rem',
                     fontWeight: '600',
-                    color: '#6f42c1',
+                    color: theme === 'dark' ? 'var(--filter-text-color)' : '#6f42c1',
                     padding: '6px 8px',
                     borderBottom: theme === 'dark' 
                       ? '1px solid rgba(255, 255, 255, 0.1)' 
@@ -3019,7 +3150,7 @@ function MainView() {
                           : '1px solid #e9ecef',
                         marginBottom: '4px',
                         fontSize: '0.8rem',
-                        color: theme === 'dark' ? '#cccccc' : '#6c757d'
+                        color: theme === 'dark' ? 'var(--filter-text-color)' : '#6c757d'
                       }}
                       onMouseEnter={(e) => {
                         e.target.style.backgroundColor = theme === 'dark' ? '#2a2a2a' : '#e9ecef';
@@ -3066,12 +3197,12 @@ function MainView() {
                         }
                       }}
                     >
-                      <span style={{ fontSize: '0.85rem', color: theme === 'dark' ? '#ffffff' : '#374151' }}>
+                      <span style={{ fontSize: '0.85rem', color: theme === 'dark' ? 'var(--filter-text-color)' : '#374151' }}>
                         {year.year}
                       </span>
                       <span style={{ 
                         fontSize: '0.75rem', 
-                        color: theme === 'dark' ? '#cccccc' : '#6c757d',
+                        color: theme === 'dark' ? 'var(--filter-text-color)' : '#6c757d',
                         background: theme === 'dark' ? '#1a1a1a' : '#e5e7eb',
                         padding: '2px 6px',
                         borderRadius: '4px'
@@ -3100,7 +3231,7 @@ function MainView() {
                         backgroundColor: selectedMonthInYear === month.month 
                           ? (theme === 'dark' ? 'rgba(111, 66, 193, 0.2)' : '#f3f4f6') 
                           : 'transparent',
-                        border: selectedMonthInYear === month.month ? '1px solid #6f42c1' : '1px solid transparent'
+                        border: selectedMonthInYear === month.month ? (theme === 'dark' ? '1px solid var(--filter-text-color)' : '1px solid #6f42c1') : '1px solid transparent'
                       }}
                       onMouseEnter={(e) => {
                         if (selectedMonthInYear !== month.month) {
@@ -3113,12 +3244,12 @@ function MainView() {
                         }
                       }}
                     >
-                      <span style={{ fontSize: '0.85rem', color: theme === 'dark' ? '#ffffff' : '#374151' }}>
+                      <span style={{ fontSize: '0.85rem', color: theme === 'dark' ? 'var(--filter-text-color)' : '#374151' }}>
                         {month.monthName}
                       </span>
                       <span style={{ 
                         fontSize: '0.75rem', 
-                        color: theme === 'dark' ? '#cccccc' : '#6c757d',
+                        color: theme === 'dark' ? 'var(--filter-text-color)' : '#6c757d',
                         background: theme === 'dark' ? '#1a1a1a' : '#e5e7eb',
                         padding: '2px 6px',
                         borderRadius: '4px'
@@ -3148,7 +3279,7 @@ function MainView() {
                         backgroundColor: selectedDate === day.date 
                           ? (theme === 'dark' ? 'rgba(111, 66, 193, 0.2)' : '#f3f4f6') 
                           : 'transparent',
-                        border: selectedDate === day.date ? '1px solid #6f42c1' : '1px solid transparent'
+                        border: selectedDate === day.date ? (theme === 'dark' ? '1px solid var(--filter-text-color)' : '1px solid #6f42c1') : '1px solid transparent'
                       }}
                       onMouseEnter={(e) => {
                         if (selectedDate !== day.date) {
@@ -3161,12 +3292,12 @@ function MainView() {
                         }
                       }}
                     >
-                      <span style={{ fontSize: '0.85rem', color: theme === 'dark' ? '#ffffff' : '#374151' }}>
+                      <span style={{ fontSize: '0.85rem', color: theme === 'dark' ? 'var(--filter-text-color)' : '#374151' }}>
                         {day.fecha_formateada}
                       </span>
                       <span style={{ 
                         fontSize: '0.75rem', 
-                        color: theme === 'dark' ? '#cccccc' : '#6c757d',
+                        color: theme === 'dark' ? 'var(--filter-text-color)' : '#6c757d',
                         background: theme === 'dark' ? '#1a1a1a' : '#e5e7eb',
                         padding: '2px 6px',
                         borderRadius: '4px'
@@ -3190,24 +3321,29 @@ function MainView() {
             boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
             border: '1px solid var(--border-color)',
             cursor: 'pointer',
-            color: 'var(--text-primary)'
+            color: theme === 'dark' ? 'var(--filter-text-color)' : 'var(--text-primary)'
           }}
           onClick={handleRefresh}
           onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = '#28a745';
-            e.currentTarget.style.color = '#28a745';
+            if (theme === 'dark') {
+              e.currentTarget.style.borderColor = 'rgba(97, 218, 251, 0.5)';
+              e.currentTarget.style.color = 'var(--filter-text-hover)';
+            } else {
+              e.currentTarget.style.borderColor = '#28a745';
+              e.currentTarget.style.color = '#28a745';
+            }
             e.currentTarget.style.transform = 'translateY(-1px)';
             e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.borderColor = 'var(--border-color)';
-            e.currentTarget.style.color = 'var(--text-primary)';
+            e.currentTarget.style.color = theme === 'dark' ? 'var(--filter-text-color)' : 'var(--text-primary)';
             e.currentTarget.style.transform = 'translateY(0)';
             e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
           }}
           >
-            <FiRefreshCw style={{ color: '#28a745', fontSize: '1.1rem' }} />
-            <span style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-primary)' }}>Actualizar</span>
+            <FiRefreshCw style={{ color: theme === 'dark' ? 'var(--filter-text-color)' : '#28a745', fontSize: '1.1rem' }} />
+            <span style={{ fontSize: '0.9rem', fontWeight: '600', color: theme === 'dark' ? 'var(--filter-text-color)' : 'var(--text-primary)' }}>Actualizar</span>
           </div>
 
           <div style={{
@@ -3220,24 +3356,29 @@ function MainView() {
             boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
             border: '1px solid var(--border-color)',
             cursor: 'pointer',
-            color: 'var(--text-primary)'
+            color: theme === 'dark' ? 'var(--filter-text-color)' : 'var(--text-primary)'
           }}
           onClick={fetchTodasLasNoticias}
           onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = '#007bff';
-            e.currentTarget.style.color = '#007bff';
+            if (theme === 'dark') {
+              e.currentTarget.style.borderColor = 'rgba(97, 218, 251, 0.5)';
+              e.currentTarget.style.color = 'var(--filter-text-hover)';
+            } else {
+              e.currentTarget.style.borderColor = '#007bff';
+              e.currentTarget.style.color = '#007bff';
+            }
             e.currentTarget.style.transform = 'translateY(-1px)';
             e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.borderColor = 'var(--border-color)';
-            e.currentTarget.style.color = 'var(--text-primary)';
+            e.currentTarget.style.color = theme === 'dark' ? 'var(--filter-text-color)' : 'var(--text-primary)';
             e.currentTarget.style.transform = 'translateY(0)';
             e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
           }}
           >
-            <FiRefreshCw style={{ color: '#007bff', fontSize: '1.1rem' }} />
-            <span style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-primary)' }}>Recargar Todas</span>
+            <FiRefreshCw style={{ color: theme === 'dark' ? 'var(--filter-text-color)' : '#007bff', fontSize: '1.1rem' }} />
+            <span style={{ fontSize: '0.9rem', fontWeight: '600', color: theme === 'dark' ? 'var(--filter-text-color)' : 'var(--text-primary)' }}>Recargar Todas</span>
           </div>
 
           <div style={{
@@ -3525,8 +3666,8 @@ function MainView() {
                   </MainFeaturedCard>
                 )}
 
-                {/* Noticias Pequeñas */}
-                {noticiasSecundarias.slice(0, 4).map((noticia, index) => (
+                {/* Noticias Pequeñas - Solo mostrar en primera página */}
+                {currentPage === 1 && noticiasSecundarias.slice(0, 4).map((noticia, index) => (
                   <SmallFeaturedCard 
                     key={index}
                     imageUrl={noticia.imagen_url}
@@ -3553,7 +3694,8 @@ function MainView() {
               </FeaturedGrid>
             </FeaturedSection>
 
-            {/* Sección de Lista de Noticias (Estilo Primera Imagen) */}
+            {/* Sección de Lista de Noticias (Estilo Primera Imagen) - Solo mostrar en primera página */}
+            {currentPage === 1 && (
             <ListSection>
               <ListTitle>Últimas Noticias</ListTitle>
               <NewsListGrid>
@@ -3583,6 +3725,7 @@ function MainView() {
                 ))}
               </NewsListGrid>
             </ListSection>
+            )}
 
             <ComparisonSection>
               <ComparisonTitle>
@@ -3678,7 +3821,8 @@ function MainView() {
               )}
             </ComparisonSection>
 
-            {/* Sección de Grid Compacto (Estilo Segunda Imagen) */}
+            {/* Sección de Grid Compacto (Estilo Segunda Imagen) - Solo mostrar en primera página */}
+            {currentPage === 1 && (
             <CompactSection>
               <CompactTitle>Noticias Destacadas</CompactTitle>
               <CompactGrid>
@@ -3705,13 +3849,16 @@ function MainView() {
                 ))}
               </CompactGrid>
             </CompactSection>
+            )}
 
             {/* Resto de Noticias - Diseño Original */}
-            {noticiasSecundarias.slice(18).length > 0 && (
+            {((currentPage === 1 && noticiasSecundarias.slice(18).length > 0) || currentPage > 1) && (
               <SecondarySection>
-                <SectionTitle>Más Noticias</SectionTitle>
+                <SectionTitle>
+                  {currentPage === 1 ? 'Más Noticias' : `Noticias - Página ${currentPage}`}
+                </SectionTitle>
                 <NewsGrid>
-                  {noticiasSecundarias.slice(18).map((noticia, index) => {
+                  {(currentPage === 1 ? noticiasSecundarias.slice(18) : noticiasSecundarias).map((noticia, index) => {
                     // Si la noticia tiene imagen, usar el diseño con imagen
                     if (noticia.imagen_url && noticia.imagen_url.trim() !== '') {
                       return (
@@ -3809,6 +3956,56 @@ function MainView() {
                   })}
                 </NewsGrid>
               </SecondarySection>
+            )}
+            
+            {/* Paginación */}
+            {totalPages > 1 && (
+              <PaginationContainer>
+                <PaginationButton
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  aria-label="Página anterior"
+                >
+                  <FiChevronLeft />
+                </PaginationButton>
+                
+                {/* Mostrar números de página */}
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  
+                  return (
+                    <PaginationButton
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={currentPage === pageNum ? 'active' : ''}
+                      aria-label={`Ir a página ${pageNum}`}
+                    >
+                      {pageNum}
+                    </PaginationButton>
+                  );
+                })}
+                
+                <PaginationButton
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  aria-label="Página siguiente"
+                >
+                  <FiChevronRight />
+                </PaginationButton>
+                
+                <PaginationInfo>
+                  Página {currentPage} de {totalPages} ({allNoticiasSecundarias.length} noticias)
+                </PaginationInfo>
+              </PaginationContainer>
             )}
             </RightPanel>
         </>

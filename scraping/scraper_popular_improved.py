@@ -5,7 +5,9 @@ import logging
 from typing import List, Dict, Optional
 import sys
 import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'backend'))
+from image_extractor import extract_image_from_element
 from date_extraction_utils import get_publication_date
 
 class ScraperPopularImproved:
@@ -77,20 +79,10 @@ class ScraperPopularImproved:
             logging.warning(f"Error extrayendo contenido completo de {article_url}: {e}")
             return ""
     
-    def _find_image_url(self, element) -> Optional[str]:
-        """Busca la URL de imagen en un elemento"""
+    def _find_image_url(self, element, article_url: str = None) -> Optional[str]:
+        """Busca la URL de imagen en un elemento usando el extractor mejorado"""
         try:
-            img_elem = element.find('img')
-            if img_elem:
-                img_url = img_elem.get('src') or img_elem.get('data-src') or img_elem.get('data-lazy-src')
-                if img_url:
-                    if not img_url.startswith('http'):
-                        if img_url.startswith('//'):
-                            img_url = 'https:' + img_url
-                        else:
-                            img_url = self.base_url + img_url
-                    return img_url
-            return None
+            return extract_image_from_element(element, article_url=article_url, base_url=self.base_url, session=self.session)
         except Exception:
             return None
     
@@ -141,8 +133,8 @@ class ScraperPopularImproved:
                                 else:
                                     full_url = href
                                 
-                                # Buscar imagen
-                                imagen_url = self._find_image_url(link)
+                                # Buscar imagen usando el extractor mejorado
+                                imagen_url = self._find_image_url(link, article_url=full_url)
                                 
                                 # Extraer contenido
                                 print(f"🔍 Extrayendo contenido de El Popular: {full_url}")
@@ -197,7 +189,7 @@ class ScraperPopularImproved:
                                     content = content_elem.get_text(strip=True) if content_elem else ""
                                 
                                 # Buscar imagen usando la función mejorada
-                                imagen_url = self._find_image_url(article)
+                                imagen_url = self._find_image_url(article, article_url=link)
                                 
                                 # Extraer fecha de publicación real
                                 fecha_publicacion = get_publication_date(article, 'El Popular')

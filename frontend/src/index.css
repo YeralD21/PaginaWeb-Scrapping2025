@@ -21,6 +21,8 @@
   --header-bg: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
   --filter-bg: #ffffff;
   --card-bg: #ffffff;
+  --filter-text-color: #000000;
+  --filter-text-hover: #333333;
 }
 
 body {

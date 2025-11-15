@@ -23,15 +23,19 @@ export const ThemeProvider = ({ children }) => {
     
     // Actualizar todas las variables CSS de forma síncrona para máxima velocidad
     if (currentTheme === 'dark') {
-      root.style.setProperty('--bg-primary', '#0a0a0a');
-      root.style.setProperty('--bg-secondary', '#1a1a1a');
-      root.style.setProperty('--bg-tertiary', '#2a2a2a');
-      root.style.setProperty('--text-primary', '#ffffff');
-      root.style.setProperty('--text-secondary', '#cccccc');
+      // Fondo azul-gris oscuro (como la imagen 3)
+      root.style.setProperty('--bg-primary', '#1e293b'); // Azul-gris oscuro
+      root.style.setProperty('--bg-secondary', '#334155'); // Azul-gris medio
+      root.style.setProperty('--bg-tertiary', '#475569'); // Azul-gris claro
+      root.style.setProperty('--text-primary', '#ffffff'); // Texto principal blanco
+      root.style.setProperty('--text-secondary', '#cbd5e1'); // Texto secundario gris claro
       root.style.setProperty('--border-color', 'rgba(255, 255, 255, 0.2)');
-      root.style.setProperty('--header-bg', 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)');
-      root.style.setProperty('--filter-bg', '#1a1a1a');
-      root.style.setProperty('--card-bg', '#2a2a2a');
+      root.style.setProperty('--header-bg', 'linear-gradient(135deg, #1e293b 0%, #334155 100%)');
+      root.style.setProperty('--filter-bg', '#334155');
+      root.style.setProperty('--card-bg', '#334155');
+      // Color celeste React para filtros y controles (#61dafb es el color característico de React)
+      root.style.setProperty('--filter-text-color', '#61dafb'); // Celeste React
+      root.style.setProperty('--filter-text-hover', '#7ee3fc'); // Celeste React más claro para hover
     } else {
       root.style.setProperty('--bg-primary', '#f8f9fa');
       root.style.setProperty('--bg-secondary', '#ffffff');
@@ -42,6 +46,9 @@ export const ThemeProvider = ({ children }) => {
       root.style.setProperty('--header-bg', 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)');
       root.style.setProperty('--filter-bg', '#ffffff');
       root.style.setProperty('--card-bg', '#ffffff');
+      // En modo claro, los filtros usan el color normal
+      root.style.setProperty('--filter-text-color', '#000000');
+      root.style.setProperty('--filter-text-hover', '#333333');
     }
     
     // Aplicar el tema al body inmediatamente
