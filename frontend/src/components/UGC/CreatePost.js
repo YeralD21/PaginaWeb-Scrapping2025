@@ -4,16 +4,17 @@ import styled from 'styled-components';
 import ImageEditor from './ImageEditor';
 
 const Container = styled.div`
-  background: white;
-  padding: 2rem;
-  border-radius: 15px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  margin-bottom: 2rem;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
+  margin-bottom: 0;
 `;
 
 const Title = styled.h2`
-  color: #333;
+  color: rgba(255, 255, 255, 0.95);
   margin-bottom: 1.5rem;
+  font-size: 1.8rem;
 `;
 
 const Form = styled.form`
@@ -30,41 +31,58 @@ const InputGroup = styled.div`
 
 const Label = styled.label`
   font-weight: 600;
-  color: #555;
+  color: rgba(255, 255, 255, 0.9);
 `;
 
 const Select = styled.select`
   padding: 0.8rem;
-  border: 2px solid #e0e0e0;
+  border: 2px solid rgba(102, 126, 234, 0.3);
   border-radius: 8px;
   font-size: 1rem;
   cursor: pointer;
+  background: rgba(26, 31, 58, 0.6);
+  color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
 
   &:focus {
     outline: none;
     border-color: #667eea;
+  }
+
+  option {
+    background: #1a1f3a;
+    color: rgba(255, 255, 255, 0.9);
   }
 `;
 
 const Input = styled.input`
   padding: 0.8rem;
-  border: 2px solid #e0e0e0;
+  border: 2px solid rgba(102, 126, 234, 0.3);
   border-radius: 8px;
   font-size: 1rem;
+  background: rgba(26, 31, 58, 0.6);
+  color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
 
   &:focus {
     outline: none;
     border-color: #667eea;
   }
+
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+  }
 `;
 
 const FileInput = styled.input`
   padding: 0.8rem;
-  border: 2px solid #e0e0e0;
+  border: 2px solid rgba(102, 126, 234, 0.3);
   border-radius: 8px;
   font-size: 1rem;
-  background: white;
+  background: rgba(26, 31, 58, 0.6);
+  color: rgba(255, 255, 255, 0.9);
   cursor: pointer;
+  backdrop-filter: blur(10px);
 
   &:focus {
     outline: none;
@@ -104,20 +122,22 @@ const UploadStatus = styled.div`
   padding: 0.5rem;
   border-radius: 5px;
   font-size: 0.9rem;
-  background: ${props => props.success ? '#d4edda' : props.error ? '#f8d7da' : '#e7f3ff'};
-  color: ${props => props.success ? '#155724' : props.error ? '#721c24' : '#0c5460'};
+  background: ${props => props.success ? 'rgba(40, 167, 69, 0.2)' : props.error ? 'rgba(220, 53, 69, 0.2)' : 'rgba(102, 126, 234, 0.2)'};
+  color: ${props => props.success ? '#51cf66' : props.error ? '#ff6b6b' : 'rgba(255, 255, 255, 0.9)'};
+  border: 1px solid ${props => props.success ? 'rgba(40, 167, 69, 0.3)' : props.error ? 'rgba(220, 53, 69, 0.3)' : 'rgba(102, 126, 234, 0.3)'};
 `;
 
 const PreviewSection = styled.div`
   margin-top: 2rem;
   padding: 1.5rem;
-  background: #f8f9fa;
+  background: rgba(26, 31, 58, 0.6);
   border-radius: 10px;
-  border: 2px solid #e9ecef;
+  border: 2px solid rgba(102, 126, 234, 0.3);
+  backdrop-filter: blur(10px);
 `;
 
 const PreviewTitle = styled.h3`
-  color: #333;
+  color: rgba(255, 255, 255, 0.95);
   margin-bottom: 1rem;
   display: flex;
   align-items: center;
@@ -125,12 +145,13 @@ const PreviewTitle = styled.h3`
 `;
 
 const NewsPreview = styled.div`
-  background: white;
+  background: rgba(26, 31, 58, 0.8);
   border-radius: 10px;
   padding: 1.5rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
   max-width: 600px;
   margin: 0 auto;
+  border: 1px solid rgba(102, 126, 234, 0.2);
 `;
 
 const NewsHeader = styled.div`
@@ -138,7 +159,7 @@ const NewsHeader = styled.div`
 `;
 
 const NewsTitle = styled.h2`
-  color: #2c3e50;
+  color: rgba(255, 255, 255, 0.95);
   font-size: 1.5rem;
   font-weight: 700;
   margin-bottom: 0.5rem;
@@ -151,7 +172,7 @@ const NewsMeta = styled.div`
   gap: 1rem;
   margin-bottom: 1rem;
   font-size: 0.9rem;
-  color: #666;
+  color: rgba(255, 255, 255, 0.7);
 `;
 
 const NewsImage = styled.img`
@@ -163,19 +184,19 @@ const NewsImage = styled.img`
 `;
 
 const NewsDescription = styled.p`
-  color: #555;
+  color: rgba(255, 255, 255, 0.8);
   font-size: 1rem;
   line-height: 1.5;
   margin-bottom: 1rem;
   font-style: italic;
-  background: #f8f9fa;
+  background: rgba(102, 126, 234, 0.1);
   padding: 1rem;
   border-radius: 5px;
   border-left: 4px solid #667eea;
 `;
 
 const NewsContent = styled.div`
-  color: #333;
+  color: rgba(255, 255, 255, 0.9);
   line-height: 1.6;
   font-size: 1rem;
 `;
@@ -183,12 +204,12 @@ const NewsContent = styled.div`
 const NewsFooter = styled.div`
   margin-top: 1rem;
   padding-top: 1rem;
-  border-top: 1px solid #eee;
+  border-top: 1px solid rgba(102, 126, 234, 0.2);
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-size: 0.9rem;
-  color: #666;
+  color: rgba(255, 255, 255, 0.7);
 `;
 
 const TogglePreviewButton = styled.button`
@@ -220,13 +241,14 @@ const TogglePreviewButton = styled.button`
 const ProgressIndicator = styled.div`
   margin-top: 1rem;
   padding: 1rem;
-  background: #e3f2fd;
+  background: rgba(102, 126, 234, 0.1);
   border-radius: 8px;
-  border-left: 4px solid #2196f3;
+  border-left: 4px solid #667eea;
+  border: 1px solid rgba(102, 126, 234, 0.2);
 `;
 
 const ProgressTitle = styled.h4`
-  color: #1976d2;
+  color: rgba(255, 255, 255, 0.9);
   margin-bottom: 0.5rem;
   font-size: 0.9rem;
 `;
@@ -243,21 +265,28 @@ const ProgressItem = styled.li`
   gap: 0.5rem;
   margin-bottom: 0.3rem;
   font-size: 0.85rem;
-  color: ${props => props.completed ? '#4caf50' : '#666'};
+  color: ${props => props.completed ? '#51cf66' : 'rgba(255, 255, 255, 0.7)'};
 `;
 
 const TextArea = styled.textarea`
   padding: 1rem;
-  border: 2px solid #e0e0e0;
+  border: 2px solid rgba(102, 126, 234, 0.3);
   border-radius: 8px;
   font-size: 1rem;
   min-height: 120px;
   resize: vertical;
   font-family: inherit;
+  background: rgba(26, 31, 58, 0.6);
+  color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
 
   &:focus {
     outline: none;
     border-color: #667eea;
+  }
+
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.5);
   }
 `;
 
@@ -286,17 +315,20 @@ const Message = styled.div`
   padding: 1rem;
   border-radius: 8px;
   text-align: center;
-  background: ${props => props.success ? '#d4edda' : '#f8d7da'};
-  color: ${props => props.success ? '#155724' : '#721c24'};
+  background: ${props => props.success ? 'rgba(40, 167, 69, 0.2)' : 'rgba(220, 53, 69, 0.2)'};
+  color: ${props => props.success ? '#51cf66' : '#ff6b6b'};
+  border: 1px solid ${props => props.success ? 'rgba(40, 167, 69, 0.3)' : 'rgba(220, 53, 69, 0.3)'};
 `;
 
 const InfoBox = styled.div`
-  background: #e7f3ff;
+  background: rgba(102, 126, 234, 0.15);
   padding: 1rem;
   border-radius: 8px;
   border-left: 4px solid #667eea;
   margin-top: 1rem;
   font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(102, 126, 234, 0.2);
 `;
 
 const API_BASE = 'http://localhost:8000';
@@ -522,7 +554,7 @@ function CreatePost({ token, onPostCreated }) {
                 style={{ minHeight: '80px' }}
                 maxLength={200}
               />
-              <small style={{ color: '#999', fontSize: '0.85rem' }}>
+              <small style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '0.85rem' }}>
                 {descripcion.length}/200 caracteres
               </small>
             </InputGroup>
@@ -530,13 +562,14 @@ function CreatePost({ token, onPostCreated }) {
             <InputGroup>
               <Label>Imagen de la Noticia</Label>
               <div style={{ 
-                background: '#e3f2fd', 
+                background: 'rgba(102, 126, 234, 0.15)', 
                 padding: '0.8rem', 
                 borderRadius: '8px', 
                 marginBottom: '0.5rem',
                 fontSize: '0.9rem',
-                color: '#1976d2',
-                borderLeft: '4px solid #2196f3'
+                color: 'rgba(255, 255, 255, 0.9)',
+                borderLeft: '4px solid #667eea',
+                border: '1px solid rgba(102, 126, 234, 0.2)'
               }}>
                 📐 <strong>Tamaño recomendado:</strong> 1200x628 píxeles<br/>
                 📏 <strong>Proporción:</strong> 1.91:1 (ideal para noticias)
@@ -648,12 +681,13 @@ function CreatePost({ token, onPostCreated }) {
               <NewsPreview>
                 {/* Debug info - remover en producción */}
                 <div style={{
-                  background: '#fff3cd',
+                  background: 'rgba(255, 193, 7, 0.15)',
                   padding: '0.5rem',
                   borderRadius: '4px',
                   marginBottom: '1rem',
                   fontSize: '0.8rem',
-                  color: '#856404'
+                  color: 'rgba(255, 255, 255, 0.8)',
+                  border: '1px solid rgba(255, 193, 7, 0.2)'
                 }}>
                   🔍 Debug: imagePreview={imagePreview ? 'Sí' : 'No'} (usando preview para vista previa)
                 </div>
@@ -683,13 +717,13 @@ function CreatePost({ token, onPostCreated }) {
                   <div style={{
                     width: '100%',
                     height: '200px',
-                    background: '#f0f0f0',
+                    background: 'rgba(26, 31, 58, 0.4)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderRadius: '8px',
-                    border: '2px dashed #ccc',
-                    color: '#666',
+                    border: '2px dashed rgba(102, 126, 234, 0.3)',
+                    color: 'rgba(255, 255, 255, 0.7)',
                     fontSize: '1rem'
                   }}>
                     🖼️ No hay imagen seleccionada

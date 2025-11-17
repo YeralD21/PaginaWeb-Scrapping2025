@@ -11,10 +11,10 @@ const shimmer = keyframes`
 `;
 
 const Container = styled.div`
-  background: white;
-  padding: 2rem;
-  border-radius: 15px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
 `;
 
 const Header = styled.div`
@@ -23,15 +23,16 @@ const Header = styled.div`
   justify-content: space-between;
   margin-bottom: 2rem;
   padding-bottom: 1.5rem;
-  border-bottom: 3px solid #667eea;
+  border-bottom: 3px solid rgba(102, 126, 234, 0.5);
 `;
 
 const Title = styled.h2`
-  color: #333;
+  color: rgba(255, 255, 255, 0.95);
   margin: 0;
   display: flex;
   align-items: center;
   gap: 0.8rem;
+  font-size: 1.8rem;
 `;
 
 const StatusBadge = styled.div`
@@ -122,17 +123,19 @@ const RequirementsGrid = styled.div`
 `;
 
 const RequirementCard = styled.div`
-  background: ${props => props.completed ? '#f0f9ff' : '#fff'};
-  border: 2px solid ${props => props.completed ? '#28a745' : '#e0e0e0'};
+  background: ${props => props.completed ? 'rgba(40, 167, 69, 0.1)' : 'rgba(26, 31, 58, 0.6)'};
+  border: 2px solid ${props => props.completed ? 'rgba(40, 167, 69, 0.3)' : 'rgba(102, 126, 234, 0.3)'};
   border-radius: 12px;
   padding: 1.5rem;
   position: relative;
   overflow: hidden;
   transition: all 0.3s;
+  backdrop-filter: blur(10px);
 
   &:hover {
     transform: translateY(-3px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.2);
+    border-color: ${props => props.completed ? 'rgba(40, 167, 69, 0.5)' : 'rgba(102, 126, 234, 0.5)'};
   }
 
   ${props => props.completed && `
@@ -156,7 +159,7 @@ const RequirementHeader = styled.div`
 `;
 
 const RequirementTitle = styled.h3`
-  color: #333;
+  color: rgba(255, 255, 255, 0.95);
   margin: 0;
   font-size: 1.1rem;
   display: flex;
@@ -170,11 +173,11 @@ const RequirementIcon = styled.div`
 
 const StatusIcon = styled.div`
   font-size: 1.5rem;
-  color: ${props => props.completed ? '#28a745' : '#ffc107'};
+  color: ${props => props.completed ? '#51cf66' : '#ffc107'};
 `;
 
 const ProgressBarContainer = styled.div`
-  background: #e0e0e0;
+  background: rgba(26, 31, 58, 0.8);
   border-radius: 10px;
   height: 12px;
   overflow: hidden;
@@ -213,14 +216,14 @@ const ProgressText = styled.div`
 
 const ProgressLabel = styled.span`
   font-size: 0.9rem;
-  color: #666;
+  color: rgba(255, 255, 255, 0.7);
   font-weight: 600;
 `;
 
 const ProgressValue = styled.span`
   font-size: 1.1rem;
   font-weight: 700;
-  color: ${props => props.completed ? '#28a745' : '#667eea'};
+  color: ${props => props.completed ? '#51cf66' : '#667eea'};
 `;
 
 const ActionButton = styled.button`
@@ -245,17 +248,17 @@ const ActionButton = styled.button`
   }
 
   &:disabled {
-    background: #ccc;
+    background: rgba(255, 255, 255, 0.2);
     cursor: not-allowed;
     transform: none;
   }
 `;
 
 const TipBox = styled.div`
-  background: #fff3cd;
-  border: 2px solid #ffc107;
+  background: rgba(255, 193, 7, 0.15);
+  border: 2px solid rgba(255, 193, 7, 0.3);
   border-left: 6px solid #ffc107;
-  color: #856404;
+  color: rgba(255, 255, 255, 0.9);
   padding: 1.5rem;
   border-radius: 8px;
   margin-top: 2rem;
@@ -608,7 +611,7 @@ function MonetizationProgress({ token, onMonetizationEnabled }) {
             {activating ? '⏳ Activando...' : '🎉 Activar Monetización Ahora'}
           </ActionButton>
           
-          <TipBox style={{background: '#d1ecf1', borderColor: '#0c5460', color: '#0c5460'}}>
+          <TipBox style={{background: 'rgba(102, 126, 234, 0.15)', borderColor: 'rgba(102, 126, 234, 0.3)', color: 'rgba(255, 255, 255, 0.9)'}}>
             <strong>🎊 ¡Felicitaciones!</strong><br/>
             Has cumplido todos los requisitos. Haz clic en el botón para activar la monetización 
             y comenzar a ganar dinero con tus publicaciones.

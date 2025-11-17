@@ -6,24 +6,25 @@ import { useNavigate } from 'react-router-dom';
 const API_BASE = 'http://localhost:8000';
 
 const Container = styled.div`
-  background: white;
-  padding: 2rem;
-  border-radius: 15px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
 `;
 
 const Title = styled.h2`
-  color: #333;
+  color: rgba(255, 255, 255, 0.95);
   margin-bottom: 2rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  font-size: 1.8rem;
 `;
 
 const Loading = styled.div`
   text-align: center;
   padding: 3rem;
-  color: #888;
+  color: rgba(255, 255, 255, 0.7);
   font-size: 1.2rem;
 `;
 
@@ -31,18 +32,20 @@ const Error = styled.div`
   text-align: center;
   padding: 2rem;
   color: #ff6b6b;
-  background: #fff5f5;
+  background: rgba(220, 53, 69, 0.15);
   border-radius: 10px;
-  border: 2px solid #ff6b6b;
+  border: 2px solid rgba(220, 53, 69, 0.3);
 `;
 
 const PlanCard = styled.div`
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #1a1f3a 100%);
   padding: 2rem;
   border-radius: 15px;
   color: white;
-  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
   margin-bottom: 2rem;
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  backdrop-filter: blur(10px);
 `;
 
 const PlanName = styled.h3`
@@ -107,23 +110,25 @@ const TimeLabel = styled.div`
 `;
 
 const NoPlanCard = styled.div`
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background: rgba(26, 31, 58, 0.6);
+  backdrop-filter: blur(10px);
   padding: 3rem;
   border-radius: 15px;
   text-align: center;
-  color: #666;
+  color: rgba(255, 255, 255, 0.8);
+  border: 2px solid rgba(102, 126, 234, 0.3);
 `;
 
 const NoPlanTitle = styled.h3`
   font-size: 1.5rem;
   margin-bottom: 1rem;
-  color: #333;
+  color: rgba(255, 255, 255, 0.95);
 `;
 
 const NoPlanText = styled.p`
   font-size: 1.1rem;
   margin-bottom: 2rem;
-  color: #666;
+  color: rgba(255, 255, 255, 0.7);
 `;
 
 const SubscribeButton = styled.button`

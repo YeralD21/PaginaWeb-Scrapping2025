@@ -1,7 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import styled, { keyframes } from 'styled-components';
-import { FiArrowLeft, FiCalendar, FiClock, FiExternalLink, FiFileText, FiTag, FiUser, FiHeart, FiTrendingUp, FiAlertTriangle, FiBookOpen, FiGlobe, FiMapPin, FiHash, FiShare2, FiEye, FiChevronDown, FiChevronUp, FiMaximize2, FiMinimize2 } from 'react-icons/fi';
+import { FiArrowLeft, FiCalendar, FiClock, FiExternalLink, FiFileText, FiTag, FiUser, FiHeart, FiTrendingUp, FiAlertTriangle, FiBookOpen, FiGlobe, FiMapPin, FiHash, FiShare2, FiEye, FiChevronDown, FiChevronUp, FiSun, FiMoon, FiLock } from 'react-icons/fi';
+import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
+import SubscriptionModal from './Subscriptions/SubscriptionModal';
+import LoginModal from './Auth/LoginModal';
 import axios from 'axios';
 
 // Animaciones
@@ -38,22 +42,29 @@ const shimmer = keyframes`
   100% { background-position: 200% 0; }
 `;
 
+// Container principal con tema
 const Container = styled.div`
   min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background: var(--bg-primary);
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: var(--text-primary);
+  transition: background-color 0.15s ease, color 0.15s ease;
 `;
 
-// Header ultra moderno
+// Header estilo La República (rojo)
 const Header = styled.header`
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  background: #dc3545;
+  color: white;
   padding: 1rem 0;
   position: sticky;
   top: 0;
   z-index: 1000;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  
+  body[data-theme="dark"] & {
+    background: #c82333;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
 `;
 
 const HeaderContent = styled.div`
@@ -63,14 +74,42 @@ const HeaderContent = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
+  
+  @media (max-width: 768px) {
+    padding: 0 1rem;
+  }
+`;
+
+const HeaderLeft = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+`;
+
+const HeaderRight = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+`;
+
+const Logo = styled.h1`
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+  color: white;
+  cursor: pointer;
+  
+  @media (max-width: 768px) {
+    font-size: 1.2rem;
+  }
 `;
 
 const BackButton = styled.button`
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: rgba(255, 255, 255, 0.2);
   border: none;
   color: white;
-  padding: 0.8rem 1.5rem;
-  border-radius: 50px;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
@@ -78,38 +117,88 @@ const BackButton = styled.button`
   align-items: center;
   gap: 0.5rem;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
 
   &:hover {
+    background: rgba(255, 255, 255, 0.3);
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
-    animation: ${pulse} 0.6s ease-in-out;
   }
 `;
 
-const HeaderTitle = styled.h1`
-  font-size: 1.3rem;
-  font-weight: 700;
-  margin: 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+const ThemeToggleButton = styled.button`
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
+  }
 `;
 
-// Layout principal más dinámico
+// Línea azul debajo del header (estilo La República)
+const BlueLine = styled.div`
+  height: 3px;
+  background: #17a2b8;
+  width: 100%;
+`;
+
+// Breadcrumb mejorado
+const Breadcrumb = styled.nav`
+  background: var(--card-bg);
+  padding: 1rem 2rem;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  
+  @media (max-width: 768px) {
+    padding: 0.8rem 1rem;
+    font-size: 0.85rem;
+  }
+`;
+
+const BreadcrumbContent = styled.div`
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const BreadcrumbLink = styled.span`
+  color: var(--text-primary);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+
+  &:hover {
+    color: #dc3545;
+    text-decoration: underline;
+  }
+`;
+
+// Layout principal estilo La República
 const MainLayout = styled.div`
   max-width: 1400px;
   margin: 0 auto;
   padding: 2rem;
   display: grid;
   grid-template-columns: 1fr 350px;
-  gap: 3rem;
+  gap: 2rem;
   animation: ${fadeInUp} 0.8s ease-out;
-
+  
   @media (max-width: 1200px) {
     grid-template-columns: 1fr 300px;
-    gap: 2rem;
+    gap: 1.5rem;
   }
 
   @media (max-width: 968px) {
@@ -121,106 +210,97 @@ const MainLayout = styled.div`
 
 // Contenedor principal del artículo
 const ArticleMain = styled.main`
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  border-radius: 24px;
+  background: var(--card-bg);
+  border-radius: 0;
   overflow: hidden;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border-color);
   animation: ${slideIn} 0.6s ease-out;
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  
+  body[data-theme="dark"] & {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
 `;
 
 // Header del artículo mejorado
 const ArticleHeader = styled.div`
-  padding: 3rem 3rem 2rem 3rem;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.9) 100%);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  padding: 2rem 2.5rem 1.5rem 2.5rem;
+  background: var(--card-bg);
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
   
   @media (max-width: 768px) {
-    padding: 2rem 1.5rem 1.5rem 1.5rem;
+    padding: 1.5rem 1rem 1rem 1rem;
   }
 `;
 
 const CategoryBadge = styled.span`
   background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
   color: white;
-  padding: 0.6rem 1.5rem;
-  border-radius: 50px;
-  font-size: 0.8rem;
+  padding: 0.4rem 1rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
   display: inline-block;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
-  animation: ${pulse} 2s infinite;
+  margin-bottom: 1rem;
 `;
 
 const ArticleTitle = styled.h1`
-  font-size: 2.8rem;
-  font-weight: 800;
-  color: #2c3e50;
-  line-height: 1.2;
-  margin: 0 0 2rem 0;
-  background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+  margin: 0 0 1.5rem 0;
+  transition: color 0.15s ease;
   
   @media (max-width: 768px) {
-    font-size: 2rem;
+    font-size: 1.8rem;
   }
 `;
 
 const ArticleMeta = styled.div`
   display: flex;
   align-items: center;
-  gap: 2.5rem;
-  font-size: 0.95rem;
-  color: #7f8c8d;
-  margin-bottom: 1.5rem;
+  gap: 2rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
   flex-wrap: wrap;
+  transition: color 0.15s ease;
+  
+  @media (max-width: 768px) {
+    gap: 1rem;
+    font-size: 0.85rem;
+  }
 `;
 
 const MetaItem = styled.div`
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-weight: 600;
-  background: rgba(255, 255, 255, 0.8);
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
-
-  &:hover {
-    background: rgba(255, 255, 255, 1);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  }
+  font-weight: 500;
 `;
 
 const DiarioName = styled.div`
-  font-weight: 700;
-  font-size: 1.2rem;
-  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-weight: 600;
+  font-size: 1rem;
+  color: #dc3545;
   margin-bottom: 0.5rem;
 `;
 
-// Imagen mejorada con overlay
+// Imagen del artículo
 const ArticleImageContainer = styled.div`
   position: relative;
   width: 100%;
   height: 450px;
-  margin: 0 -3rem 2rem -3rem;
+  margin: 0;
   overflow: hidden;
   
   @media (max-width: 768px) {
     height: 300px;
-    margin: 0 -1.5rem 2rem -1.5rem;
   }
 `;
 
@@ -237,63 +317,43 @@ const ArticleImage = styled.div`
   }
 `;
 
-const ImageOverlay = styled.div`
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
-  padding: 2rem;
-  color: white;
-`;
-
-// Contenido con mejor manejo de texto largo
+// Contenido del artículo
 const ArticleContent = styled.div`
-  padding: 0 3rem 3rem 3rem;
+  padding: 2rem 2.5rem;
+  transition: background-color 0.15s ease;
   
   @media (max-width: 768px) {
-    padding: 0 1.5rem 2rem 1.5rem;
+    padding: 1.5rem 1rem;
   }
 `;
 
 const ContentSection = styled.div`
-  margin-bottom: 2.5rem;
+  margin-bottom: 2rem;
   animation: ${fadeInUp} 0.6s ease-out;
 `;
 
 const SectionTitle = styled.h3`
-  font-size: 1.3rem;
+  font-size: 1.2rem;
   font-weight: 700;
-  color: #2c3e50;
+  color: var(--text-primary);
   margin: 0 0 1rem 0;
   display: flex;
   align-items: center;
   gap: 0.8rem;
   padding-bottom: 0.5rem;
-  border-bottom: 2px solid #ecf0f1;
-`;
-
-// Contenido expandible para textos largos
-const ExpandableContent = styled.div`
-  position: relative;
-  max-height: ${props => props.expanded ? 'none' : '400px'};
-  overflow: hidden;
-  transition: max-height 0.5s ease;
+  border-bottom: 2px solid var(--border-color);
+  transition: color 0.15s ease, border-color 0.15s ease;
 `;
 
 const ContentText = styled.div`
-  font-size: 1.15rem;
-  line-height: 1.9;
-  color: #2c3e50;
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: var(--text-primary);
   text-align: justify;
+  transition: color 0.15s ease;
   
   p {
-    margin-bottom: 1.8rem;
-    transition: all 0.3s ease;
-  }
-  
-  p:hover {
-    color: #34495e;
+    margin-bottom: 1.5rem;
   }
   
   @media (max-width: 768px) {
@@ -302,24 +362,30 @@ const ContentText = styled.div`
   }
 `;
 
+const ExpandableContent = styled.div`
+  position: relative;
+  max-height: ${props => props.expanded ? 'none' : '400px'};
+  overflow: hidden;
+  transition: max-height 0.5s ease;
+`;
+
 const ExpandButton = styled.button`
-  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+  background: #dc3545;
   color: white;
   border: none;
-  padding: 1rem 2rem;
-  border-radius: 50px;
+  padding: 0.8rem 1.5rem;
+  border-radius: 4px;
   font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin: 2rem auto 0 auto;
+  margin: 1.5rem auto 0 auto;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
 
   &:hover {
+    background: #c82333;
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(52, 152, 219, 0.6);
   }
 `;
 
@@ -329,79 +395,88 @@ const FadeOverlay = styled.div`
   left: 0;
   right: 0;
   height: 100px;
-  background: linear-gradient(transparent, rgba(255, 255, 255, 0.95));
+  background: linear-gradient(transparent, var(--card-bg));
   pointer-events: none;
   opacity: ${props => props.show ? 1 : 0};
   transition: opacity 0.3s ease;
 `;
 
-// Sidebar mejorada
+// Sidebar estilo La República
 const Sidebar = styled.aside`
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1.5rem;
   animation: ${slideIn} 0.8s ease-out 0.2s both;
 `;
 
 const SidebarCard = styled.div`
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  border-radius: 20px;
-  padding: 2rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  transition: all 0.3s ease;
+  background: var(--card-bg);
+  border-radius: 0;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border-color);
+  transition: all 0.3s ease, background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 
   &:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+  
+  body[data-theme="dark"] & {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    
+    &:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
   }
 `;
 
 const SidebarTitle = styled.h3`
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 700;
-  color: #2c3e50;
-  margin: 0 0 1.5rem 0;
+  color: var(--text-primary);
+  margin: 0 0 1rem 0;
   display: flex;
   align-items: center;
-  gap: 0.8rem;
+  gap: 0.5rem;
   padding-bottom: 0.8rem;
-  border-bottom: 2px solid #ecf0f1;
+  border-bottom: 2px solid var(--border-color);
+  transition: color 0.15s ease, border-color 0.15s ease;
 `;
 
-// Información mejorada
 const InfoItem = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid var(--border-color);
+  transition: border-color 0.15s ease;
   
   &:last-child {
     border-bottom: none;
   }
 
   &:hover {
-    background: rgba(0, 0, 0, 0.02);
-    margin: 0 -1rem;
-    padding: 1rem;
-    border-radius: 8px;
+    background: var(--bg-tertiary);
+    margin: 0 -0.5rem;
+    padding: 0.8rem 0.5rem;
+    border-radius: 4px;
   }
 `;
 
 const InfoLabel = styled.span`
   font-size: 0.9rem;
-  color: #7f8c8d;
+  color: var(--text-secondary);
   font-weight: 600;
+  transition: color 0.15s ease;
 `;
 
 const InfoValue = styled.span`
   font-size: 0.9rem;
-  color: #2c3e50;
+  color: var(--text-primary);
   font-weight: 700;
   text-align: right;
+  transition: color 0.15s ease;
 `;
 
 // Badges mejorados
@@ -409,7 +484,7 @@ const BadgesContainer = styled.div`
   display: flex;
   flex-wrap: wrap;
   gap: 0.8rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 `;
 
 const Badge = styled.span`
@@ -427,20 +502,14 @@ const Badge = styled.span`
     }
   }};
   color: ${props => props.type?.includes('media') ? '#2c3e50' : 'white'};
-  padding: 0.6rem 1.2rem;
-  border-radius: 25px;
-  font-size: 0.8rem;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
   font-weight: 700;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-  transition: all 0.3s ease;
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-  }
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 `;
 
 // Tags modernos
@@ -451,19 +520,19 @@ const TagsList = styled.div`
 `;
 
 const Tag = styled.span`
-  background: rgba(255, 255, 255, 0.9);
-  color: #2c3e50;
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
   font-size: 0.8rem;
   font-weight: 600;
-  border: 2px solid #ecf0f1;
-  transition: all 0.3s ease;
+  border: 1px solid var(--border-color);
+  transition: all 0.3s ease, background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 
   &:hover {
-    background: #3498db;
+    background: #dc3545;
     color: white;
-    border-color: #3498db;
+    border-color: #dc3545;
     transform: translateY(-2px);
   }
 `;
@@ -471,16 +540,16 @@ const Tag = styled.span`
 const KeywordTag = styled.span`
   background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
   color: white;
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
   font-size: 0.8rem;
   font-weight: 700;
-  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.4);
   transition: all 0.3s ease;
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(231, 76, 60, 0.6);
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.6);
   }
 `;
 
@@ -490,22 +559,56 @@ const ActionButton = styled.a`
   align-items: center;
   justify-content: center;
   gap: 0.8rem;
-  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  background: #dc3545;
   color: white;
-  padding: 1.2rem 2rem;
-  border-radius: 50px;
+  padding: 1rem 1.5rem;
+  border-radius: 4px;
   text-decoration: none;
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 0.95rem;
   transition: all 0.3s ease;
-  margin-top: 1.5rem;
-  box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
+  margin-top: 1rem;
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
 
   &:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 12px 35px rgba(231, 76, 60, 0.6);
-    animation: ${pulse} 0.6s ease-in-out;
+    background: #c82333;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
   }
+`;
+
+// Resumen destacado
+const ResumenCard = styled.div`
+  background: var(--bg-tertiary);
+  padding: 1.5rem;
+  border-radius: 4px;
+  border-left: 4px solid #27ae60;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+  
+  body[data-theme="dark"] & {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+`;
+
+const ResumenTitle = styled.h3`
+  color: #27ae60;
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0 0 1rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+`;
+
+const ResumenText = styled.p`
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--text-primary);
+  font-weight: 500;
+  transition: color 0.15s ease;
 `;
 
 // Estados mejorados
@@ -515,16 +618,17 @@ const LoadingContainer = styled.div`
   align-items: center;
   height: 400px;
   font-size: 1.2rem;
-  color: #7f8c8d;
+  color: var(--text-secondary);
   flex-direction: column;
   gap: 1.5rem;
+  transition: color 0.15s ease;
 `;
 
 const LoadingSpinner = styled.div`
   width: 60px;
   height: 60px;
-  border: 4px solid #ecf0f1;
-  border-top: 4px solid #3498db;
+  border: 4px solid var(--border-color);
+  border-top: 4px solid #dc3545;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -538,90 +642,119 @@ const ErrorContainer = styled.div`
   background: linear-gradient(135deg, #ff7675 0%, #fd79a8 100%);
   color: white;
   padding: 3rem;
-  border-radius: 20px;
+  border-radius: 8px;
   text-align: center;
   margin: 2rem;
   box-shadow: 0 10px 30px rgba(255, 118, 117, 0.4);
 `;
 
-// Breadcrumb mejorado
-const Breadcrumb = styled.nav`
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(10px);
-  padding: 1rem 2rem;
-  margin-bottom: 2rem;
-  border-radius: 50px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  font-size: 0.9rem;
-  color: #7f8c8d;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-`;
-
-const BreadcrumbLink = styled.span`
-  color: #3498db;
+// Componentes para noticias relacionadas
+const RelatedNewsCard = styled.div`
+  display: flex;
+  gap: 0.8rem;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid var(--border-color);
   cursor: pointer;
-  font-weight: 600;
   transition: all 0.3s ease;
+  
+  &:last-child {
+    border-bottom: none;
+  }
 
   &:hover {
-    color: #2980b9;
-    text-decoration: underline;
+    background: var(--bg-tertiary);
+    margin: 0 -0.5rem;
+    padding: 0.8rem 0.5rem;
+    border-radius: 4px;
   }
 `;
 
-// Resumen destacado mejorado
-const ResumenCard = styled.div`
-  background: linear-gradient(135deg, #e8f5e8 0%, #f0f8f0 100%);
-  padding: 2.5rem;
-  border-radius: 20px;
-  border-left: 6px solid #27ae60;
-  box-shadow: 0 8px 25px rgba(39, 174, 96, 0.2);
-  margin-bottom: 3rem;
-  position: relative;
+const RelatedNewsImageContainer = styled.div`
+  width: 80px;
+  height: 60px;
+  border-radius: 4px;
+  flex-shrink: 0;
   overflow: hidden;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      rgba(255, 255, 255, 0.4),
-      transparent
-    );
-    animation: ${shimmer} 2s infinite;
-  }
+  background: var(--bg-tertiary);
 `;
 
-const ResumenTitle = styled.h3`
-  color: #27ae60;
-  font-size: 1.2rem;
-  font-weight: 700;
-  margin: 0 0 1.5rem 0;
+const RelatedNewsImage = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+`;
+
+const RelatedNewsContent = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+`;
+
+const RelatedNewsTitle = styled.h4`
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  transition: color 0.15s ease;
+`;
+
+const RelatedNewsMeta = styled.div`
   display: flex;
   align-items: center;
   gap: 0.8rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  transition: color 0.15s ease;
 `;
 
-const ResumenText = styled.p`
-  margin: 0;
-  font-size: 1.1rem;
-  line-height: 1.8;
-  color: #2c3e50;
-  font-weight: 500;
+const RelatedNewsCategory = styled.span`
+  background: #dc3545;
+  color: white;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+`;
+
+const PremiumBadgeSmall = styled.span`
+  background: linear-gradient(135deg, #ffd43b 0%, #f08c00 100%);
+  color: #2d1b69;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
 `;
 
 function NoticiaDetalle() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
+  const { isAuthenticated, token, subscription, refreshSubscription } = useAuth();
   const [noticia, setNoticia] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [contentExpanded, setContentExpanded] = useState(false);
+  const [relatedNews, setRelatedNews] = useState([]);
+  const [loadingRelated, setLoadingRelated] = useState(false);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [pendingPremiumNews, setPendingPremiumNews] = useState(null);
+  const loginModalShownForPremiumRef = useRef(false);
+  const modalOpenRef = useRef(false);
+  const hasActiveSubscription = subscription?.estado === 'active';
 
   useEffect(() => {
     const fetchNoticia = async () => {
@@ -647,6 +780,71 @@ function NoticiaDetalle() {
     }
   }, [id]);
 
+  // Obtener noticias relacionadas (excluyendo la actual)
+  useEffect(() => {
+    const fetchRelatedNews = async () => {
+      if (!noticia) return;
+      
+      try {
+        setLoadingRelated(true);
+        // Obtener más noticias para tener opciones (30 para asegurar que haya suficientes con imágenes)
+        const response = await axios.get(`http://localhost:8000/noticias?limit=30`);
+        
+        // Filtrar la noticia actual
+        let filtered = response.data.filter(n => n.id !== noticia.id);
+        
+        // Separar noticias con imagen y sin imagen
+        const withImages = filtered.filter(n => n.imagen_url && n.imagen_url.trim() !== '');
+        const withoutImages = filtered.filter(n => !n.imagen_url || n.imagen_url.trim() === '');
+        
+        // Priorizar noticias con imágenes: tomar hasta 4 con imagen y 1 sin imagen (o todas con imagen si hay suficientes)
+        let selectedNews = [];
+        
+        if (withImages.length >= 5) {
+          // Si hay suficientes con imagen, tomar solo esas
+          selectedNews = withImages.slice(0, 5);
+        } else if (withImages.length > 0) {
+          // Si hay algunas con imagen, tomar todas las que tengan imagen y completar con sin imagen
+          selectedNews = [...withImages, ...withoutImages.slice(0, 5 - withImages.length)];
+        } else {
+          // Si no hay ninguna con imagen, tomar las primeras 5 sin imagen
+          selectedNews = withoutImages.slice(0, 5);
+        }
+        
+        setRelatedNews(selectedNews);
+      } catch (error) {
+        console.error('Error fetching related news:', error);
+      } finally {
+        setLoadingRelated(false);
+      }
+    };
+
+    if (noticia) {
+      fetchRelatedNews();
+    }
+  }, [noticia]);
+
+  // Manejar cuando el usuario se loguea después de hacer click en noticia premium
+  useEffect(() => {
+    if (isAuthenticated() && token && pendingPremiumNews && !showSubscriptionModal) {
+      if (loginModalShownForPremiumRef.current) {
+        const timer = setTimeout(() => {
+          setShowLoginModal(false);
+          loginModalShownForPremiumRef.current = false;
+          modalOpenRef.current = true;
+          setShowSubscriptionModal(true);
+        }, 1000);
+        return () => clearTimeout(timer);
+      } else if (!showLoginModal) {
+        const timer = setTimeout(() => {
+          modalOpenRef.current = true;
+          setShowSubscriptionModal(true);
+        }, 100);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [isAuthenticated, token, pendingPremiumNews, showLoginModal, showSubscriptionModal]);
+
   const handleBack = () => {
     navigate(-1);
   };
@@ -656,6 +854,7 @@ function NoticiaDetalle() {
   };
 
   const formatDate = (dateString) => {
+    if (!dateString) return 'Fecha no disponible';
     const date = new Date(dateString);
     return date.toLocaleDateString('es-ES', {
       day: '2-digit',
@@ -665,6 +864,7 @@ function NoticiaDetalle() {
   };
 
   const formatTime = (dateString) => {
+    if (!dateString) return '';
     const date = new Date(dateString);
     return date.toLocaleTimeString('es-ES', {
       hour: '2-digit',
@@ -678,18 +878,78 @@ function NoticiaDetalle() {
 
   const isContentLong = noticia?.contenido && noticia.contenido.length > 1000;
 
+  // Manejar click en noticias relacionadas
+  const handleRelatedNewsClick = async (relatedNoticia) => {
+    // Si es una noticia premium, manejar el flujo de suscripción
+    if (relatedNoticia?.es_premium) {
+      console.log('Click en noticia premium relacionada:', relatedNoticia.titulo);
+      
+      // Si no está autenticado, mostrar modal de login primero
+      if (!isAuthenticated()) {
+        console.log('Usuario no autenticado, mostrando modal de login');
+        setPendingPremiumNews(relatedNoticia);
+        loginModalShownForPremiumRef.current = true;
+        setShowLoginModal(true);
+        return;
+      }
+      
+      // Si está autenticado, verificar suscripción activa
+      if (token) {
+        try {
+          console.log('Verificando suscripción activa...');
+          const statusResponse = await axios.get('http://localhost:8000/subscriptions/status', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          
+          const hasActive = statusResponse.data?.has_active && statusResponse.data?.active_subscription;
+          
+          if (hasActive) {
+            // Tiene suscripción activa, navegar a la noticia
+            console.log('Usuario tiene suscripción activa, navegando a noticia');
+            await refreshSubscription(token);
+            navigate(`/noticia/${relatedNoticia.id}`);
+            return;
+          } else {
+            console.log('Usuario no tiene suscripción activa, mostrando planes');
+          }
+        } catch (err) {
+          console.error('Error verificando suscripción:', err);
+        }
+      }
+      
+      // No tiene suscripción activa, mostrar planes de suscripción
+      console.log('Mostrando modal de suscripción');
+      setPendingPremiumNews(relatedNoticia);
+      modalOpenRef.current = true;
+      setShowSubscriptionModal(true);
+      return;
+    }
+    
+    // Si no es premium, navegar directamente
+    navigate(`/noticia/${relatedNoticia.id}`);
+  };
+
   if (loading) {
     return (
       <Container>
         <Header>
           <HeaderContent>
-            <BackButton onClick={handleBack}>
-              <FiArrowLeft />
-              Volver
-            </BackButton>
-            <HeaderTitle>Cargando...</HeaderTitle>
+            <HeaderLeft>
+              <BackButton onClick={handleBack}>
+                <FiArrowLeft />
+                Volver
+              </BackButton>
+              <Logo onClick={handleBackToHome}>📰 Noticias</Logo>
+            </HeaderLeft>
+            <HeaderRight>
+              <ThemeToggleButton onClick={toggleTheme}>
+                {theme === 'dark' ? <FiSun /> : <FiMoon />}
+                {theme === 'dark' ? 'Día' : 'Noche'}
+              </ThemeToggleButton>
+            </HeaderRight>
           </HeaderContent>
         </Header>
+        <BlueLine />
         <LoadingContainer>
           <LoadingSpinner />
           <span style={{ fontSize: '1.2rem', fontWeight: '600' }}>Cargando detalles de la noticia...</span>
@@ -703,27 +963,36 @@ function NoticiaDetalle() {
       <Container>
         <Header>
           <HeaderContent>
-            <BackButton onClick={handleBack}>
-              <FiArrowLeft />
-              Volver
-            </BackButton>
-            <HeaderTitle>Error</HeaderTitle>
+            <HeaderLeft>
+              <BackButton onClick={handleBack}>
+                <FiArrowLeft />
+                Volver
+              </BackButton>
+              <Logo onClick={handleBackToHome}>📰 Noticias</Logo>
+            </HeaderLeft>
+            <HeaderRight>
+              <ThemeToggleButton onClick={toggleTheme}>
+                {theme === 'dark' ? <FiSun /> : <FiMoon />}
+                {theme === 'dark' ? 'Día' : 'Noche'}
+              </ThemeToggleButton>
+            </HeaderRight>
           </HeaderContent>
         </Header>
+        <BlueLine />
         <ErrorContainer>
           <h2 style={{ margin: '0 0 1rem 0', fontSize: '2rem' }}>¡Oops! Algo salió mal</h2>
           <p style={{ fontSize: '1.1rem', margin: '0 0 2rem 0' }}>{error}</p>
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
             <button onClick={handleBack} style={{ 
               background: 'rgba(255, 255, 255, 0.2)', color: 'white', border: 'none', 
-              padding: '1rem 2rem', borderRadius: '50px', cursor: 'pointer', fontWeight: '600'
+              padding: '1rem 2rem', borderRadius: '4px', cursor: 'pointer', fontWeight: '600'
             }}>
               <FiArrowLeft style={{ marginRight: '0.5rem' }} />
               Volver
             </button>
             <button onClick={handleBackToHome} style={{ 
               background: 'rgba(255, 255, 255, 0.9)', color: '#e74c3c', border: 'none', 
-              padding: '1rem 2rem', borderRadius: '50px', cursor: 'pointer', fontWeight: '600'
+              padding: '1rem 2rem', borderRadius: '4px', cursor: 'pointer', fontWeight: '600'
             }}>
               <FiFileText style={{ marginRight: '0.5rem' }} />
               Ir al Inicio
@@ -742,23 +1011,32 @@ function NoticiaDetalle() {
     <Container>
       <Header>
         <HeaderContent>
-          <BackButton onClick={handleBack}>
-            <FiArrowLeft />
-            Volver
-          </BackButton>
-          <HeaderTitle>Detalle de Noticia</HeaderTitle>
+          <HeaderLeft>
+            <BackButton onClick={handleBack}>
+              <FiArrowLeft />
+              Volver
+            </BackButton>
+            <Logo onClick={handleBackToHome}>📰 Noticias</Logo>
+          </HeaderLeft>
+          <HeaderRight>
+            <ThemeToggleButton onClick={toggleTheme}>
+              {theme === 'dark' ? <FiSun /> : <FiMoon />}
+              {theme === 'dark' ? 'Día' : 'Noche'}
+            </ThemeToggleButton>
+          </HeaderRight>
         </HeaderContent>
       </Header>
+      <BlueLine />
 
-      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 2rem' }}>
-        <Breadcrumb>
+      <Breadcrumb>
+        <BreadcrumbContent>
           <BreadcrumbLink onClick={handleBackToHome}>🏠 Inicio</BreadcrumbLink>
           {' / '}
           <BreadcrumbLink onClick={handleBack}>📰 Noticias</BreadcrumbLink>
           {' / '}
           <span>📄 Detalle</span>
-        </Breadcrumb>
-      </div>
+        </BreadcrumbContent>
+      </Breadcrumb>
 
       <MainLayout>
         <ArticleMain>
@@ -773,10 +1051,12 @@ function NoticiaDetalle() {
                 <FiCalendar />
                 {formatDate(noticia.fecha_publicacion)}
               </MetaItem>
-              <MetaItem>
-                <FiClock />
-                {formatTime(noticia.fecha_publicacion)}
-              </MetaItem>
+              {formatTime(noticia.fecha_publicacion) && (
+                <MetaItem>
+                  <FiClock />
+                  {formatTime(noticia.fecha_publicacion)}
+                </MetaItem>
+              )}
               {noticia.tiempo_lectura_min && (
                 <MetaItem>
                   <FiBookOpen />
@@ -942,8 +1222,107 @@ function NoticiaDetalle() {
               </ActionButton>
             </SidebarCard>
           )}
+
+          {/* Noticias Relacionadas */}
+          <SidebarCard>
+            <SidebarTitle>
+              <FiTrendingUp />
+              Noticias Relacionadas
+            </SidebarTitle>
+            {loadingRelated ? (
+              <div style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--text-secondary)' }}>
+                Cargando...
+              </div>
+            ) : relatedNews.length > 0 ? (
+              <div>
+                {relatedNews.map((relatedNoticia) => (
+                  <RelatedNewsCard 
+                    key={relatedNoticia.id}
+                    onClick={() => handleRelatedNewsClick(relatedNoticia)}
+                  >
+                    {relatedNoticia.imagen_url && (
+                      <RelatedNewsImageContainer>
+                        <RelatedNewsImage 
+                          src={relatedNoticia.imagen_url} 
+                          alt={relatedNoticia.titulo}
+                          onError={(e) => {
+                            // Si la imagen falla al cargar, ocultarla
+                            e.target.style.display = 'none';
+                            e.target.parentElement.style.display = 'none';
+                          }}
+                        />
+                      </RelatedNewsImageContainer>
+                    )}
+                    <RelatedNewsContent>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
+                        {relatedNoticia.es_premium && (
+                          <PremiumBadgeSmall>
+                            <FiLock style={{ fontSize: '0.7rem' }} />
+                            Premium
+                          </PremiumBadgeSmall>
+                        )}
+                        <RelatedNewsCategory>
+                          {relatedNoticia.categoria}
+                        </RelatedNewsCategory>
+                      </div>
+                      <RelatedNewsTitle>{relatedNoticia.titulo}</RelatedNewsTitle>
+                      <RelatedNewsMeta>
+                        <span>{formatDate(relatedNoticia.fecha_publicacion)}</span>
+                      </RelatedNewsMeta>
+                    </RelatedNewsContent>
+                  </RelatedNewsCard>
+                ))}
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--text-secondary)' }}>
+                No hay noticias relacionadas disponibles
+              </div>
+            )}
+          </SidebarCard>
         </Sidebar>
       </MainLayout>
+
+      {/* Modal de Login */}
+      {showLoginModal && (
+        <LoginModal
+          onClose={() => {
+            setShowLoginModal(false);
+            loginModalShownForPremiumRef.current = false;
+          }}
+          onSwitchToRegister={() => {
+            setShowLoginModal(false);
+            navigate('/');
+          }}
+          skipRedirect={true}
+          onLoginSuccess={() => {
+            console.log('Login exitoso desde noticia premium relacionada');
+          }}
+        />
+      )}
+
+      {/* Modal de Suscripción */}
+      {showSubscriptionModal && (
+        <SubscriptionModal
+          isOpen={showSubscriptionModal}
+          pendingNews={pendingPremiumNews}
+          onClose={() => {
+            modalOpenRef.current = false;
+            setShowSubscriptionModal(false);
+            setPendingPremiumNews(null);
+          }}
+          onSubscriptionSuccess={() => {
+            modalOpenRef.current = false;
+            setShowSubscriptionModal(false);
+            if (token) {
+              refreshSubscription(token);
+            }
+            // Si hay una noticia pendiente y ahora tiene suscripción, navegar a ella
+            if (pendingPremiumNews) {
+              navigate(`/noticia/${pendingPremiumNews.id}`);
+            }
+          }}
+        />
+      )}
     </Container>
   );
 }

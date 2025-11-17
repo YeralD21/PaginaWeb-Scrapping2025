@@ -5,17 +5,19 @@ import styled from 'styled-components';
 const API_BASE = 'http://localhost:8000';
 
 const PanelContainer = styled.div`
-  background: white;
+  background: rgba(30, 41, 59, 0.8);
+  backdrop-filter: blur(10px);
   padding: 2rem;
   border-radius: 15px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   margin-top: 2rem;
+  border: 1px solid rgba(102, 126, 234, 0.2);
 `;
 
 const PanelTitle = styled.h2`
-  color: #28a745;
+  color: #51cf66;
   margin-bottom: 1.5rem;
-  border-bottom: 2px solid #28a745;
+  border-bottom: 2px solid #51cf66;
   padding-bottom: 0.5rem;
   display: flex;
   align-items: center;
@@ -36,7 +38,7 @@ const FormGroup = styled.div`
 
 const Label = styled.label`
   font-weight: 600;
-  color: #333;
+  color: rgba(255, 255, 255, 0.95);
   margin-bottom: 0.5rem;
   font-size: 1rem;
   display: flex;
@@ -46,25 +48,32 @@ const Label = styled.label`
 
 const Input = styled.input`
   padding: 0.8rem;
-  border: 2px solid #e0e0e0;
+  border: 2px solid rgba(102, 126, 234, 0.3);
   border-radius: 8px;
   font-size: 1rem;
   transition: all 0.3s;
+  background: rgba(26, 31, 58, 0.6);
+  color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
 
   &:focus {
     outline: none;
-    border-color: #28a745;
-    box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+    border-color: #51cf66;
+    box-shadow: 0 0 0 3px rgba(81, 207, 102, 0.1);
   }
 
   &:disabled {
-    background: #f5f5f5;
+    background: rgba(26, 31, 58, 0.4);
     cursor: not-allowed;
+  }
+
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.5);
   }
 `;
 
 const HelpText = styled.small`
-  color: #666;
+  color: rgba(255, 255, 255, 0.7);
   margin-top: 0.3rem;
   font-size: 0.85rem;
 `;
@@ -122,12 +131,12 @@ const Button = styled.button`
 `;
 
 const InfoBox = styled.div`
-  background: linear-gradient(135deg, #e7f3ff 0%, #f0f9ff 100%);
-  border: 2px solid #2196f3;
+  background: rgba(102, 126, 234, 0.15);
+  border: 2px solid rgba(102, 126, 234, 0.3);
   border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 2rem;
-  color: #333;
+  color: rgba(255, 255, 255, 0.9);
 `;
 
 const CurrentValues = styled.div`
@@ -138,16 +147,18 @@ const CurrentValues = styled.div`
 `;
 
 const ValueCard = styled.div`
-  background: white;
+  background: rgba(26, 31, 58, 0.6);
+  backdrop-filter: blur(10px);
   padding: 1rem;
   border-radius: 8px;
-  border-left: 4px solid #2196f3;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid rgba(102, 126, 234, 0.5);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(102, 126, 234, 0.2);
 `;
 
 const ValueLabel = styled.div`
   font-size: 0.85rem;
-  color: #666;
+  color: rgba(255, 255, 255, 0.7);
   margin-bottom: 0.3rem;
 `;
 

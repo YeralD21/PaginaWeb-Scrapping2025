@@ -9,6 +9,7 @@ from typing import List, Dict, Optional, Tuple
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from models import Noticia, AlertaConfiguracion, AlertaDisparo, TrendingKeywords
+from sentiment_analyzer import get_sentiment_analyzer
 import smtplib
 try:
     from email.mime.text import MimeText
@@ -85,9 +86,24 @@ class AlertSystem:
         return max_urgency_level, list(set(found_keywords))
     
     def analyze_sentiment(self, text: str) -> str:
-        """Análisis básico de sentimientos"""
+        """Análisis de sentimientos usando el módulo avanzado"""
         if not text:
-            return 'neutral'
+            return 'neutro'
+        
+        try:
+            analyzer = get_sentiment_analyzer()
+            # El analizador espera título y contenido separados, pero podemos pasar todo como título
+            result = analyzer.analyze_sentiment(text, "")
+            return result.get('sentimiento', 'neutro')
+        except Exception as e:
+            logger.warning(f"Error en análisis de sentimientos, usando método básico: {e}")
+            # Fallback al método básico si hay error
+            return self._analyze_sentiment_basic(text)
+    
+    def _analyze_sentiment_basic(self, text: str) -> str:
+        """Método básico de análisis de sentimientos (fallback)"""
+        if not text:
+            return 'neutro'
         
         text_lower = text.lower()
         
@@ -187,8 +203,14 @@ class AlertSystem:
                 noticia.nivel_urgencia = urgency_level
                 noticia.keywords_alerta = urgency_keywords
             
-            # Analizar sentimiento
-            noticia.sentimiento = self.analyze_sentiment(noticia.titulo + " " + (noticia.contenido or ""))
+            # Analizar sentimiento usando el nuevo analizador avanzado
+            try:
+                analyzer = get_sentiment_analyzer()
+                sentiment_result = analyzer.analyze_sentiment(noticia.titulo or "", noticia.contenido or "")
+                noticia.sentimiento = sentiment_result.get('sentimiento', 'neutro')
+            except Exception as e:
+                logger.warning(f"Error en análisis de sentimientos avanzado, usando método básico: {e}")
+                noticia.sentimiento = self.analyze_sentiment(noticia.titulo + " " + (noticia.contenido or ""))
             
             # Verificar alertas configuradas
             triggered_alerts = self.check_alert_triggers(db, noticia)

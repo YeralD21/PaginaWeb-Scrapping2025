@@ -3,28 +3,143 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import styled from 'styled-components';
 import Swal from 'sweetalert2';
+import { FiBarChart, FiFileText, FiUsers, FiAlertTriangle, FiDollarSign, FiSettings, FiStar, FiCreditCard, FiList, FiArrowLeft } from 'react-icons/fi';
 import ModerationPanel from './ModerationPanel';
 import ReportedPostsPanel from './ReportedPostsPanel';
 import EarningsConfigPanel from './EarningsConfigPanel';
 import MonetizationSettingsPanel from './MonetizationSettingsPanel';
 
 const Container = styled.div`
-  background: white;
-  padding: 2rem;
-  border-radius: 15px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
   overflow-x: hidden;
 `;
 
+const DashboardLayout = styled.div`
+  display: flex;
+  gap: 2rem;
+  min-height: calc(100vh - 200px);
+`;
+
+const Sidebar = styled.aside`
+  width: 280px;
+  background: rgba(26, 31, 58, 0.95);
+  backdrop-filter: blur(10px);
+  border-right: 1px solid rgba(102, 126, 234, 0.2);
+  padding: 2rem 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  height: fit-content;
+  position: sticky;
+  top: 2rem;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(26, 31, 58, 0.5);
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(102, 126, 234, 0.3);
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba(102, 126, 234, 0.5);
+  }
+`;
+
+const SidebarSection = styled.div`
+  padding: 0 1.5rem;
+  margin-bottom: 2rem;
+`;
+
+const SidebarTitle = styled.h3`
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 1rem;
+  font-weight: 600;
+`;
+
+const NavItem = styled.button`
+  width: 100%;
+  padding: 0.9rem 1rem;
+  background: ${props => props.$active ? 'linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%)' : 'transparent'};
+  color: ${props => props.$active ? '#fff' : 'rgba(255, 255, 255, 0.7)'};
+  border: none;
+  border-left: 3px solid ${props => props.$active ? '#667eea' : 'transparent'};
+  border-radius: 0 8px 8px 0;
+  cursor: pointer;
+  font-weight: ${props => props.$active ? '600' : '500'};
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+  text-align: left;
+  font-size: 0.95rem;
+
+  &:hover {
+    background: ${props => props.$active ? 'linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%)' : 'rgba(102, 126, 234, 0.1)'};
+    color: #fff;
+    border-left-color: ${props => props.$active ? '#667eea' : 'rgba(102, 126, 234, 0.5)'};
+    transform: translateX(5px);
+  }
+`;
+
+const NavIcon = styled.span`
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+`;
+
+const BackButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+  color: white;
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 1.5rem;
+  width: 100%;
+
+  &:hover {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.3) 100%);
+    border-color: rgba(102, 126, 234, 0.5);
+    transform: translateY(-2px);
+  }
+`;
+
+const MainContent = styled.main`
+  flex: 1;
+  padding: 0;
+  overflow-y: auto;
+  background: transparent;
+`;
+
 const Title = styled.h1`
-  color: #333;
+  color: rgba(255, 255, 255, 0.95);
   margin-bottom: 2rem;
   display: flex;
   align-items: center;
   gap: 1rem;
+  font-size: 2rem;
 `;
 
 const StatsGrid = styled.div`
@@ -55,40 +170,60 @@ const StatLabel = styled.div`
 
 const Section = styled.div`
   margin-bottom: 3rem;
+  background: rgba(30, 41, 59, 0.6);
+  backdrop-filter: blur(10px);
+  padding: 2rem;
+  border-radius: 16px;
+  border: 1px solid rgba(102, 126, 234, 0.2);
 `;
 
 const SectionTitle = styled.h2`
-  color: #333;
+  color: rgba(255, 255, 255, 0.95);
   margin-bottom: 1.5rem;
-  border-bottom: 2px solid #667eea;
+  border-bottom: 2px solid rgba(102, 126, 234, 0.5);
   padding-bottom: 0.5rem;
+  font-size: 1.5rem;
 `;
 
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  background: white;
+  background: rgba(30, 41, 59, 0.8);
   border-radius: 10px;
   overflow: hidden;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  backdrop-filter: blur(10px);
 `;
 
 const Th = styled.th`
-  background: #667eea;
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
   color: white;
   padding: 1rem;
   text-align: left;
   font-weight: 600;
+  border-bottom: 2px solid rgba(102, 126, 234, 0.3);
 `;
 
 const Td = styled.td`
   padding: 1rem;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+  color: rgba(255, 255, 255, 0.9);
 `;
 
 const Tr = styled.tr`
+  background: rgba(30, 41, 59, 0.6);
+  
   &:hover {
-    background: #f9f9f9;
+    background: rgba(102, 126, 234, 0.15);
+  }
+  
+  &:nth-child(even) {
+    background: rgba(30, 41, 59, 0.7);
+    
+    &:hover {
+      background: rgba(102, 126, 234, 0.15);
+    }
   }
 `;
 
@@ -110,103 +245,36 @@ const Money = styled.span`
 const Loading = styled.div`
   text-align: center;
   padding: 3rem;
-  color: #888;
+  color: rgba(255, 255, 255, 0.7);
   font-size: 1.2rem;
 `;
 
 const RefreshButton = styled.button`
   padding: 0.8rem 1.5rem;
-  background: #667eea;
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
   color: white;
-  border: none;
+  border: 1px solid rgba(102, 126, 234, 0.3);
   border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
   margin-bottom: 2rem;
-
-  &:hover {
-    background: #764ba2;
-  }
-`;
-
-const TabContainer = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  margin-bottom: 2rem;
-  width: 100%;
-  max-width: 100%;
-  overflow-x: auto;
-  
-  /* Scrollbar personalizado */
-  &::-webkit-scrollbar {
-    height: 8px;
-  }
-  
-  &::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 10px;
-  }
-  
-  &::-webkit-scrollbar-thumb {
-    background: #667eea;
-    border-radius: 10px;
-    
-    &:hover {
-      background: #764ba2;
-    }
-  }
-`;
-
-const Tab = styled.button`
-  padding: 1rem 1.5rem;
-  background: ${props => props.$active ? '#667eea' : 'white'};
-  color: ${props => props.$active ? 'white' : '#333'};
-  border: 2px solid #667eea;
-  border-radius: 10px;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 0.95rem;
   transition: all 0.3s;
-  flex: 1 1 auto;
-  min-width: fit-content;
-  white-space: nowrap;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
 
   &:hover {
-    background: ${props => props.$active ? '#764ba2' : '#f0f0f0'};
+    background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  }
-
-  @media (max-width: 1200px) {
-    flex: 1 1 calc(33.333% - 0.67rem);
-    min-width: 150px;
-  }
-
-  @media (max-width: 768px) {
-    flex: 1 1 calc(50% - 0.5rem);
-    min-width: 140px;
-    font-size: 0.85rem;
-    padding: 0.8rem 1rem;
-  }
-
-  @media (max-width: 480px) {
-    flex: 1 1 100%;
-    min-width: 100%;
+    box-shadow: 0 4px 12px rgba(30, 58, 138, 0.4);
   }
 `;
 
 const PostCard = styled.div`
-  background: white;
-  border: 2px solid #e0e0e0;
+  background: rgba(30, 41, 59, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(102, 126, 234, 0.3);
   border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 `;
 
 const PostHeader = styled.div`
@@ -215,11 +283,11 @@ const PostHeader = styled.div`
   align-items: center;
   margin-bottom: 1rem;
   padding-bottom: 1rem;
-  border-bottom: 2px solid #f0f0f0;
+  border-bottom: 2px solid rgba(102, 126, 234, 0.2);
 `;
 
 const PostTitle = styled.h3`
-  color: #333;
+  color: rgba(255, 255, 255, 0.95);
   margin-bottom: 0.5rem;
   font-size: 1.3rem;
 `;
@@ -233,7 +301,7 @@ const PostImage = styled.img`
 `;
 
 const PostContent = styled.div`
-  color: #555;
+  color: rgba(255, 255, 255, 0.8);
   line-height: 1.6;
   margin: 1rem 0;
 `;
@@ -300,7 +368,7 @@ const Modal = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.8);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -308,45 +376,86 @@ const Modal = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background: white;
+  background: rgba(30, 41, 59, 0.95);
+  backdrop-filter: blur(20px);
   padding: 2rem;
   border-radius: 15px;
   max-width: 500px;
   width: 90%;
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 `;
 
 const ModalTitle = styled.h3`
   margin-bottom: 1rem;
-  color: #333;
+  color: rgba(255, 255, 255, 0.95);
 `;
 
 const Input = styled.input`
   width: 100%;
   padding: 0.8rem;
-  border: 2px solid #e0e0e0;
+  border: 2px solid rgba(102, 126, 234, 0.3);
   border-radius: 8px;
   margin-bottom: 1rem;
   font-size: 1rem;
+  background: rgba(26, 31, 58, 0.6);
+  color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+
+  &:focus {
+    outline: none;
+    border-color: #667eea;
+  }
+
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+  }
 `;
 
 const TextArea = styled.textarea`
   width: 100%;
   padding: 0.8rem;
-  border: 2px solid #e0e0e0;
+  border: 2px solid rgba(102, 126, 234, 0.3);
   border-radius: 8px;
   margin-bottom: 1rem;
   font-size: 1rem;
   min-height: 100px;
   resize: vertical;
+  background: rgba(26, 31, 58, 0.6);
+  color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+
+  &:focus {
+    outline: none;
+    border-color: #667eea;
+  }
+
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+  }
 `;
 
 const Select = styled.select`
   width: 100%;
   padding: 0.8rem;
-  border: 2px solid #e0e0e0;
+  border: 2px solid rgba(102, 126, 234, 0.3);
   border-radius: 8px;
   margin-bottom: 1rem;
   font-size: 1rem;
+  background: rgba(26, 31, 58, 0.6);
+  color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+    border-color: #667eea;
+  }
+
+  option {
+    background: #1e3a8a;
+    color: rgba(255, 255, 255, 0.9);
+  }
 `;
 
 const API_BASE = 'http://localhost:8000';
@@ -373,8 +482,8 @@ const DiagnosticButton = styled.button`
 `;
 
 const DiagnosticResult = styled.pre`
-  background: #f8f9fa;
-  border: 2px solid #dee2e6;
+  background: rgba(26, 31, 58, 0.6);
+  border: 2px solid rgba(102, 126, 234, 0.3);
   border-radius: 8px;
   padding: 1.5rem;
   margin-bottom: 2rem;
@@ -382,15 +491,20 @@ const DiagnosticResult = styled.pre`
   font-size: 0.9rem;
   white-space: pre-wrap;
   word-wrap: break-word;
+  color: rgba(255, 255, 255, 0.9);
 `;
 
-function AdminDashboard({ token }) {
+function AdminDashboard({ token, hideSidebar = false, activeTab: externalActiveTab, setActiveTab: setExternalActiveTab }) {
   const navigate = useNavigate();
   const [dashboard, setDashboard] = useState(null);
   const [users, setUsers] = useState([]);
   const [pendingPosts, setPendingPosts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'pending', 'users', 'premium', 'payments'
+  const [internalActiveTab, setInternalActiveTab] = useState('dashboard'); // 'dashboard', 'pending', 'users', 'premium', 'payments'
+  
+  // Usar el tab externo si está disponible (cuando hideSidebar es true), sino usar el interno
+  const activeTab = hideSidebar && externalActiveTab ? externalActiveTab : internalActiveTab;
+  const setActiveTab = hideSidebar && setExternalActiveTab ? setExternalActiveTab : setInternalActiveTab;
   const [diagnostic, setDiagnostic] = useState(null);
   const [premiumNews, setPremiumNews] = useState([]);
   const [premiumLoading, setPremiumLoading] = useState(false);
@@ -1206,121 +1320,9 @@ function AdminDashboard({ token }) {
     );
   }
 
-  return (
-    <Container>
-      <Title>
-        👑 Dashboard de Administrador
-      </Title>
-
-      {diagnostic && (
-        <div>
-          <DiagnosticButton onClick={runDiagnostic}>
-            🔄 Re-ejecutar Diagnóstico
-          </DiagnosticButton>
-          <DiagnosticResult>
-            <strong>🔍 Diagnóstico del Sistema:</strong>
-            {'\n\n'}
-            {JSON.stringify(diagnostic, null, 2)}
-          </DiagnosticResult>
-        </div>
-      )}
-
-      <TabContainer>
-        <Tab 
-          $active={activeTab === 'dashboard'} 
-          onClick={() => setActiveTab('dashboard')}
-        >
-          📊 Estadísticas
-        </Tab>
-        <Tab 
-          $active={activeTab === 'pending'} 
-          onClick={() => setActiveTab('pending')}
-        >
-          ⏳ Publicaciones Pendientes ({dashboard?.posts?.pending || 0})
-        </Tab>
-        <Tab 
-          $active={activeTab === 'users'} 
-          onClick={() => setActiveTab('users')}
-        >
-          👥 Gestión de Usuarios
-        </Tab>
-        <Tab 
-          $active={activeTab === 'reported'} 
-          onClick={() => setActiveTab('reported')}
-          style={{
-            background: activeTab === 'reported' 
-              ? 'linear-gradient(135deg, #dc3545 0%, #ff6b6b 100%)' 
-              : 'white',
-            border: activeTab === 'reported' ? 'none' : '2px solid #667eea',
-            animation: dashboard?.reports?.pending > 0 ? 'pulse 2s infinite' : 'none'
-          }}
-        >
-          🚨 ALERT! ({dashboard?.posts?.flagged || 0})
-        </Tab>
-        <Tab 
-          $active={activeTab === 'earnings'} 
-          onClick={() => setActiveTab('earnings')}
-          style={{
-            background: activeTab === 'earnings' 
-              ? 'linear-gradient(135deg, #28a745 0%, #51cf66 100%)' 
-              : 'white',
-            border: activeTab === 'earnings' ? 'none' : '2px solid #667eea'
-          }}
-        >
-          💰 Gestionar Ganancias
-        </Tab>
-        <Tab 
-          $active={activeTab === 'monetization'} 
-          onClick={() => setActiveTab('monetization')}
-          style={{
-            background: activeTab === 'monetization' 
-              ? 'linear-gradient(135deg, #ffc107 0%, #ff9800 100%)' 
-              : 'white',
-            border: activeTab === 'monetization' ? 'none' : '2px solid #667eea'
-          }}
-        >
-          ⚙️ Configurar Monetización
-        </Tab>
-        <Tab
-          $active={activeTab === 'premium'}
-          onClick={() => setActiveTab('premium')}
-          style={{
-            background: activeTab === 'premium'
-              ? 'linear-gradient(135deg, #ffd43b 0%, #ffa94d 100%)'
-              : 'white',
-            border: activeTab === 'premium' ? 'none' : '2px solid #667eea'
-          }}
-        >
-          ⭐ Noticias Premium
-        </Tab>
-        <Tab
-          $active={activeTab === 'payments'}
-          onClick={() => setActiveTab('payments')}
-          style={{
-            background: activeTab === 'payments'
-              ? 'linear-gradient(135deg, #ff6b6b 0%, #ff4757 100%)'
-              : 'white',
-            border: activeTab === 'payments' ? 'none' : '2px solid #ff6b6b',
-            color: activeTab === 'payments' ? 'white' : '#ff6b6b'
-          }}
-        >
-          💳 Pagos Suscripciones
-        </Tab>
-        <Tab
-          $active={activeTab === 'plans'}
-          onClick={() => setActiveTab('plans')}
-          style={{
-            background: activeTab === 'plans'
-              ? 'linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%)'
-              : 'white',
-            border: activeTab === 'plans' ? 'none' : '2px solid #4ecdc4',
-            color: activeTab === 'plans' ? 'white' : '#4ecdc4'
-          }}
-        >
-          📋 Gestión de Planes
-        </Tab>
-      </TabContainer>
-
+  // Función helper para renderizar el contenido del dashboard
+  const renderContent = () => (
+    <>
       {activeTab === 'dashboard' && (
         <>
           <RefreshButton onClick={fetchData}>
@@ -1417,10 +1419,11 @@ function AdminDashboard({ token }) {
       </Section>
 
           <div style={{
-            background: '#e7f3ff', 
+            background: 'rgba(102, 126, 234, 0.15)', 
             padding: '1.5rem', 
             borderRadius: '12px',
-            borderLeft: '4px solid #667eea'
+            borderLeft: '4px solid #667eea',
+            color: 'rgba(255, 255, 255, 0.9)'
           }}>
             <strong>ℹ️ Información del Sistema:</strong><br/>
             • Cada interacción (view/click) genera $0.01 USD<br/>
@@ -1501,6 +1504,107 @@ function AdminDashboard({ token }) {
         <MonetizationSettingsPanel token={token} onUpdate={fetchData} />
       )}
 
+      {activeTab === 'premium' && (
+        <Section>
+          <SectionTitle>⭐ Gestión de noticias premium</SectionTitle>
+          <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+            <ActionButton onClick={() => handleRecalculatePremium(false)}>
+              🔄 Recalcular Puntajes
+            </ActionButton>
+            <ActionButton variant="premium" onClick={() => handleRecalculatePremium(true)}>
+              🌟 Recalcular y marcar Top 15%
+            </ActionButton>
+            <ActionButton onClick={fetchPremiumNews}>
+              📋 Refrescar Lista
+            </ActionButton>
+          </div>
+
+          <div style={{
+            background: 'rgba(255, 212, 59, 0.15)',
+            borderLeft: '4px solid #ffa94d',
+            padding: '1rem',
+            borderRadius: '10px',
+            marginBottom: '1.5rem',
+            color: '#ffd43b'
+          }}>
+            <strong>Consejo rápido:</strong> Estas recomendaciones se basan en popularidad, tendencia, categoría y frescura.
+            Puedes recalcular cuando quieras y marcar manualmente qué noticias serán exclusivas.
+          </div>
+
+          {premiumLoading ? (
+            <Loading>⏳ Analizando noticias más atractivas...</Loading>
+          ) : premiumError ? (
+            <Loading>❌ Error cargando recomendaciones: {premiumError}</Loading>
+          ) : (
+            <Table>
+              <thead>
+                <tr>
+                  <Th>ID</Th>
+                  <Th>Título</Th>
+                  <Th>Categoría</Th>
+                  <Th>Score</Th>
+                  <Th>Trending</Th>
+                  <Th>Popularidad</Th>
+                  <Th>Premium</Th>
+                  <Th>Acciones</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {premiumNews && premiumNews.length > 0 ? premiumNews.map(item => (
+                  <Tr 
+                    key={item.id}
+                    onClick={() => navigate(`/noticia/${item.id}`)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <Td>{item.id}</Td>
+                    <Td>
+                      <div style={{ fontWeight: 600 }}>{item.titulo}</div>
+                      <div style={{ fontSize: '0.85rem', color: '#888' }}>
+                        {item.fecha_publicacion ? new Date(item.fecha_publicacion).toLocaleString() : 'Sin fecha'}
+                      </div>
+                    </Td>
+                    <Td>{item.categoria || 'Sin categoría'}</Td>
+                    <Td>
+                      <Badge style={{ background: '#ffd43b', color: '#1a1f3a' }}>
+                        {item.premium_score?.toFixed(2)}
+                      </Badge>
+                    </Td>
+                    <Td>{item.es_trending ? '🔥 Sí' : '–'}</Td>
+                    <Td>{item.popularidad_score?.toFixed(2) ?? '0.00'}</Td>
+                    <Td>
+                      {item.es_premium ? (
+                        <Badge style={{ background: '#51cf66' }}>Premium</Badge>
+                      ) : (
+                        <Badge style={{ background: '#adb5bd' }}>Libre</Badge>
+                      )}
+                    </Td>
+                    <Td onClick={(e) => e.stopPropagation()}>
+                      <ButtonGroup>
+                        {!item.es_premium ? (
+                          <ActionButton variant="premium" onClick={() => handleTogglePremium(item.id, true)}>
+                            ⭐ Marcar Premium
+                          </ActionButton>
+                        ) : (
+                          <ActionButton variant="premium-off" onClick={() => handleTogglePremium(item.id, false)}>
+                            ⚪ Quitar Premium
+                          </ActionButton>
+                        )}
+                      </ButtonGroup>
+                    </Td>
+                  </Tr>
+                )) : (
+                  <Tr>
+                    <Td colSpan="8" style={{ textAlign: 'center', color: 'rgba(255, 255, 255, 0.7)', padding: '2rem' }}>
+                      No hay recomendaciones en este momento.
+                    </Td>
+                  </Tr>
+                )}
+              </tbody>
+            </Table>
+          )}
+        </Section>
+      )}
+
       {activeTab === 'payments' && (
         <Section>
           <SectionTitle>💳 Gestión de Pagos de Suscripciones</SectionTitle>
@@ -1510,7 +1614,7 @@ function AdminDashboard({ token }) {
             display: 'flex', 
             gap: '1rem', 
             marginBottom: '2rem',
-            borderBottom: '2px solid #e1e5e9',
+            borderBottom: '2px solid rgba(102, 126, 234, 0.2)',
             paddingBottom: '1rem'
           }}>
             <button
@@ -1519,14 +1623,15 @@ function AdminDashboard({ token }) {
                 padding: '0.75rem 1.5rem',
                 background: paymentsSubTab === 'pending'
                   ? 'linear-gradient(135deg, #ff6b6b 0%, #ff4757 100%)'
-                  : 'white',
-                color: paymentsSubTab === 'pending' ? 'white' : '#ff6b6b',
-                border: paymentsSubTab === 'pending' ? 'none' : '2px solid #ff6b6b',
+                  : 'rgba(26, 31, 58, 0.6)',
+                color: paymentsSubTab === 'pending' ? 'white' : 'rgba(255, 255, 255, 0.9)',
+                border: paymentsSubTab === 'pending' ? 'none' : '2px solid rgba(255, 107, 107, 0.3)',
                 borderRadius: '10px',
                 fontWeight: '600',
                 cursor: 'pointer',
                 fontSize: '1rem',
-                transition: 'all 0.3s ease'
+                transition: 'all 0.3s ease',
+                backdropFilter: 'blur(10px)'
               }}
             >
               ⏳ Lista Pendiente de Aprobación
@@ -1537,14 +1642,15 @@ function AdminDashboard({ token }) {
                 padding: '0.75rem 1.5rem',
                 background: paymentsSubTab === 'active'
                   ? 'linear-gradient(135deg, #51cf66 0%, #2f9e44 100%)'
-                  : 'white',
-                color: paymentsSubTab === 'active' ? 'white' : '#51cf66',
-                border: paymentsSubTab === 'active' ? 'none' : '2px solid #51cf66',
+                  : 'rgba(26, 31, 58, 0.6)',
+                color: paymentsSubTab === 'active' ? 'white' : 'rgba(255, 255, 255, 0.9)',
+                border: paymentsSubTab === 'active' ? 'none' : '2px solid rgba(81, 207, 102, 0.3)',
                 borderRadius: '10px',
                 fontWeight: '600',
                 cursor: 'pointer',
                 fontSize: '1rem',
-                transition: 'all 0.3s ease'
+                transition: 'all 0.3s ease',
+                backdropFilter: 'blur(10px)'
               }}
             >
               ⭐ Usuarios con Suscripción Premium
@@ -1573,7 +1679,7 @@ function AdminDashboard({ token }) {
             <div style={{
               padding: '3rem',
               textAlign: 'center',
-              background: '#f8f9fa',
+              background: 'rgba(26, 31, 58, 0.6)',
               borderRadius: '12px',
               color: '#6c757d'
             }}>
@@ -1594,7 +1700,7 @@ function AdminDashboard({ token }) {
                 </Tr>
               </thead>
               <tbody>
-                {pendingPayments.map((payment) => (
+                {pendingPayments && pendingPayments.length > 0 ? pendingPayments.map((payment) => (
                   <Tr key={payment.subscription_id}>
                     <Td>
                       <strong>{payment.user_email}</strong>
@@ -1609,7 +1715,7 @@ function AdminDashboard({ token }) {
                     </Td>
                     <Td>
                       <code style={{
-                        background: '#f8f9fa',
+                        background: 'rgba(26, 31, 58, 0.6)',
                         padding: '0.3rem 0.6rem',
                         borderRadius: '6px',
                         fontSize: '0.85rem',
@@ -1652,9 +1758,10 @@ function AdminDashboard({ token }) {
                             style={{
                               padding: '0.5rem',
                               borderRadius: '8px',
-                              border: '1px solid #dee2e6',
+                              border: '1px solid rgba(102, 126, 234, 0.3)',
                               fontSize: '0.9rem',
-                              background: 'white'
+                              background: 'rgba(26, 31, 58, 0.6)',
+                              color: 'rgba(255, 255, 255, 0.9)'
                             }}
                           >
                             <option value="">Seleccionar motivo...</option>
@@ -1685,7 +1792,13 @@ function AdminDashboard({ token }) {
                       </div>
                     </Td>
                   </Tr>
-                ))}
+                )) : (
+                  <Tr>
+                    <Td colSpan="6" style={{ textAlign: 'center', color: 'rgba(255, 255, 255, 0.7)', padding: '2rem' }}>
+                      No hay pagos pendientes en este momento.
+                    </Td>
+                  </Tr>
+                )}
               </tbody>
             </Table>
           )}
@@ -1701,7 +1814,7 @@ function AdminDashboard({ token }) {
                 </ActionButton>
                 {activeSubscriptions.length > 0 && (
                   <span style={{ color: '#51cf66', fontWeight: '600', fontSize: '1rem' }}>
-                    {activeSubscriptions.length} suscripción(es) activa(s)
+                    {activeSubscriptions.length} usuario(s) con suscripción premium activa
                   </span>
                 )}
               </div>
@@ -1714,80 +1827,70 @@ function AdminDashboard({ token }) {
                 <div style={{
                   padding: '3rem',
                   textAlign: 'center',
-                  background: '#f8f9fa',
+                  background: 'rgba(26, 31, 58, 0.6)',
                   borderRadius: '12px',
-                  color: '#6c757d'
+                  color: 'rgba(255, 255, 255, 0.7)'
                 }}>
-                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📭</div>
-                  <div style={{ fontSize: '1.2rem', fontWeight: '600' }}>No hay suscripciones activas</div>
-                  <div style={{ marginTop: '0.5rem' }}>No hay usuarios con suscripciones premium activas en este momento</div>
+                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⭐</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)' }}>No hay usuarios con suscripción premium</div>
+                  <div style={{ marginTop: '0.5rem' }}>No hay suscripciones activas en este momento</div>
                 </div>
               ) : (
                 <Table>
                   <thead>
                     <Tr>
                       <Th>Usuario</Th>
+                      <Th>Email</Th>
                       <Th>Plan</Th>
-                      <Th>Monto</Th>
                       <Th>Fecha Inicio</Th>
                       <Th>Fecha Fin</Th>
-                      <Th>Días Restantes</Th>
-                      <Th>Renovación</Th>
+                      <Th>Estado</Th>
                       <Th>Acciones</Th>
                     </Tr>
                   </thead>
                   <tbody>
-                    {activeSubscriptions.map((subscription) => (
-                      <Tr key={subscription.subscription_id}>
+                    {activeSubscriptions && activeSubscriptions.length > 0 ? activeSubscriptions.map((subscription) => (
+                      <Tr key={subscription.id}>
                         <Td>
-                          <strong>{subscription.user_email}</strong>
+                          <strong style={{ color: 'rgba(255, 255, 255, 0.95)' }}>
+                            {subscription.user_email || subscription.user?.email || 'N/A'}
+                          </strong>
+                        </Td>
+                        <Td>
+                          <span style={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                            {subscription.user_email || subscription.user?.email || 'N/A'}
+                          </span>
                         </Td>
                         <Td>
                           <Badge style={{ background: '#51cf66' }}>
-                            {subscription.plan_nombre}
+                            {subscription.plan_nombre || subscription.plan?.nombre || 'N/A'}
                           </Badge>
                         </Td>
                         <Td>
-                          <Money>${subscription.plan_precio.toFixed(2)}</Money>
-                        </Td>
-                        <Td>
-                          {new Date(subscription.fecha_inicio).toLocaleString('es-ES', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
+                          {subscription.fecha_inicio 
+                            ? new Date(subscription.fecha_inicio).toLocaleDateString('es-ES', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric'
+                              })
+                            : 'N/A'}
                         </Td>
                         <Td>
                           {subscription.fecha_fin 
-                            ? new Date(subscription.fecha_fin).toLocaleString('es-ES', {
+                            ? new Date(subscription.fecha_fin).toLocaleDateString('es-ES', {
                                 day: '2-digit',
                                 month: '2-digit',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
+                                year: 'numeric'
                               })
-                            : 'Sin fecha límite'}
+                            : 'N/A'}
                         </Td>
                         <Td>
-                          {subscription.dias_restantes !== null ? (
-                            <Badge style={{ 
-                              background: subscription.dias_restantes > 7 ? '#51cf66' : '#ffd43b',
-                              color: subscription.dias_restantes > 7 ? 'white' : '#333'
-                            }}>
-                              {subscription.dias_restantes} días
-                            </Badge>
-                          ) : (
-                            <Badge style={{ background: '#667eea' }}>Indefinido</Badge>
-                          )}
-                        </Td>
-                        <Td>
-                          {subscription.renovacion_automatica ? (
-                            <Badge style={{ background: '#51cf66' }}>✅ Automática</Badge>
-                          ) : (
-                            <Badge style={{ background: '#ffd43b', color: '#333' }}>❌ Manual</Badge>
-                          )}
+                          <Badge style={{ 
+                            background: subscription.estado === 'activa' ? '#51cf66' : '#ff6b6b',
+                            color: 'white'
+                          }}>
+                            {subscription.estado === 'activa' ? '✅ Activa' : subscription.estado || 'N/A'}
+                          </Badge>
                         </Td>
                         <Td>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', minWidth: '250px' }}>
@@ -1797,38 +1900,45 @@ function AdminDashboard({ token }) {
                               style={{
                                 padding: '0.5rem',
                                 borderRadius: '8px',
-                                border: '1px solid #dee2e6',
+                                border: '1px solid rgba(102, 126, 234, 0.3)',
                                 fontSize: '0.9rem',
-                                background: 'white'
+                                background: 'rgba(26, 31, 58, 0.6)',
+                                color: 'rgba(255, 255, 255, 0.9)',
+                                marginBottom: '0.5rem'
                               }}
                             >
-                              <option value="">Seleccionar motivo...</option>
-                              <option value="Incumplimiento de términos y condiciones">Incumplimiento de términos y condiciones</option>
-                              <option value="Actividad sospechosa o fraudulenta">Actividad sospechosa o fraudulenta</option>
+                              <option value="">Seleccionar motivo de cancelación...</option>
+                              <option value="Incumplimiento de términos">Incumplimiento de términos</option>
                               <option value="Solicitud del usuario">Solicitud del usuario</option>
-                              <option value="Problemas de pago recurrentes">Problemas de pago recurrentes</option>
-                              <option value="Violación de políticas de contenido">Violación de políticas de contenido</option>
-                              <option value="Uso indebido de la plataforma">Uso indebido de la plataforma</option>
+                              <option value="Pago no recibido">Pago no recibido</option>
+                              <option value="Fraude detectado">Fraude detectado</option>
+                              <option value="Violación de políticas">Violación de políticas</option>
                               <option value="Otro motivo">Otro motivo</option>
                             </select>
                             <ActionButton
                               variant="premium-off"
-                              onClick={() => handleCancelSubscription(subscription.subscription_id)}
-                              disabled={!cancelReason || cancellingSubscriptionId === subscription.subscription_id}
+                              onClick={() => handleCancelSubscription(subscription.id)}
+                              disabled={!cancelReason || cancellingSubscriptionId === subscription.id}
                               style={{
-                                background: !cancelReason || cancellingSubscriptionId === subscription.subscription_id
+                                background: !cancelReason || cancellingSubscriptionId === subscription.id
                                   ? '#ccc'
                                   : 'linear-gradient(135deg, #ff6b6b 0%, #ff4757 100%)',
-                                opacity: !cancelReason || cancellingSubscriptionId === subscription.subscription_id ? 0.6 : 1,
-                                cursor: !cancelReason || cancellingSubscriptionId === subscription.subscription_id ? 'not-allowed' : 'pointer'
+                                opacity: !cancelReason || cancellingSubscriptionId === subscription.id ? 0.6 : 1,
+                                cursor: !cancelReason || cancellingSubscriptionId === subscription.id ? 'not-allowed' : 'pointer'
                               }}
                             >
-                              {cancellingSubscriptionId === subscription.subscription_id ? '⏳' : '🚫'} Cancelar Suscripción
+                              {cancellingSubscriptionId === subscription.id ? '⏳' : '🚫'} Cancelar Suscripción
                             </ActionButton>
                           </div>
                         </Td>
                       </Tr>
-                    ))}
+                    )) : (
+                      <Tr>
+                        <Td colSpan="7" style={{ textAlign: 'center', color: 'rgba(255, 255, 255, 0.7)', padding: '2rem' }}>
+                          No hay suscripciones activas en este momento.
+                        </Td>
+                      </Tr>
+                    )}
                   </tbody>
                 </Table>
               )}
@@ -1841,722 +1951,515 @@ function AdminDashboard({ token }) {
         <Section>
           <SectionTitle>📋 Gestión de Planes de Suscripción</SectionTitle>
           
-          <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            <ActionButton onClick={() => { resetPlanForm(); setBeneficiosExpanded(true); setShowPlanForm(true); }}>
+          {plansLoading && <Loading>⏳ Cargando planes...</Loading>}
+          {plansError && (
+            <div style={{ color: '#ff6b6b', padding: '1rem', background: 'rgba(255, 107, 107, 0.1)', borderRadius: '8px', marginBottom: '1rem' }}>
+              ❌ Error: {plansError}
+            </div>
+          )}
+          
+          <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <ActionButton 
+              variant="premium" 
+              onClick={() => {
+                resetPlanForm();
+                setShowPlanForm(true);
+              }}
+            >
               ➕ Crear Nuevo Plan
             </ActionButton>
-            <ActionButton onClick={fetchPlans}>
+            <RefreshButton onClick={fetchPlans}>
               🔄 Actualizar Lista
-            </ActionButton>
+            </RefreshButton>
           </div>
 
-          {plansLoading ? (
-            <Loading>⏳ Cargando planes...</Loading>
-          ) : plansError ? (
-            <Loading style={{ color: '#ff6b6b' }}>❌ Error: {plansError}</Loading>
-          ) : plans.length === 0 ? (
-            <div style={{
-              padding: '3rem',
-              textAlign: 'center',
-              background: '#f8f9fa',
-              borderRadius: '12px',
-              color: '#6c757d'
-            }}>
-              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📋</div>
-              <div style={{ fontSize: '1.2rem', fontWeight: '600' }}>No hay planes creados</div>
-              <div style={{ marginTop: '0.5rem' }}>Crea tu primer plan de suscripción</div>
+          {!plansLoading && !plansError && plans.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '3rem', color: 'rgba(255, 255, 255, 0.7)' }}>
+              📭 No hay planes creados aún. Crea tu primer plan para comenzar.
             </div>
-          ) : (
+          )}
+
+          {!plansLoading && !plansError && plans.length > 0 && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
-              {plans.map((plan) => {
+              {plans.map(plan => {
                 const stats = planStats[plan.id] || {};
                 return (
                   <div
                     key={plan.id}
                     style={{
-                      background: plan.es_activo 
-                        ? 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)'
-                        : 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
-                      border: `2px solid ${plan.es_activo ? '#51cf66' : '#dee2e6'}`,
-                      borderRadius: '16px',
+                      background: 'rgba(30, 41, 59, 0.8)',
+                      backdropFilter: 'blur(10px)',
+                      border: `2px solid ${plan.es_activo ? 'rgba(102, 126, 234, 0.3)' : 'rgba(255, 107, 107, 0.3)'}`,
+                      borderRadius: '12px',
                       padding: '1.5rem',
-                      boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
-                      position: 'relative'
+                      boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)'
                     }}
                   >
-                    {!plan.es_activo && (
-                      <div style={{
-                        position: 'absolute',
-                        top: '1rem',
-                        right: '1rem',
-                        background: '#ff6b6b',
-                        color: 'white',
-                        padding: '0.25rem 0.75rem',
-                        borderRadius: '20px',
-                        fontSize: '0.75rem',
-                        fontWeight: '600'
-                      }}>
-                        INACTIVO
-                      </div>
-                    )}
-                    
-                    <div style={{ marginBottom: '1rem' }}>
-                      <h3 style={{ 
-                        fontSize: '1.5rem', 
-                        fontWeight: '700', 
-                        color: '#2d1b69',
-                        marginBottom: '0.5rem'
-                      }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
+                      <h3 style={{ color: 'rgba(255, 255, 255, 0.95)', margin: 0, fontSize: '1.3rem' }}>
                         {plan.nombre}
                       </h3>
-                      {plan.descripcion && (
-                        <p style={{ color: '#605f7d', fontSize: '0.95rem', marginBottom: '1rem' }}>
-                          {plan.descripcion}
-                        </p>
-                      )}
-                      <div style={{ 
-                        fontSize: '2rem', 
-                        fontWeight: '700', 
-                        color: '#667eea',
-                        marginBottom: '0.5rem'
-                      }}>
-                        ${plan.precio.toFixed(2)}
+                      <span
+                        style={{
+                          padding: '0.3rem 0.8rem',
+                          borderRadius: '15px',
+                          fontSize: '0.8rem',
+                          fontWeight: 600,
+                          background: plan.es_activo ? 'rgba(81, 207, 102, 0.2)' : 'rgba(255, 107, 107, 0.2)',
+                          color: plan.es_activo ? '#51cf66' : '#ff6b6b',
+                          border: `1px solid ${plan.es_activo ? 'rgba(81, 207, 102, 0.3)' : 'rgba(255, 107, 107, 0.3)'}`
+                        }}
+                      >
+                        {plan.es_activo ? '✅ Activo' : '❌ Inactivo'}
+                      </span>
+                    </div>
+                    
+                    <p style={{ color: 'rgba(255, 255, 255, 0.7)', marginBottom: '1rem', fontSize: '0.95rem' }}>
+                      {plan.descripcion || 'Sin descripción'}
+                    </p>
+                    
+                    <div style={{ marginBottom: '1rem', padding: '1rem', background: 'rgba(26, 31, 58, 0.4)', borderRadius: '8px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                        <span style={{ color: 'rgba(255, 255, 255, 0.7)' }}>💰 Precio:</span>
+                        <span style={{ color: '#51cf66', fontWeight: 600, fontSize: '1.1rem' }}>${plan.precio}</span>
                       </div>
-                      <Badge style={{ 
-                        background: plan.periodo === 'anual' ? '#667eea' : 
-                                   plan.periodo === 'mensual' ? '#51cf66' : 
-                                   plan.periodo === 'trimestral' ? '#ff6b6b' :
-                                   plan.periodo === 'personalizado' ? '#9b59b6' : '#ffd43b',
-                        color: plan.periodo === 'semanal' ? '#333' : 'white'
-                      }}>
-                        {plan.periodo === 'personalizado' && plan.periodo_cantidad && plan.periodo_tipo
-                          ? `${plan.periodo_cantidad} ${plan.periodo_tipo}`
-                          : plan.periodo.charAt(0).toUpperCase() + plan.periodo.slice(1)}
-                      </Badge>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                        <span style={{ color: 'rgba(255, 255, 255, 0.7)' }}>⏱️ Período:</span>
+                        <span style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
+                          {plan.periodo === 'personalizado' 
+                            ? `${plan.periodo_cantidad} ${plan.periodo_tipo}`
+                            : plan.periodo.charAt(0).toUpperCase() + plan.periodo.slice(1)
+                          }
+                        </span>
+                      </div>
+                      {stats.active_subscriptions !== undefined && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ color: 'rgba(255, 255, 255, 0.7)' }}>👥 Suscripciones activas:</span>
+                          <span style={{ color: 'rgba(255, 255, 255, 0.9)', fontWeight: 600 }}>{stats.active_subscriptions || 0}</span>
+                        </div>
+                      )}
                     </div>
 
                     {plan.beneficios && plan.beneficios.length > 0 && (
                       <div style={{ marginBottom: '1rem' }}>
-                        <strong style={{ color: '#2d1b69', fontSize: '0.9rem' }}>Beneficios:</strong>
-                        <ul style={{ 
-                          marginTop: '0.5rem', 
-                          paddingLeft: '1.5rem',
-                          color: '#605f7d',
-                          fontSize: '0.9rem'
-                        }}>
-                          {plan.beneficios.map((benefit, idx) => (
-                            <li key={idx}>{benefit}</li>
+                        <strong style={{ color: 'rgba(255, 255, 255, 0.9)', display: 'block', marginBottom: '0.5rem' }}>✨ Beneficios:</strong>
+                        <ul style={{ margin: 0, paddingLeft: '1.5rem', color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.9rem' }}>
+                          {plan.beneficios.slice(0, 3).map((beneficio, idx) => (
+                            <li key={idx}>{beneficio}</li>
                           ))}
+                          {plan.beneficios.length > 3 && (
+                            <li style={{ fontStyle: 'italic' }}>... y {plan.beneficios.length - 3} más</li>
+                          )}
                         </ul>
                       </div>
                     )}
 
-                    {stats && (
-                      <div style={{
-                        background: '#e7f3ff',
-                        padding: '0.75rem',
-                        borderRadius: '8px',
-                        marginBottom: '1rem',
-                        fontSize: '0.85rem',
-                        color: '#667eea'
-                      }}>
-                        <div><strong>Estadísticas:</strong></div>
-                        <div>Total: {stats.total_subscriptions || 0} | Activas: {stats.active_subscriptions || 0}</div>
-                      </div>
-                    )}
-
-                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'nowrap' }}>
-                      <ActionButton
+                    <ButtonGroup style={{ marginTop: '1rem' }}>
+                      <ActionButton 
+                        variant="premium" 
                         onClick={() => openEditPlan(plan)}
-                        style={{
-                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                          flex: 1,
-                          minWidth: '100px'
-                        }}
+                        style={{ flex: 1 }}
                       >
                         ✏️ Editar
                       </ActionButton>
                       {plan.es_activo ? (
-                        <ActionButton
+                        <ActionButton 
+                          variant="premium-off" 
                           onClick={() => handleDeactivatePlan(plan.id)}
-                          style={{
-                            background: 'linear-gradient(135deg, #ff6b6b 0%, #ff4757 100%)',
-                            flex: 1,
-                            minWidth: '100px'
-                          }}
+                          style={{ flex: 1 }}
                         >
                           🚫 Desactivar
                         </ActionButton>
                       ) : (
-                        <ActionButton
+                        <ActionButton 
+                          variant="premium" 
                           onClick={() => handleActivatePlan(plan.id)}
-                          style={{
-                            background: 'linear-gradient(135deg, #51cf66 0%, #2f9e44 100%)',
-                            flex: 1,
-                            minWidth: '100px'
-                          }}
+                          style={{ flex: 1 }}
                         >
                           ✅ Activar
                         </ActionButton>
                       )}
-                      <ActionButton
+                      <ActionButton 
+                        variant="delete" 
                         onClick={() => handleDeletePlan(plan.id)}
-                        style={{
-                          background: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
-                          flex: 1,
-                          minWidth: '100px'
-                        }}
+                        style={{ flex: 1 }}
                       >
                         🗑️ Eliminar
                       </ActionButton>
-                    </div>
+                    </ButtonGroup>
                   </div>
                 );
               })}
             </div>
           )}
 
-          {/* Modal de formulario para crear/editar plan */}
+          {/* Modal de formulario de plan */}
           {showPlanForm && (
-            <div style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'rgba(0, 0, 0, 0.7)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 2000,
-              padding: '2rem'
-            }}>
-              <div style={{
-                background: 'white',
-                borderRadius: '20px',
-                padding: '2rem',
-                maxWidth: '600px',
-                width: '100%',
-                maxHeight: '90vh',
-                overflowY: 'auto',
-                boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)'
-              }}>
+            <Modal onClick={(e) => e.target === e.currentTarget && (setShowPlanForm(false), resetPlanForm())}>
+              <ModalContent onClick={(e) => e.stopPropagation()}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                  <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#2d1b69' }}>
-                    {editingPlan ? 'Editar Plan' : 'Crear Nuevo Plan'}
-                  </h2>
+                  <ModalTitle>{editingPlan ? '✏️ Editar Plan' : '➕ Crear Nuevo Plan'}</ModalTitle>
                   <button
-                    onClick={() => { setShowPlanForm(false); resetPlanForm(); }}
+                    onClick={() => {
+                      setShowPlanForm(false);
+                      resetPlanForm();
+                    }}
                     style={{
-                      background: '#f8f9fa',
+                      background: 'rgba(26, 31, 58, 0.6)',
                       border: 'none',
+                      color: 'rgba(255, 255, 255, 0.9)',
                       fontSize: '1.5rem',
                       cursor: 'pointer',
-                      padding: '0.25rem 0.5rem',
-                      borderRadius: '8px'
+                      padding: '0.5rem',
+                      borderRadius: '4px',
+                      width: '32px',
+                      height: '32px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
                     }}
                   >
                     ×
                   </button>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#2d1b69' }}>
-                      Nombre del Plan *
+                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'rgba(255, 255, 255, 0.95)', fontWeight: 600 }}>
+                  Nombre del Plan <span style={{ color: '#ff6b6b' }}>*</span>
+                </label>
+                <Input
+                  type="text"
+                  value={planFormData.nombre}
+                  onChange={(e) => setPlanFormData({ ...planFormData, nombre: e.target.value })}
+                  placeholder="Ej: Plan Premium Mensual"
+                />
+
+                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'rgba(255, 255, 255, 0.95)', fontWeight: 600 }}>
+                  Descripción
+                </label>
+                <TextArea
+                  value={planFormData.descripcion}
+                  onChange={(e) => setPlanFormData({ ...planFormData, descripcion: e.target.value })}
+                  placeholder="Describe los beneficios del plan..."
+                />
+
+                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'rgba(255, 255, 255, 0.95)', fontWeight: 600 }}>
+                  Precio (USD) <span style={{ color: '#ff6b6b' }}>*</span>
+                </label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={planFormData.precio}
+                  onChange={(e) => setPlanFormData({ ...planFormData, precio: e.target.value })}
+                  placeholder="0.00"
+                />
+
+                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'rgba(255, 255, 255, 0.95)', fontWeight: 600 }}>
+                  Tipo de Periodo <span style={{ color: '#ff6b6b' }}>*</span>
+                </label>
+                <Select
+                  value={planFormData.periodo}
+                  onChange={(e) => {
+                    const periodo = e.target.value;
+                    setPlanFormData({
+                      ...planFormData,
+                      periodo,
+                      periodo_tipo: periodo === 'personalizado' ? planFormData.periodo_tipo : undefined,
+                      periodo_cantidad: periodo === 'personalizado' ? planFormData.periodo_cantidad : undefined
+                    });
+                  }}
+                >
+                  <option value="mensual">Mensual</option>
+                  <option value="semanal">Semanal</option>
+                  <option value="trimestral">Trimestral</option>
+                  <option value="anual">Anual</option>
+                  <option value="personalizado">Personalizado</option>
+                </Select>
+
+                {planFormData.periodo === 'personalizado' && (
+                  <>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'rgba(255, 255, 255, 0.95)', fontWeight: 600 }}>
+                      Cantidad <span style={{ color: '#ff6b6b' }}>*</span>
                     </label>
-                    <input
-                      type="text"
-                      value={planFormData.nombre}
-                      onChange={(e) => setPlanFormData({ ...planFormData, nombre: e.target.value })}
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        borderRadius: '8px',
-                        border: '1px solid #dee2e6',
-                        fontSize: '1rem'
-                      }}
-                      placeholder="Ej: Plan Mensual Premium"
+                    <Input
+                      type="number"
+                      value={planFormData.periodo_cantidad}
+                      onChange={(e) => setPlanFormData({ ...planFormData, periodo_cantidad: e.target.value })}
+                      placeholder="Ej: 4"
                     />
-                  </div>
 
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#2d1b69' }}>
-                      Descripción
+                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'rgba(255, 255, 255, 0.95)', fontWeight: 600 }}>
+                      Tipo <span style={{ color: '#ff6b6b' }}>*</span>
                     </label>
-                    <textarea
-                      value={planFormData.descripcion}
-                      onChange={(e) => setPlanFormData({ ...planFormData, descripcion: e.target.value })}
+                    <Select
+                      value={planFormData.periodo_tipo}
+                      onChange={(e) => setPlanFormData({ ...planFormData, periodo_tipo: e.target.value })}
+                    >
+                      <option value="minutos">Minutos</option>
+                      <option value="horas">Horas</option>
+                      <option value="dias">Días</option>
+                      <option value="semanas">Semanas</option>
+                      <option value="meses">Meses</option>
+                      <option value="años">Años</option>
+                    </Select>
+                  </>
+                )}
+
+                <div style={{ marginTop: '1.5rem', marginBottom: '1rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <label style={{ color: 'rgba(255, 255, 255, 0.95)', fontWeight: 600 }}>
+                      Elegir la lista de Beneficios Deseados
+                    </label>
+                    <button
+                      onClick={() => setBeneficiosExpanded(!beneficiosExpanded)}
                       style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        borderRadius: '8px',
-                        border: '1px solid #dee2e6',
-                        fontSize: '1rem',
-                        minHeight: '80px',
-                        resize: 'vertical'
+                        background: 'rgba(26, 31, 58, 0.6)',
+                        border: '1px solid rgba(102, 126, 234, 0.3)',
+                        color: 'rgba(255, 255, 255, 0.9)',
+                        padding: '0.4rem 0.8rem',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '0.9rem'
                       }}
-                      placeholder="Descripción del plan..."
-                    />
+                    >
+                      {beneficiosExpanded ? '▲ Ocultar' : '▼ Mostrar'}
+                    </button>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#2d1b69' }}>
-                        Precio ($) *
-                      </label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={planFormData.precio}
-                        onChange={(e) => setPlanFormData({ ...planFormData, precio: e.target.value })}
-                        style={{
-                          width: '100%',
-                          padding: '0.75rem',
-                          borderRadius: '8px',
-                          border: '1px solid #dee2e6',
-                          fontSize: '1rem'
-                        }}
-                        placeholder="0.00"
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#2d1b69' }}>
-                        Período *
-                      </label>
-                      <select
-                        value={planFormData.periodo}
-                        onChange={(e) => setPlanFormData({ 
-                          ...planFormData, 
-                          periodo: e.target.value,
-                          periodo_tipo: e.target.value === 'personalizado' ? planFormData.periodo_tipo : undefined,
-                          periodo_cantidad: e.target.value === 'personalizado' ? planFormData.periodo_cantidad : undefined
-                        })}
-                        style={{
-                          width: '100%',
-                          padding: '0.75rem',
-                          borderRadius: '8px',
-                          border: '1px solid #dee2e6',
-                          fontSize: '1rem',
-                          background: 'white'
-                        }}
-                      >
-                        <option value="semanal">Semanal</option>
-                        <option value="mensual">Mensual</option>
-                        <option value="trimestral">Trimestral</option>
-                        <option value="anual">Anual</option>
-                        <option value="personalizado">Personalizado</option>
-                      </select>
-                    </div>
-                    {planFormData.periodo === 'personalizado' && (
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                        <div>
-                          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#2d1b69', whiteSpace: 'nowrap' }}>
-                            Tipo de Período <span style={{ color: '#ff6b6b' }}>*</span>
-                          </label>
-                          <select
-                            value={planFormData.periodo_tipo}
-                            onChange={(e) => setPlanFormData({ ...planFormData, periodo_tipo: e.target.value })}
-                            style={{
-                              width: '100%',
-                              padding: '0.75rem',
-                              borderRadius: '8px',
-                              border: '1px solid #dee2e6',
-                              fontSize: '1rem',
-                              background: 'white'
-                            }}
-                          >
-                            <option value="minutos">Minutos</option>
-                            <option value="horas">Horas</option>
-                            <option value="dias">Días</option>
-                            <option value="semanas">Semanas</option>
-                            <option value="meses">Meses</option>
-                            <option value="años">Años</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#2d1b69', whiteSpace: 'nowrap' }}>
-                            Cantidad <span style={{ color: '#ff6b6b' }}>*</span>
-                          </label>
-                          <input
-                            type="number"
-                            min="1"
-                            value={planFormData.periodo_cantidad}
-                            onChange={(e) => setPlanFormData({ ...planFormData, periodo_cantidad: e.target.value })}
-                            style={{
-                              width: '100%',
-                              padding: '0.75rem',
-                              borderRadius: '8px',
-                              border: '1px solid #dee2e6',
-                              fontSize: '1rem'
-                            }}
-                            placeholder="Ej: 4"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                      <label style={{ fontWeight: '600', color: '#2d1b69', fontSize: '1rem' }}>
-                        Beneficios
-                      </label>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  {beneficiosExpanded && (
+                    <div style={{ background: 'rgba(26, 31, 58, 0.4)', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
                         <button
-                          type="button"
                           onClick={seleccionarTodosBeneficios}
                           style={{
+                            background: 'rgba(102, 126, 234, 0.3)',
+                            border: '1px solid rgba(102, 126, 234, 0.5)',
+                            color: 'rgba(255, 255, 255, 0.9)',
                             padding: '0.4rem 0.8rem',
-                            background: '#667eea',
-                            color: 'white',
-                            border: 'none',
                             borderRadius: '6px',
-                            fontSize: '0.85rem',
                             cursor: 'pointer',
-                            fontWeight: '500'
+                            fontSize: '0.85rem'
                           }}
                         >
                           Seleccionar Todos
                         </button>
                         <button
-                          type="button"
                           onClick={deseleccionarTodosBeneficios}
                           style={{
+                            background: 'rgba(102, 126, 234, 0.3)',
+                            border: '1px solid rgba(102, 126, 234, 0.5)',
+                            color: 'rgba(255, 255, 255, 0.9)',
                             padding: '0.4rem 0.8rem',
-                            background: '#f8f9fa',
-                            color: '#605f7d',
-                            border: '1px solid #dee2e6',
                             borderRadius: '6px',
-                            fontSize: '0.85rem',
                             cursor: 'pointer',
-                            fontWeight: '500'
+                            fontSize: '0.85rem'
                           }}
                         >
                           Deseleccionar Todos
                         </button>
                       </div>
+                      {beneficiosPredeterminados.map((beneficio, idx) => {
+                        const isSelected = planFormData.beneficios.includes(beneficio);
+                        return (
+                          <div
+                            key={idx}
+                            onClick={() => toggleBeneficioPredeterminado(beneficio)}
+                            style={{
+                              padding: '0.6rem',
+                              marginBottom: '0.5rem',
+                              background: isSelected ? 'rgba(255, 212, 59, 0.15)' : 'transparent',
+                              border: `1px solid ${isSelected ? 'rgba(255, 212, 59, 0.3)' : 'rgba(102, 126, 234, 0.2)'}`,
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            <span style={{ color: isSelected ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.7)' }}>
+                              {isSelected ? '✓ ' : '○ '}
+                              {beneficio}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
-                    
-                    {/* Beneficios predeterminados - Colapsable */}
-                    <div style={{ 
-                      background: '#f8f9fa', 
-                      padding: '1rem', 
-                      borderRadius: '10px', 
-                      marginBottom: '1rem',
-                      border: '1px solid #e9ecef'
-                    }}>
-                      <div 
-                        onClick={() => setBeneficiosExpanded(!beneficiosExpanded)}
-                        style={{ 
+                  )}
+
+                  <div style={{ marginTop: '1rem' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'rgba(255, 255, 255, 0.95)', fontWeight: 600 }}>
+                      Beneficios Personalizados
+                    </label>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                      <Input
+                        type="text"
+                        value={newBenefit}
+                        onChange={(e) => setNewBenefit(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && addBenefit()}
+                        placeholder="Agregar beneficio personalizado..."
+                        style={{ flex: 1 }}
+                      />
+                      <ActionButton variant="premium" onClick={addBenefit}>
+                        ➕ Agregar
+                      </ActionButton>
+                    </div>
+                    {planFormData.beneficios.filter(b => !beneficiosPredeterminados.includes(b)).map((beneficio, idx) => (
+                      <div
+                        key={idx}
+                        style={{
                           display: 'flex',
-                          alignItems: 'center',
                           justifyContent: 'space-between',
-                          cursor: 'pointer',
-                          userSelect: 'none'
+                          alignItems: 'center',
+                          padding: '0.6rem',
+                          marginBottom: '0.5rem',
+                          background: 'rgba(255, 212, 59, 0.15)',
+                          border: '1px solid rgba(255, 212, 59, 0.3)',
+                          borderRadius: '6px'
                         }}
                       >
-                        <div style={{ fontWeight: '600', color: '#2d1b69', fontSize: '0.95rem' }}>
-                          Elegir la lista de Beneficios Deseados
-                        </div>
-                        <div style={{
-                          fontSize: '1.2rem',
-                          color: '#667eea',
-                          transition: 'transform 0.3s ease',
-                          transform: beneficiosExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                          display: 'flex',
-                          alignItems: 'center'
-                        }}>
-                          ▼
-                        </div>
-                      </div>
-                      {beneficiosExpanded && (
-                        <div style={{ 
-                          display: 'flex', 
-                          flexDirection: 'column', 
-                          gap: '0.5rem',
-                          marginTop: '0.75rem',
-                          animation: 'slideDown 0.3s ease'
-                        }}>
-                          {beneficiosPredeterminados.map((beneficio, idx) => {
-                            const isSelected = planFormData.beneficios.includes(beneficio);
-                            return (
-                              <label
-                                key={idx}
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '0.75rem',
-                                  padding: '0.6rem',
-                                  background: isSelected ? '#e7f3ff' : 'white',
-                                  borderRadius: '8px',
-                                  border: `2px solid ${isSelected ? '#667eea' : '#dee2e6'}`,
-                                  cursor: 'pointer',
-                                  transition: 'all 0.2s ease'
-                                }}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={isSelected}
-                                  onChange={() => toggleBeneficioPredeterminado(beneficio)}
-                                  style={{
-                                    width: '18px',
-                                    height: '18px',
-                                    cursor: 'pointer',
-                                    accentColor: '#667eea'
-                                  }}
-                                />
-                                <span style={{ 
-                                  color: isSelected ? '#2d1b69' : '#605f7d',
-                                  fontWeight: isSelected ? '600' : '400',
-                                  fontSize: '0.9rem',
-                                  flex: 1
-                                }}>
-                                  {beneficio}
-                                </span>
-                              </label>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Agregar beneficio personalizado */}
-                    <div style={{ marginTop: '1rem' }}>
-                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#2d1b69', fontSize: '0.9rem' }}>
-                        Agregar Beneficio Personalizado:
-                      </label>
-                      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                        <input
-                          type="text"
-                          value={newBenefit}
-                          onChange={(e) => setNewBenefit(e.target.value)}
-                          onKeyPress={(e) => e.key === 'Enter' && addBenefit()}
+                        <span style={{ color: 'rgba(255, 255, 255, 0.9)' }}>{beneficio}</span>
+                        <button
+                          onClick={() => removeBenefit(planFormData.beneficios.indexOf(beneficio))}
                           style={{
-                            flex: 1,
-                            padding: '0.75rem',
-                            borderRadius: '8px',
-                            border: '1px solid #dee2e6',
-                            fontSize: '1rem'
+                            background: 'rgba(255, 107, 107, 0.2)',
+                            border: '1px solid rgba(255, 107, 107, 0.3)',
+                            color: '#ff6b6b',
+                            padding: '0.2rem 0.6rem',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '0.85rem'
                           }}
-                          placeholder="Escribe un beneficio personalizado..."
-                        />
-                        <ActionButton onClick={addBenefit} style={{ background: '#667eea' }}>
-                          ➕
-                        </ActionButton>
+                        >
+                          ✕
+                        </button>
                       </div>
-                      
-                      {/* Lista de beneficios personalizados */}
-                      {planFormData.beneficios.filter(b => !beneficiosPredeterminados.includes(b)).length > 0 && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
-                          <div style={{ fontWeight: '600', color: '#2d1b69', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
-                            Beneficios Personalizados:
-                          </div>
-                          {planFormData.beneficios
-                            .filter(b => !beneficiosPredeterminados.includes(b))
-                            .map((benefit, idx) => {
-                              const originalIdx = planFormData.beneficios.indexOf(benefit);
-                              return (
-                                <div key={idx} style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'space-between',
-                                  padding: '0.6rem',
-                                  background: '#fff4e6',
-                                  borderRadius: '8px',
-                                  border: '1px solid #ffd43b'
-                                }}>
-                                  <span style={{ color: '#8c6d1f', fontWeight: '500' }}>✓ {benefit}</span>
-                                  <button
-                                    onClick={() => removeBenefit(originalIdx)}
-                                    style={{
-                                      background: '#ff6b6b',
-                                      color: 'white',
-                                      border: 'none',
-                                      borderRadius: '50%',
-                                      width: '24px',
-                                      height: '24px',
-                                      cursor: 'pointer',
-                                      fontSize: '0.8rem',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center'
-                                    }}
-                                  >
-                                    ×
-                                  </button>
-                                </div>
-                              );
-                            })}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <input
-                      type="checkbox"
-                      id="es_activo"
-                      checked={planFormData.es_activo}
-                      onChange={(e) => setPlanFormData({ ...planFormData, es_activo: e.target.checked })}
-                      style={{ width: '20px', height: '20px', cursor: 'pointer' }}
-                    />
-                    <label htmlFor="es_activo" style={{ fontWeight: '600', color: '#2d1b69', cursor: 'pointer' }}>
-                      Plan activo (disponible para nuevos usuarios)
-                    </label>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                    <ActionButton
-                      onClick={editingPlan ? handleUpdatePlan : handleCreatePlan}
-                      disabled={
-                        !planFormData.nombre || 
-                        !planFormData.precio || 
-                        (planFormData.periodo === 'personalizado' && (!planFormData.periodo_tipo || !planFormData.periodo_cantidad))
-                      }
-                      style={{
-                        flex: 1,
-                        background: editingPlan 
-                          ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                          : 'linear-gradient(135deg, #51cf66 0%, #2f9e44 100%)',
-                        opacity: (
-                          !planFormData.nombre || 
-                          !planFormData.precio || 
-                          (planFormData.periodo === 'personalizado' && (!planFormData.periodo_tipo || !planFormData.periodo_cantidad))
-                        ) ? 0.6 : 1,
-                        cursor: (
-                          !planFormData.nombre || 
-                          !planFormData.precio || 
-                          (planFormData.periodo === 'personalizado' && (!planFormData.periodo_tipo || !planFormData.periodo_cantidad))
-                        ) ? 'not-allowed' : 'pointer'
-                      }}
-                    >
-                      {editingPlan ? '💾 Guardar Cambios' : '➕ Crear Plan'}
-                    </ActionButton>
-                    <ActionButton
-                      onClick={() => { setShowPlanForm(false); resetPlanForm(); }}
-                      style={{
-                        flex: 1,
-                        background: '#f8f9fa',
-                        color: '#605f7d',
-                        border: '1px solid #dee2e6'
-                      }}
-                    >
-                      Cancelar
-                    </ActionButton>
+                    ))}
                   </div>
                 </div>
-              </div>
-            </div>
+
+                <ButtonGroup style={{ marginTop: '2rem' }}>
+                  <ActionButton variant="premium-off" onClick={() => {
+                    setShowPlanForm(false);
+                    resetPlanForm();
+                  }}>
+                    Cancelar
+                  </ActionButton>
+                  <ActionButton variant="premium" onClick={editingPlan ? handleUpdatePlan : handleCreatePlan}>
+                    {editingPlan ? '💾 Guardar Cambios' : '✅ Crear Plan'}
+                  </ActionButton>
+                </ButtonGroup>
+              </ModalContent>
+            </Modal>
           )}
         </Section>
       )}
+    </>
+  );
 
-      {activeTab === 'premium' && (
-        <Section>
-          <SectionTitle>⭐ Gestión de noticias premium</SectionTitle>
-          <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-            <ActionButton onClick={() => handleRecalculatePremium(false)}>
-              🔄 Recalcular Puntajes
-            </ActionButton>
-            <ActionButton variant="premium" onClick={() => handleRecalculatePremium(true)}>
-              🌟 Recalcular y marcar Top 15%
-            </ActionButton>
-            <ActionButton onClick={fetchPremiumNews}>
-              📋 Refrescar Lista
-            </ActionButton>
-          </div>
+  return (
+    <Container>
+      {!hideSidebar && (
+        <Title>
+          👑 Dashboard de Administrador
+        </Title>
+      )}
 
-          <div style={{
-            background: '#fff4e6',
-            borderLeft: '4px solid #ffa94d',
-            padding: '1rem',
-            borderRadius: '10px',
-            marginBottom: '1.5rem',
-            color: '#8c6d1f'
-          }}>
-            <strong>Consejo rápido:</strong> Estas recomendaciones se basan en popularidad, tendencia, categoría y frescura.
-            Puedes recalcular cuando quieras y marcar manualmente qué noticias serán exclusivas.
-          </div>
+      {diagnostic && (
+        <div>
+          <DiagnosticButton onClick={runDiagnostic}>
+            🔄 Re-ejecutar Diagnóstico
+          </DiagnosticButton>
+          <DiagnosticResult>
+            <strong>🔍 Diagnóstico del Sistema:</strong>
+            {'\n\n'}
+            {JSON.stringify(diagnostic, null, 2)}
+          </DiagnosticResult>
+        </div>
+      )}
 
-          {premiumLoading ? (
-            <Loading>⏳ Analizando noticias más atractivas...</Loading>
-          ) : premiumError ? (
-            <Loading>❌ Error cargando recomendaciones: {premiumError}</Loading>
-          ) : (
-            <Table>
-              <thead>
-                <tr>
-                  <Th>ID</Th>
-                  <Th>Título</Th>
-                  <Th>Categoría</Th>
-                  <Th>Score</Th>
-                  <Th>Trending</Th>
-                  <Th>Popularidad</Th>
-                  <Th>Premium</Th>
-                  <Th>Acciones</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {premiumNews && premiumNews.length > 0 ? premiumNews.map(item => (
-                  <Tr 
-                    key={item.id}
-                    onClick={() => navigate(`/noticia/${item.id}`)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <Td>{item.id}</Td>
-                    <Td>
-                      <div style={{ fontWeight: 600 }}>{item.titulo}</div>
-                      <div style={{ fontSize: '0.85rem', color: '#888' }}>
-                        {item.fecha_publicacion ? new Date(item.fecha_publicacion).toLocaleString() : 'Sin fecha'}
-                      </div>
-                    </Td>
-                    <Td>{item.categoria || 'Sin categoría'}</Td>
-                    <Td>
-                      <Badge style={{ background: '#ffd43b', color: '#333' }}>
-                        {item.premium_score?.toFixed(2)}
-                      </Badge>
-                    </Td>
-                    <Td>{item.es_trending ? '🔥 Sí' : '–'}</Td>
-                    <Td>{item.popularidad_score?.toFixed(2) ?? '0.00'}</Td>
-                    <Td>
-                      {item.es_premium ? (
-                        <Badge style={{ background: '#51cf66' }}>Premium</Badge>
-                      ) : (
-                        <Badge style={{ background: '#adb5bd' }}>Libre</Badge>
-                      )}
-                    </Td>
-                    <Td onClick={(e) => e.stopPropagation()}>
-                      <ButtonGroup>
-                        {!item.es_premium ? (
-                          <ActionButton variant="premium" onClick={() => handleTogglePremium(item.id, true)}>
-                            ⭐ Marcar Premium
-                          </ActionButton>
-                        ) : (
-                          <ActionButton variant="premium-off" onClick={() => handleTogglePremium(item.id, false)}>
-                            ⚪ Quitar Premium
-                          </ActionButton>
-                        )}
-                      </ButtonGroup>
-                    </Td>
-                  </Tr>
-                )) : (
-                  <Tr>
-                    <Td colSpan="8" style={{ textAlign: 'center', color: '#888', padding: '2rem' }}>
-                      No hay recomendaciones en este momento.
-                    </Td>
-                  </Tr>
-                )}
-              </tbody>
-            </Table>
-          )}
-        </Section>
+      {!hideSidebar ? (
+        <DashboardLayout>
+          <Sidebar>
+            <SidebarSection>
+              <BackButton onClick={() => navigate('/')}>
+                <FiArrowLeft /> Volver al Menú Principal
+              </BackButton>
+            </SidebarSection>
+
+            <SidebarSection>
+              <SidebarTitle>Navegación</SidebarTitle>
+              <NavItem 
+                $active={activeTab === 'dashboard'} 
+                onClick={() => setActiveTab('dashboard')}
+              >
+                <NavIcon><FiBarChart /></NavIcon>
+                Estadísticas
+              </NavItem>
+              <NavItem 
+                $active={activeTab === 'pending'} 
+                onClick={() => setActiveTab('pending')}
+              >
+                <NavIcon><FiFileText /></NavIcon>
+                Publicaciones Pendientes ({dashboard?.posts?.pending || 0})
+              </NavItem>
+              <NavItem 
+                $active={activeTab === 'users'} 
+                onClick={() => setActiveTab('users')}
+              >
+                <NavIcon><FiUsers /></NavIcon>
+                Gestión de Usuarios
+              </NavItem>
+              <NavItem 
+                $active={activeTab === 'reported'} 
+                onClick={() => setActiveTab('reported')}
+              >
+                <NavIcon><FiAlertTriangle /></NavIcon>
+                ALERT! ({dashboard?.posts?.flagged || 0})
+              </NavItem>
+              <NavItem 
+                $active={activeTab === 'earnings'} 
+                onClick={() => setActiveTab('earnings')}
+              >
+                <NavIcon><FiDollarSign /></NavIcon>
+                Gestionar Ganancias
+              </NavItem>
+              <NavItem 
+                $active={activeTab === 'monetization'} 
+                onClick={() => setActiveTab('monetization')}
+              >
+                <NavIcon><FiSettings /></NavIcon>
+                Configurar Monetización
+              </NavItem>
+              <NavItem
+                $active={activeTab === 'premium'}
+                onClick={() => setActiveTab('premium')}
+              >
+                <NavIcon><FiStar /></NavIcon>
+                Noticias Premium
+              </NavItem>
+              <NavItem
+                $active={activeTab === 'payments'}
+                onClick={() => setActiveTab('payments')}
+              >
+                <NavIcon><FiCreditCard /></NavIcon>
+                Pagos Suscripciones
+              </NavItem>
+              <NavItem
+                $active={activeTab === 'plans'}
+                onClick={() => setActiveTab('plans')}
+              >
+                <NavIcon><FiList /></NavIcon>
+                Gestión de Planes
+              </NavItem>
+            </SidebarSection>
+          </Sidebar>
+
+          <MainContent>
+            {renderContent()}
+          </MainContent>
+        </DashboardLayout>
+      ) : (
+        renderContent()
       )}
     </Container>
   );
 }
 
 export default AdminDashboard;
-

@@ -500,7 +500,7 @@ const RelevantNewsCard = styled.article`
   position: relative;
   display: flex;
   flex-direction: column;
-  min-height: 320px;
+  min-height: ${props => props.$hasImage ? '320px' : 'auto'};
   width: 100%;
   
   &:hover {
@@ -522,14 +522,31 @@ const RelevantNewsImage = styled.div`
   width: 100%;
   min-height: 180px;
   height: 180px;
-  background: ${props => props.$imageUrl 
-    ? `url(${props.$imageUrl})` 
-    : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'};
+  background: ${props => {
+    if (props.$imageUrl) {
+      return `url(${props.$imageUrl})`;
+    }
+    // Gradiente adaptativo según el tema
+    return 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+  }};
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
   position: relative;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  body[data-theme="dark"] & {
+    background: ${props => {
+      if (props.$imageUrl) {
+        return `url(${props.$imageUrl})`;
+      }
+      // Gradiente oscuro para modo noche
+      return 'linear-gradient(135deg, #1e293b 0%, #334155 50%, #475569 100%)';
+    }};
+  }
   
   &::after {
     content: '';
@@ -539,6 +556,36 @@ const RelevantNewsImage = styled.div`
     right: 0;
     height: 40%;
     background: linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 100%);
+    display: ${props => props.$imageUrl ? 'block' : 'none'};
+  }
+`;
+
+const NoImagePlaceholder = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 3rem;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+  
+  &::before {
+    content: '📰';
+    font-size: 4rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.7;
+  }
+  
+  body[data-theme="dark"] & {
+    color: rgba(255, 255, 255, 0.5);
+    
+    &::before {
+      opacity: 0.6;
+    }
   }
 `;
 
@@ -636,12 +683,19 @@ const FeaturedSection = styled.section`
 const FeaturedTitle = styled.h2`
   font-size: 2.2rem;
   font-weight: 700;
-  color: #b8860b;
+  color: var(--text-primary);
   margin-bottom: 2rem;
-  border-left: 6px solid #b8860b;
+  border-left: 6px solid #fd7e14;
   padding-left: 1rem;
   text-transform: uppercase;
   letter-spacing: 1px;
+  transition: color 0.15s ease;
+  
+  body[data-theme="dark"] & {
+    color: #ffffff;
+    border-left-color: #fd7e14;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
 `;
 
 const FeaturedGrid = styled.div`
@@ -949,10 +1003,11 @@ const CompactSection = styled.section`
 const CompactTitle = styled.h2`
   font-size: 1.8rem;
   font-weight: 700;
-  color: #333;
+  color: var(--text-primary);
   margin-bottom: 2rem;
   text-align: center;
   position: relative;
+  transition: color 0.15s ease;
   
   &:after {
     content: '';
@@ -964,6 +1019,15 @@ const CompactTitle = styled.h2`
     height: 3px;
     background: linear-gradient(90deg, #dc3545, #fd7e14);
     border-radius: 2px;
+  }
+  
+  body[data-theme="dark"] & {
+    color: #ffffff;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    
+    &:after {
+      background: linear-gradient(90deg, #fd7e14, #ffa500);
+    }
   }
 `;
 
@@ -1041,14 +1105,21 @@ const SecondarySection = styled.section`
 
 const SectionTitle = styled.h3`
   font-size: 1.8rem;
-    font-weight: 700;
+  font-weight: 700;
   margin: 0 0 2rem 0;
-    color: #333;
+  color: var(--text-primary);
   text-transform: uppercase;
   letter-spacing: 1px;
   border-bottom: 3px solid #dc3545;
   padding-bottom: 0.5rem;
   display: inline-block;
+  transition: color 0.15s ease;
+  
+  body[data-theme="dark"] & {
+    color: #ffffff;
+    border-bottom-color: #fd7e14;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
 `;
 
 const NewsGrid = styled.div`
@@ -1058,13 +1129,18 @@ const NewsGrid = styled.div`
 `;
 
 const NewsCard = styled.article`
-  background: white;
+  background: var(--card-bg);
   border-radius: 15px;
   overflow: hidden;
   box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
+  transition: all 0.3s ease, background-color 0.15s ease;
   cursor: pointer;
   position: relative;
+  border: 1px solid var(--border-color);
+  
+  body[data-theme="dark"] & {
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+  }
   
   &:hover {
     transform: translateY(-5px);
@@ -1094,9 +1170,9 @@ const NewsOverlay = styled.div`
 `;
 
 const PremiumBadge = styled.span`
-  position: absolute;
-  top: 1rem;
-  left: 1rem;
+  position: ${props => props.$inline ? 'relative' : 'absolute'};
+  top: ${props => props.$inline ? 'auto' : '1rem'};
+  left: ${props => props.$inline ? 'auto' : '1rem'};
   background: linear-gradient(135deg, #ffd43b 0%, #f08c00 100%);
   color: #2d1b69;
   padding: 0.35rem 0.8rem;
@@ -1107,6 +1183,8 @@ const PremiumBadge = styled.span`
   text-transform: uppercase;
   z-index: 2;
   box-shadow: 0 8px 18px rgba(255, 167, 36, 0.25);
+  display: inline-block;
+  margin-bottom: ${props => props.$inline ? '0.5rem' : '0'};
 `;
 
 const PremiumOverlay = styled.div`
@@ -1173,6 +1251,11 @@ const NewsTitle = styled.h4`
   margin: 0 0 0.5rem 0;
   line-height: 1.3;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+  color: white;
+  
+  body[data-theme="dark"] & {
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  }
 `;
 
 const NewsMeta = styled.div`
@@ -1209,20 +1292,24 @@ const ErrorMessage = styled.div`
 `;
 
 const ComparisonSection = styled.section`
-  background: white;
+  background: var(--card-bg);
   border-radius: 18px;
   padding: 2rem;
   box-shadow: 0 5px 25px rgba(0, 0, 0, 0.12);
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--border-color);
   margin-bottom: 3rem;
   position: relative;
   overflow: hidden;
+  
+  body[data-theme="dark"] & {
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.3);
+  }
 `;
 
 const ComparisonTitle = styled.h2`
   font-size: 2rem;
   font-weight: 700;
-  color: #1b1f3b;
+  color: var(--text-primary);
   margin: 0 0 1.5rem 0;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -1249,13 +1336,18 @@ const ComparisonSummaryGrid = styled.div`
 `;
 
 const ComparisonSummaryCard = styled.div`
-  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  background: var(--bg-tertiary);
   border-radius: 15px;
   padding: 1rem 1.5rem;
-  border: 1px solid rgba(220, 53, 69, 0.1);
+  border: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
+  
+  body[data-theme="dark"] & {
+    background: var(--bg-secondary);
+    border-color: rgba(220, 53, 69, 0.3);
+  }
 `;
 
 const ComparisonSummaryValue = styled.span`
@@ -1266,7 +1358,7 @@ const ComparisonSummaryValue = styled.span`
 
 const ComparisonSummaryLabel = styled.span`
   font-size: 0.85rem;
-  color: #6c757d;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 `;
@@ -1279,16 +1371,25 @@ const ComparisonGrid = styled.div`
 
 const ComparisonCard = styled.article`
   border-radius: 15px;
-  border: 1px solid rgba(220, 53, 69, 0.2);
+  border: 1px solid var(--border-color);
   box-shadow: 0 8px 20px rgba(220, 53, 69, 0.08);
   padding: 1.5rem;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, #fff 100%);
+  background: var(--card-bg);
   transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
   gap: 0.8rem;
   position: relative;
   overflow: hidden;
+
+  body[data-theme="dark"] & {
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    border-color: rgba(220, 53, 69, 0.3);
+    
+    &:hover {
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+    }
+  }
 
   &:before {
     content: '';
@@ -1323,7 +1424,7 @@ const ComparisonBadge = styled.span`
 const ComparisonCardTitle = styled.h4`
   font-size: 1.1rem;
   font-weight: 600;
-  color: #212529;
+  color: var(--text-primary);
   margin: 0;
   line-height: 1.4;
 `;
@@ -1333,7 +1434,7 @@ const ComparisonMeta = styled.div`
   flex-wrap: wrap;
   gap: 0.5rem;
   font-size: 0.8rem;
-  color: #6c757d;
+  color: var(--text-secondary);
 `;
 
 const ComparisonLink = styled.a`
@@ -1352,16 +1453,16 @@ const ComparisonLink = styled.a`
 `;
 
 const ComparisonMatches = styled.div`
-  background: #f8f9fa;
+  background: var(--bg-tertiary);
   border-radius: 12px;
   padding: 0.8rem;
-  border: 1px solid rgba(99, 110, 114, 0.1);
+  border: 1px solid var(--border-color);
   font-size: 0.8rem;
 `;
 
 const ComparisonMatchesTitle = styled.div`
   font-weight: 600;
-  color: #495057;
+  color: var(--text-primary);
   margin-bottom: 0.4rem;
 `;
 
@@ -1371,7 +1472,7 @@ const ComparisonMatchItem = styled.div`
   align-items: center;
   padding: 0.2rem 0;
   gap: 0.5rem;
-  color: #6c757d;
+  color: var(--text-secondary);
 
   span {
     font-size: 0.75rem;
@@ -1381,10 +1482,10 @@ const ComparisonMatchItem = styled.div`
 const ComparisonEmpty = styled.div`
   text-align: center;
   padding: 2rem 1rem;
-  background: #f8f9fa;
+  background: var(--bg-tertiary);
   border-radius: 12px;
-  border: 1px dashed #ced4da;
-  color: #6c757d;
+  border: 1px dashed var(--border-color);
+  color: var(--text-secondary);
   font-size: 0.95rem;
 `;
 
@@ -2146,13 +2247,13 @@ function MainView() {
     return undefined;
   };
 
-  const renderPremiumIndicators = (noticia) => {
+  const renderPremiumIndicators = (noticia, inline = false) => {
     if (!noticia?.es_premium) return null;
     const locked = !hasActiveSubscription;
     return (
       <>
-        <PremiumBadge>⭐ Premium</PremiumBadge>
-        {locked && (
+        <PremiumBadge $inline={inline}>⭐ Premium</PremiumBadge>
+        {locked && !inline && (
           <PremiumOverlay>
             <div>
               <FiLock style={{ fontSize: '1.4rem', marginBottom: '0.3rem' }} />
@@ -2160,6 +2261,20 @@ function MainView() {
               <small>Haz clic para ver los planes</small>
             </div>
           </PremiumOverlay>
+        )}
+        {locked && inline && (
+          <div style={{
+            marginTop: '0.5rem',
+            padding: '0.5rem',
+            background: 'rgba(20, 16, 48, 0.85)',
+            borderRadius: '8px',
+            color: '#f8f1ff',
+            fontSize: '0.75rem',
+            textAlign: 'center'
+          }}>
+            <FiLock style={{ fontSize: '1rem', marginRight: '0.3rem', verticalAlign: 'middle' }} />
+            <span>Suscríbete para leer</span>
+          </div>
         )}
       </>
     );
@@ -2551,6 +2666,19 @@ function MainView() {
 
   // Filtrar noticias por categoría, diario y fecha si están seleccionados
   let noticiasAMostrar = dateFilter || noticias;
+  
+  // Eliminar duplicados por ID (asegurar que cada noticia aparezca solo una vez)
+  const seenIds = new Set();
+  noticiasAMostrar = noticiasAMostrar.filter(noticia => {
+    if (!noticia || !noticia.id) {
+      return false; // Filtrar noticias sin ID válido
+    }
+    if (seenIds.has(noticia.id)) {
+      return false; // Ya vimos este ID, es un duplicado
+    }
+    seenIds.add(noticia.id);
+    return true;
+  });
   
   if (categoriaSeleccionada) {
     noticiasAMostrar = noticiasAMostrar.filter(noticia => noticia.categoria === categoriaSeleccionada);
@@ -3403,12 +3531,13 @@ function MainView() {
             alignItems: 'center',
             gap: '0.5rem',
             padding: '0.5rem 1rem',
-            background: 'white',
+            background: 'var(--card-bg)',
             borderRadius: '25px',
             boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-            border: '1px solid #e9ecef',
+            border: '1px solid var(--border-color)',
             transition: 'all 0.2s ease',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            color: 'var(--text-primary)'
           }}
           onClick={() => navigate('/redes-sociales')}
           onMouseEnter={(e) => {
@@ -3416,16 +3545,20 @@ function MainView() {
             e.currentTarget.style.color = '#1da1f2';
             e.currentTarget.style.transform = 'translateY(-1px)';
             e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+            e.currentTarget.querySelector('svg').style.color = '#1da1f2';
+            e.currentTarget.querySelector('span').style.color = '#1da1f2';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = '#e9ecef';
-            e.currentTarget.style.color = '#495057';
+            e.currentTarget.style.borderColor = 'var(--border-color)';
+            e.currentTarget.style.color = 'var(--text-primary)';
             e.currentTarget.style.transform = 'translateY(0)';
             e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+            e.currentTarget.querySelector('svg').style.color = '#1da1f2';
+            e.currentTarget.querySelector('span').style.color = 'var(--text-primary)';
           }}
           >
             <FiShare2 style={{ color: '#1da1f2', fontSize: '1.1rem' }} />
-            <span style={{ fontSize: '0.9rem', fontWeight: '600', color: '#495057' }}>Redes Sociales</span>
+            <span style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-primary)' }}>Redes Sociales</span>
           </div>
         </div>
       </div>
@@ -3446,11 +3579,15 @@ function MainView() {
                     key={`relevant-${noticia.id}`} 
                     onClick={() => handleNoticiaClick(noticia)}
                     style={getPremiumStyle(noticia)}
+                    $hasImage={!!noticia.imagen_url}
                   >
-                    <RelevantNewsImage $imageUrl={noticia.imagen_url}>
-                      {renderPremiumIndicators(noticia)}
-                    </RelevantNewsImage>
+                    {noticia.imagen_url && (
+                      <RelevantNewsImage $imageUrl={noticia.imagen_url}>
+                        {renderPremiumIndicators(noticia, false)}
+                      </RelevantNewsImage>
+                    )}
                     <RelevantNewsContent>
+                      {!noticia.imagen_url && renderPremiumIndicators(noticia, true)}
                       <RelevantNewsMeta>
                         <RelevantNewsDate>
                           {formatRelativeDate(noticia.fecha_publicacion)}
@@ -3791,7 +3928,7 @@ function MainView() {
                                     <ComparisonMatchItem key={`match-${match.id}`}>
                                       <div style={{ flex: 1 }}>
                                         <strong>{match.diario}</strong>
-                                        <div style={{ fontSize: '0.7rem', color: '#868e96' }}>{match.titulo}</div>
+                                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{match.titulo}</div>
                                       </div>
                                       <span>{`${Math.round((match.similaridad || 0) * 100)}%`}</span>
                                     </ComparisonMatchItem>
@@ -3800,7 +3937,7 @@ function MainView() {
                               ) : (
                                 <ComparisonMatches>
                                   <ComparisonMatchesTitle>Sin coincidencias detectadas en diarios web</ComparisonMatchesTitle>
-                                  <div style={{ fontSize: '0.75rem', color: '#868e96' }}>
+                                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                                     Esta noticia proviene de redes sociales y no se encontró cobertura similar en el scraping de diarios.
                                   </div>
                                 </ComparisonMatches>

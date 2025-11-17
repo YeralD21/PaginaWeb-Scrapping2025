@@ -1,6 +1,7 @@
 ﻿from fastapi import FastAPI, Depends, HTTPException, Query
+from starlette.requests import Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
@@ -237,7 +238,17 @@ async def get_noticias(
     if es_premium is not None:
         query = query.filter(Noticia.es_premium == es_premium)
     
-    noticias = query.order_by(Noticia.fecha_extraccion.desc()).offset(offset).limit(limit).all()
+    # Obtener noticias y eliminar duplicados por ID en Python (más seguro que distinct con order_by)
+    noticias_raw = query.order_by(Noticia.fecha_extraccion.desc()).offset(offset).limit(limit * 2).all()
+    # Eliminar duplicados manteniendo el orden
+    seen_ids = set()
+    noticias = []
+    for noticia in noticias_raw:
+        if noticia.id not in seen_ids:
+            seen_ids.add(noticia.id)
+            noticias.append(noticia)
+            if len(noticias) >= limit:
+                break
     
     result = []
     for noticia in noticias:
@@ -481,10 +492,20 @@ async def get_noticias_relevantes_anteriores(
     )
     
     # Ordenar por peso de categoría y fecha de publicación
-    noticias = query.order_by(
+    noticias_raw = query.order_by(
         desc(categoria_peso),
         desc(Noticia.fecha_publicacion)
-    ).limit(limit).all()
+    ).limit(limit * 2).all()
+    
+    # Eliminar duplicados por ID manteniendo el orden
+    seen_ids = set()
+    noticias = []
+    for noticia in noticias_raw:
+        if noticia.id not in seen_ids:
+            seen_ids.add(noticia.id)
+            noticias.append(noticia)
+            if len(noticias) >= limit:
+                break
     
     result = []
     for noticia in noticias:
@@ -556,8 +577,15 @@ async def get_noticias_por_fecha(
             Noticia.fecha_publicacion <= fecha_fin
         ).order_by(Noticia.fecha_publicacion.desc())
         
-        noticias = query.all()
-        logger.info(f"Encontradas {len(noticias)} noticias")
+        # Eliminar duplicados por ID
+        noticias_raw = query.all()
+        seen_ids = set()
+        noticias = []
+        for noticia in noticias_raw:
+            if noticia.id not in seen_ids:
+                seen_ids.add(noticia.id)
+                noticias.append(noticia)
+        logger.info(f"Encontradas {len(noticias)} noticias únicas (después de eliminar duplicados)")
         
         result = []
         for noticia in noticias:
@@ -907,83 +935,300 @@ async def eliminar_alerta(alerta_id: int, db: Session = Depends(get_db)):
     
     return {"message": "Alerta desactivada exitosamente"}
 
-@app.get("/noticias/buscar", response_model=List[NoticiaResponse])
-async def buscar_noticias(
-    q: str = Query(..., min_length=3, description="Término de búsqueda"),
-    categoria: Optional[str] = Query(None),
-    diario: Optional[str] = Query(None),
-    sentimiento: Optional[str] = Query(None),
-    fecha_desde: Optional[str] = Query(None),
-    fecha_hasta: Optional[str] = Query(None),
-    limit: int = Query(50, le=200),
+@app.api_route("/noticias/buscar", methods=["GET"])
+async def buscar_noticias(request: Request, db: Session = Depends(get_db)):
+    """
+    Búsqueda avanzada de noticias - TODOS los parámetros son OPCIONALES
+    Permite buscar por título, categoría, fechas o cualquier combinación
+    """
+    try:
+        # Obtener query parameters directamente desde el Request
+        query_params = dict(request.query_params)
+        logger.info(f"📥 Petición de búsqueda recibida")
+        logger.info(f"📥 Query params: {query_params}")
+        
+        # Extraer parámetros (TODOS son opcionales, ninguno es requerido)
+        q = query_params.get("q", "").strip() if query_params.get("q") else ""
+        categoria = query_params.get("categoria", "").strip() if query_params.get("categoria") else ""
+        diario = query_params.get("diario", "").strip() if query_params.get("diario") else ""
+        sentimiento = query_params.get("sentimiento", "").strip() if query_params.get("sentimiento") else ""
+        fecha_desde = query_params.get("fecha_desde", "").strip() if query_params.get("fecha_desde") else ""
+        fecha_hasta = query_params.get("fecha_hasta", "").strip() if query_params.get("fecha_hasta") else ""
+        
+        # Procesar 'limit' de forma segura
+        limit_str = query_params.get("limit", "100")
+        try:
+            limit_int = int(str(limit_str).strip())
+            if limit_int < 1:
+                limit_int = 100
+            elif limit_int > 500:
+                limit_int = 500
+        except (ValueError, TypeError):
+            limit_int = 100
+        
+        logger.info(f"🔍 Búsqueda iniciada con:")
+        logger.info(f"   📝 Texto (q): '{q}' (longitud: {len(q)})")
+        logger.info(f"   📂 Categoría: '{categoria}'")
+        logger.info(f"   📰 Diario: '{diario}'")
+        logger.info(f"   📅 Fechas: {fecha_desde} - {fecha_hasta}")
+        logger.info(f"   🔢 Limit: {limit_int}")
+        
+        # Construir query base
+        query = db.query(Noticia).join(Diario)
+        
+        # Aplicar filtro de texto solo si 'q' tiene al menos 2 caracteres
+        if q and len(q) >= 2:
+            search_filter = Noticia.titulo.ilike(f"%{q}%") | Noticia.contenido.ilike(f"%{q}%")
+            query = query.filter(search_filter)
+            logger.info(f"   ✅ Filtro de texto aplicado: búsqueda por '{q}'")
+        
+        # Aplicar filtros adicionales
+        if categoria and categoria.strip():
+            query = query.filter(Noticia.categoria == categoria.strip())
+            logger.info(f"   ✅ Filtro de categoría aplicado: '{categoria}'")
+            
+        if diario:
+            query = query.filter(Diario.nombre == diario)
+            logger.info(f"   ✅ Filtro de diario aplicado: '{diario}'")
+            
+        if sentimiento:
+            query = query.filter(Noticia.sentimiento == sentimiento)
+            logger.info(f"   ✅ Filtro de sentimiento aplicado: '{sentimiento}'")
+            
+        if fecha_desde:
+            try:
+                fecha_desde_dt = datetime.strptime(fecha_desde, "%Y-%m-%d")
+                query = query.filter(Noticia.fecha_publicacion >= fecha_desde_dt)
+                logger.info(f"   ✅ Filtro fecha_desde aplicado: {fecha_desde}")
+            except ValueError:
+                logger.warning(f"   ⚠️  Fecha desde inválida: {fecha_desde}")
+                
+        if fecha_hasta:
+            try:
+                fecha_hasta_dt = datetime.strptime(fecha_hasta, "%Y-%m-%d")
+                query = query.filter(Noticia.fecha_publicacion <= fecha_hasta_dt)
+                logger.info(f"   ✅ Filtro fecha_hasta aplicado: {fecha_hasta}")
+            except ValueError:
+                logger.warning(f"   ⚠️  Fecha hasta inválida: {fecha_hasta}")
+        
+        # Ejecutar query
+        noticias = query.order_by(Noticia.fecha_extraccion.desc()).limit(limit_int).all()
+        logger.info(f"📊 Query ejecutada, resultados encontrados: {len(noticias)}")
+        
+        # Convertir a formato de respuesta
+        result = []
+        for noticia in noticias:
+            result.append({
+                "id": noticia.id,
+                "titulo": noticia.titulo,
+                "contenido": noticia.contenido,
+                "enlace": noticia.enlace,
+                "imagen_url": noticia.imagen_url,
+                "categoria": noticia.categoria,
+                "fecha_publicacion": noticia.fecha_publicacion.isoformat() if noticia.fecha_publicacion else None,
+                "fecha_extraccion": noticia.fecha_extraccion.isoformat(),
+                "diario_id": noticia.diario_id,
+                "diario_nombre": noticia.diario.nombre if noticia.diario else "Desconocido",
+                "autor": noticia.autor,
+                "tags": noticia.tags,
+                "sentimiento": noticia.sentimiento,
+                "tiempo_lectura_min": noticia.tiempo_lectura_min,
+                "popularidad_score": float(noticia.popularidad_score) if noticia.popularidad_score else None,
+                "es_trending": noticia.es_trending,
+                "palabras_clave": noticia.palabras_clave,
+                "resumen_auto": noticia.resumen_auto,
+                "idioma": noticia.idioma,
+                "region": noticia.region,
+                "es_alerta": noticia.es_alerta,
+                "nivel_urgencia": noticia.nivel_urgencia,
+                "keywords_alerta": noticia.keywords_alerta,
+                "es_premium": getattr(noticia, 'es_premium', False)
+            })
+        
+        logger.info(f"✅ Búsqueda completada: {len(result)} noticias encontradas")
+        return JSONResponse(content=result)
+        
+    except Exception as e:
+        logger.error(f"❌ Error en búsqueda: {e}", exc_info=True)
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Error al buscar noticias: {str(e)}"}
+        )
+
+# ===== NUEVO ENDPOINT DE BÚSQUEDA (sin validación de FastAPI) =====
+@app.api_route("/api/buscar-noticias", methods=["GET"])
+async def nuevo_buscar_noticias(request: Request, db: Session = Depends(get_db)):
+    """
+    NUEVO endpoint de búsqueda - Todos los parámetros son OPCIONALES
+    Sin validación automática de FastAPI
+    Soporta paginación con offset y limit
+    """
+    try:
+        query_params = dict(request.query_params)
+        logger.info(f"🔍 NUEVA BÚSQUEDA - Params: {query_params}")
+        
+        # Extraer parámetros (todos opcionales)
+        q = query_params.get("q", "").strip()
+        categoria = query_params.get("categoria", "").strip()
+        sentimiento = query_params.get("sentimiento", "").strip()
+        fecha_desde = query_params.get("fecha_desde", "").strip()
+        fecha_hasta = query_params.get("fecha_hasta", "").strip()
+        
+        # Paginación
+        try:
+            page = int(query_params.get("page", "1"))
+            per_page = int(query_params.get("per_page", "20"))
+        except (ValueError, TypeError):
+            page = 1
+            per_page = 20
+        
+        # Validar valores de paginación
+        if page < 1:
+            page = 1
+        if per_page < 1:
+            per_page = 20
+        if per_page > 100:
+            per_page = 100  # Máximo 100 por página para evitar sobrecarga
+        
+        offset = (page - 1) * per_page
+        
+        # Construir query
+        query_db = db.query(Noticia).join(Diario)
+        
+        # Aplicar filtros
+        if q and len(q) >= 2:
+            query_db = query_db.filter(
+                (Noticia.titulo.ilike(f"%{q}%")) | (Noticia.contenido.ilike(f"%{q}%"))
+            )
+            logger.info(f"✅ Filtro texto: '{q}'")
+        
+        if categoria:
+            query_db = query_db.filter(Noticia.categoria == categoria)
+            logger.info(f"✅ Filtro categoría: '{categoria}'")
+        
+        if sentimiento:
+            query_db = query_db.filter(Noticia.sentimiento == sentimiento)
+            logger.info(f"✅ Filtro sentimiento: '{sentimiento}'")
+        
+        if fecha_desde:
+            try:
+                fecha_desde_dt = datetime.strptime(fecha_desde, "%Y-%m-%d")
+                query_db = query_db.filter(Noticia.fecha_publicacion >= fecha_desde_dt)
+                logger.info(f"✅ Filtro fecha desde: {fecha_desde}")
+            except:
+                pass
+        
+        if fecha_hasta:
+            try:
+                fecha_hasta_dt = datetime.strptime(fecha_hasta, "%Y-%m-%d")
+                query_db = query_db.filter(Noticia.fecha_publicacion <= fecha_hasta_dt)
+                logger.info(f"✅ Filtro fecha hasta: {fecha_hasta}")
+            except:
+                pass
+        
+        # Contar total de resultados (antes de paginar)
+        total_count = query_db.count()
+        logger.info(f"📊 Total de resultados encontrados: {total_count}")
+        
+        # Ejecutar query con paginación
+        noticias = query_db.order_by(Noticia.fecha_extraccion.desc()).offset(offset).limit(per_page).all()
+        logger.info(f"📄 Página {page}: mostrando {len(noticias)} de {total_count} noticias (offset: {offset}, limit: {per_page})")
+        
+        # Convertir a JSON
+        result = []
+        for noticia in noticias:
+            result.append({
+                "id": noticia.id,
+                "titulo": noticia.titulo,
+                "contenido": noticia.contenido,
+                "enlace": noticia.enlace,
+                "imagen_url": noticia.imagen_url,
+                "categoria": noticia.categoria,
+                "fecha_publicacion": noticia.fecha_publicacion.isoformat() if noticia.fecha_publicacion else None,
+                "fecha_extraccion": noticia.fecha_extraccion.isoformat(),
+                "diario_id": noticia.diario_id,
+                "diario_nombre": noticia.diario.nombre if noticia.diario else "Desconocido",
+                "autor": noticia.autor,
+                "sentimiento": noticia.sentimiento,
+                "es_premium": getattr(noticia, 'es_premium', False)
+            })
+        
+        # Calcular información de paginación
+        total_pages = (total_count + per_page - 1) // per_page  # Ceiling division
+        
+        logger.info(f"✅ Búsqueda exitosa - Página {page}/{total_pages}")
+        return JSONResponse(content={
+            "noticias": result,
+            "pagination": {
+                "page": page,
+                "per_page": per_page,
+                "total": total_count,
+                "total_pages": total_pages,
+                "has_next": page < total_pages,
+                "has_prev": page > 1
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Error: {e}", exc_info=True)
+        return JSONResponse(status_code=500, content={"detail": str(e)})
+
+# ===== ENDPOINT PARA ANALIZAR SENTIMIENTOS DE NOTICIAS EXISTENTES =====
+@app.post("/api/analizar-sentimientos")
+async def analizar_sentimientos_noticias(
+    limit: int = 100,
     db: Session = Depends(get_db)
 ):
-    """Búsqueda avanzada de noticias"""
-    query = db.query(Noticia).join(Diario)
-    
-    # Búsqueda por texto en título y contenido
-    search_filter = Noticia.titulo.ilike(f"%{q}%")
-    if True:  # Buscar también en contenido
-        search_filter = search_filter | Noticia.contenido.ilike(f"%{q}%")
-    
-    query = query.filter(search_filter)
-    
-    # Filtros adicionales
-    if categoria:
-        query = query.filter(Noticia.categoria == categoria)
-    
-    if diario:
-        query = query.filter(Diario.nombre == diario)
-    
-    if sentimiento:
-        query = query.filter(Noticia.sentimiento == sentimiento)
-    
-    if fecha_desde:
-        try:
-            fecha_desde_dt = datetime.strptime(fecha_desde, "%Y-%m-%d")
-            query = query.filter(Noticia.fecha_publicacion >= fecha_desde_dt)
-        except ValueError:
-            pass
-    
-    if fecha_hasta:
-        try:
-            fecha_hasta_dt = datetime.strptime(fecha_hasta, "%Y-%m-%d")
-            query = query.filter(Noticia.fecha_publicacion <= fecha_hasta_dt)
-        except ValueError:
-            pass
-    
-    noticias = query.order_by(Noticia.fecha_extraccion.desc()).limit(limit).all()
-    
-    # Convertir a response model
-    result = []
-    for noticia in noticias:
-        result.append(NoticiaResponse(
-            id=noticia.id,
-            titulo=noticia.titulo,
-            contenido=noticia.contenido,
-            enlace=noticia.enlace,
-            imagen_url=noticia.imagen_url,
-            categoria=noticia.categoria,
-            fecha_publicacion=noticia.fecha_publicacion,
-            fecha_extraccion=noticia.fecha_extraccion,
-            diario_id=noticia.diario_id,
-            diario_nombre=noticia.diario.nombre,
-            autor=noticia.autor,
-            tags=noticia.tags,
-            sentimiento=noticia.sentimiento,
-            tiempo_lectura_min=noticia.tiempo_lectura_min,
-            popularidad_score=noticia.popularidad_score,
-            es_trending=noticia.es_trending,
-            palabras_clave=noticia.palabras_clave,
-            resumen_auto=noticia.resumen_auto,
-            idioma=noticia.idioma,
-            region=noticia.region,
-            es_alerta=noticia.es_alerta,
-            nivel_urgencia=noticia.nivel_urgencia,
-            keywords_alerta=noticia.keywords_alerta
-        ))
-    
-    return result
+    """
+    Analizar sentimientos de noticias que aún no tienen sentimiento asignado
+    Útil para procesar noticias existentes en la base de datos
+    """
+    try:
+        from sentiment_analyzer import get_sentiment_analyzer
+        
+        analyzer = get_sentiment_analyzer()
+        
+        # Obtener noticias sin sentimiento o con sentimiento null
+        noticias_sin_sentimiento = db.query(Noticia).filter(
+            (Noticia.sentimiento == None) | (Noticia.sentimiento == '')
+        ).limit(limit).all()
+        
+        if not noticias_sin_sentimiento:
+            return JSONResponse(content={
+                "message": "No hay noticias sin sentimiento asignado",
+                "processed": 0
+            })
+        
+        processed = 0
+        errors = []
+        
+        for noticia in noticias_sin_sentimiento:
+            try:
+                # Analizar sentimiento
+                sentiment_result = analyzer.analyze_sentiment(
+                    noticia.titulo or "",
+                    noticia.contenido or ""
+                )
+                noticia.sentimiento = sentiment_result.get('sentimiento', 'neutro')
+                processed += 1
+            except Exception as e:
+                errors.append(f"Error procesando noticia ID {noticia.id}: {str(e)}")
+                logger.error(f"Error analizando sentimiento de noticia {noticia.id}: {e}")
+        
+        # Guardar cambios
+        db.commit()
+        
+        logger.info(f"✅ Procesadas {processed} noticias para análisis de sentimientos")
+        
+        return JSONResponse(content={
+            "message": f"Procesadas {processed} noticias",
+            "processed": processed,
+            "errors": errors[:10] if errors else []  # Máximo 10 errores
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Error analizando sentimientos: {e}", exc_info=True)
+        return JSONResponse(status_code=500, content={"detail": str(e)})
 
 @app.get("/trending/noticias", response_model=List[NoticiaResponse])
 async def obtener_noticias_trending(

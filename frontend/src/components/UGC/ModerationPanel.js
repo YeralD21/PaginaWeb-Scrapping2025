@@ -3,14 +3,16 @@ import axios from 'axios';
 import styled from 'styled-components';
 
 const Container = styled.div`
-  background: white;
+  background: rgba(30, 41, 59, 0.8);
+  backdrop-filter: blur(10px);
   padding: 2rem;
   border-radius: 15px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(102, 126, 234, 0.2);
 `;
 
 const Title = styled.h2`
-  color: #333;
+  color: rgba(255, 255, 255, 0.95);
   margin-bottom: 2rem;
   display: flex;
   align-items: center;
@@ -18,12 +20,13 @@ const Title = styled.h2`
 `;
 
 const PostCard = styled.div`
-  background: white;
-  border: 2px solid #e0e0e0;
+  background: rgba(26, 31, 58, 0.6);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(102, 126, 234, 0.3);
   border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 `;
 
 const PostHeader = styled.div`
@@ -32,11 +35,11 @@ const PostHeader = styled.div`
   align-items: center;
   margin-bottom: 1rem;
   padding-bottom: 1rem;
-  border-bottom: 2px solid #f0f0f0;
+  border-bottom: 2px solid rgba(102, 126, 234, 0.2);
 `;
 
 const PostType = styled.span`
-  background: #667eea;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   padding: 0.4rem 1rem;
   border-radius: 20px;
@@ -45,18 +48,18 @@ const PostType = styled.span`
 `;
 
 const PostDate = styled.span`
-  color: #888;
+  color: rgba(255, 255, 255, 0.6);
   font-size: 0.9rem;
 `;
 
 const PostTitle = styled.h3`
-  color: #333;
+  color: rgba(255, 255, 255, 0.95);
   margin-bottom: 0.5rem;
   font-size: 1.3rem;
 `;
 
 const PostDescription = styled.div`
-  color: #666;
+  color: rgba(255, 255, 255, 0.7);
   font-size: 0.95rem;
   margin-bottom: 0.5rem;
   font-style: italic;
@@ -71,19 +74,21 @@ const PostImage = styled.img`
 `;
 
 const PostContent = styled.div`
-  color: #555;
+  color: rgba(255, 255, 255, 0.8);
   line-height: 1.6;
   margin: 1rem 0;
 `;
 
 const UserInfo = styled.div`
-  background: #f8f9fa;
+  background: rgba(26, 31, 58, 0.4);
+  backdrop-filter: blur(10px);
   padding: 1rem;
   border-radius: 8px;
   margin: 1rem 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  border: 1px solid rgba(102, 126, 234, 0.2);
 `;
 
 const ButtonGroup = styled.div`

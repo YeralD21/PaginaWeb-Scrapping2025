@@ -3,14 +3,16 @@ import axios from 'axios';
 import styled from 'styled-components';
 
 const Container = styled.div`
-  background: white;
+  background: rgba(30, 41, 59, 0.8);
+  backdrop-filter: blur(10px);
   padding: 2rem;
   border-radius: 15px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(102, 126, 234, 0.2);
 `;
 
 const Title = styled.h2`
-  color: #dc3545;
+  color: #ff6b6b;
   margin-bottom: 2rem;
   display: flex;
   align-items: center;
@@ -18,14 +20,15 @@ const Title = styled.h2`
 `;
 
 const PostCard = styled.div`
-  background: white;
-  border: 2px solid ${props => props.alert ? '#dc3545' : '#e0e0e0'};
+  background: rgba(26, 31, 58, 0.6);
+  backdrop-filter: blur(10px);
+  border: 2px solid ${props => props.alert ? 'rgba(255, 107, 107, 0.5)' : 'rgba(102, 126, 234, 0.3)'};
   border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
   ${props => props.alert && `
-    background: linear-gradient(to right, #fff5f5 0%, white 100%);
+    background: linear-gradient(to right, rgba(255, 107, 107, 0.1) 0%, rgba(26, 31, 58, 0.6) 100%);
   `}
 `;
 
@@ -35,7 +38,7 @@ const PostHeader = styled.div`
   align-items: center;
   margin-bottom: 1rem;
   padding-bottom: 1rem;
-  border-bottom: 2px solid #f0f0f0;
+  border-bottom: 2px solid rgba(102, 126, 234, 0.2);
 `;
 
 const AlertBadge = styled.span`
@@ -85,27 +88,29 @@ const PostInfo = styled.div`
 `;
 
 const PostTitle = styled.h3`
-  color: #333;
+  color: rgba(255, 255, 255, 0.95);
   margin-bottom: 0.5rem;
   font-size: 1.2rem;
 `;
 
 const PostText = styled.p`
-  color: #666;
+  color: rgba(255, 255, 255, 0.7);
   line-height: 1.6;
   margin-bottom: 1rem;
 `;
 
 const UserInfo = styled.div`
-  background: #f8f9fa;
+  background: rgba(26, 31, 58, 0.4);
+  backdrop-filter: blur(10px);
   padding: 1rem;
   border-radius: 8px;
   margin: 1rem 0;
+  border: 1px solid rgba(102, 126, 234, 0.2);
 `;
 
 const ReportsSection = styled.div`
-  background: #fff3cd;
-  border: 2px solid #ffc107;
+  background: rgba(255, 212, 59, 0.15);
+  border: 2px solid rgba(255, 212, 59, 0.3);
   border-radius: 8px;
   padding: 1rem;
   margin: 1rem 0;
@@ -113,10 +118,12 @@ const ReportsSection = styled.div`
 
 const ReportItem = styled.div`
   padding: 0.8rem;
-  background: white;
+  background: rgba(26, 31, 58, 0.6);
+  backdrop-filter: blur(10px);
   border-radius: 6px;
   margin-bottom: 0.5rem;
-  border-left: 3px solid #dc3545;
+  border-left: 3px solid #ff6b6b;
+  color: rgba(255, 255, 255, 0.9);
 
   &:last-child {
     margin-bottom: 0;
@@ -165,17 +172,19 @@ const ActionButton = styled.button`
 const Loading = styled.div`
   text-align: center;
   padding: 3rem;
-  color: #888;
+  color: rgba(255, 255, 255, 0.7);
   font-size: 1.2rem;
 `;
 
 const EmptyState = styled.div`
   text-align: center;
   padding: 3rem;
-  color: #888;
+  color: rgba(255, 255, 255, 0.7);
   font-size: 1.1rem;
-  background: #f8f9fa;
+  background: rgba(26, 31, 58, 0.6);
+  backdrop-filter: blur(10px);
   border-radius: 12px;
+  border: 1px solid rgba(102, 126, 234, 0.2);
 `;
 
 const Modal = styled.div`
@@ -192,16 +201,18 @@ const Modal = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background: white;
+  background: rgba(30, 41, 59, 0.95);
+  backdrop-filter: blur(10px);
   padding: 2rem;
   border-radius: 15px;
   max-width: 500px;
   width: 90%;
+  border: 1px solid rgba(102, 126, 234, 0.3);
 `;
 
 const ModalTitle = styled.h3`
   margin-bottom: 1rem;
-  color: #333;
+  color: rgba(255, 255, 255, 0.95);
 `;
 
 const API_BASE = 'http://localhost:8000';

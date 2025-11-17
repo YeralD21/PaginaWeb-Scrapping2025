@@ -4,15 +4,16 @@ import styled from 'styled-components';
 import ReactionBar from '../Community/ReactionBar';
 
 const Container = styled.div`
-  background: white;
-  padding: 2rem;
-  border-radius: 15px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
 `;
 
 const Title = styled.h2`
-  color: #333;
+  color: rgba(255, 255, 255, 0.95);
   margin-bottom: 1.5rem;
+  font-size: 1.8rem;
 `;
 
 const StatsGrid = styled.div`
@@ -47,14 +48,17 @@ const PostsGrid = styled.div`
 `;
 
 const PostCard = styled.div`
-  border: 2px solid #e0e0e0;
+  border: 2px solid rgba(102, 126, 234, 0.3);
   border-radius: 12px;
   padding: 1.5rem;
+  background: rgba(26, 31, 58, 0.6);
+  backdrop-filter: blur(10px);
   transition: border-color 0.3s, transform 0.2s;
 
   &:hover {
     border-color: #667eea;
     transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.2);
   }
 `;
 
@@ -67,21 +71,21 @@ const PostImage = styled.img`
 `;
 
 const PostTitle = styled.h3`
-  color: #333;
+  color: rgba(255, 255, 255, 0.95);
   margin-bottom: 0.5rem;
   font-size: 1.2rem;
   font-weight: 600;
 `;
 
 const PostDescription = styled.div`
-  color: #666;
+  color: rgba(255, 255, 255, 0.7);
   font-size: 0.95rem;
   margin-bottom: 0.5rem;
   font-style: italic;
 `;
 
 const PostSource = styled.div`
-  color: #888;
+  color: rgba(255, 255, 255, 0.6);
   font-size: 0.85rem;
   margin-bottom: 0.5rem;
 `;
@@ -96,15 +100,15 @@ const PostStatus = styled.span`
   ${props => {
     switch(props.status) {
       case 'pending_review':
-        return 'background: #fff3cd; color: #856404;';
+        return 'background: rgba(255, 193, 7, 0.2); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.3);';
       case 'published':
-        return 'background: #d4edda; color: #155724;';
+        return 'background: rgba(40, 167, 69, 0.2); color: #51cf66; border: 1px solid rgba(40, 167, 69, 0.3);';
       case 'rejected':
-        return 'background: #f8d7da; color: #721c24;';
+        return 'background: rgba(220, 53, 69, 0.2); color: #ff6b6b; border: 1px solid rgba(220, 53, 69, 0.3);';
       case 'flagged':
-        return 'background: #fff3cd; color: #856404;';
+        return 'background: rgba(255, 193, 7, 0.2); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.3);';
       default:
-        return 'background: #d1ecf1; color: #0c5460;';
+        return 'background: rgba(102, 126, 234, 0.2); color: #667eea; border: 1px solid rgba(102, 126, 234, 0.3);';
     }
   }}
 `;
@@ -117,7 +121,7 @@ const PostHeader = styled.div`
 `;
 
 const PostType = styled.span`
-  background: #667eea;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   padding: 0.4rem 1rem;
   border-radius: 20px;
@@ -126,12 +130,12 @@ const PostType = styled.span`
 `;
 
 const PostDate = styled.span`
-  color: #888;
+  color: rgba(255, 255, 255, 0.6);
   font-size: 0.9rem;
 `;
 
 const PostContent = styled.div`
-  color: #555;
+  color: rgba(255, 255, 255, 0.8);
   margin-bottom: 1rem;
   line-height: 1.6;
 `;
@@ -140,7 +144,7 @@ const PostMetrics = styled.div`
   display: flex;
   gap: 2rem;
   padding-top: 1rem;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid rgba(102, 126, 234, 0.2);
   font-size: 0.9rem;
 `;
 
@@ -148,19 +152,19 @@ const Metric = styled.div`
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #666;
+  color: rgba(255, 255, 255, 0.7);
 `;
 
 const Loading = styled.div`
   text-align: center;
   padding: 3rem;
-  color: #888;
+  color: rgba(255, 255, 255, 0.7);
 `;
 
 const EmptyState = styled.div`
   text-align: center;
   padding: 3rem;
-  color: #888;
+  color: rgba(255, 255, 255, 0.7);
   font-size: 1.1rem;
 `;
 

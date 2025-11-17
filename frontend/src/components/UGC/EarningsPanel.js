@@ -6,10 +6,10 @@ import { FiDollarSign, FiTrendingUp, FiEye, FiMousePointer, FiAward } from 'reac
 const API_BASE = 'http://localhost:8000';
 
 const Container = styled.div`
-  background: white;
-  padding: 2rem;
-  border-radius: 15px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
 `;
 
 const Header = styled.div`
@@ -18,15 +18,16 @@ const Header = styled.div`
   justify-content: space-between;
   margin-bottom: 2rem;
   padding-bottom: 1.5rem;
-  border-bottom: 3px solid #28a745;
+  border-bottom: 3px solid rgba(40, 167, 69, 0.5);
 `;
 
 const Title = styled.h2`
-  color: #333;
+  color: rgba(255, 255, 255, 0.95);
   margin: 0;
   display: flex;
   align-items: center;
   gap: 0.8rem;
+  font-size: 1.8rem;
 `;
 
 const StatusBadge = styled.div`
@@ -88,14 +89,16 @@ const StatLabel = styled.div`
 `;
 
 const EarningsBreakdown = styled.div`
-  background: #f8f9fa;
+  background: rgba(26, 31, 58, 0.6);
+  backdrop-filter: blur(10px);
   border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 2rem;
+  border: 1px solid rgba(102, 126, 234, 0.2);
 `;
 
 const BreakdownTitle = styled.h3`
-  color: #333;
+  color: rgba(255, 255, 255, 0.95);
   margin-bottom: 1.5rem;
   display: flex;
   align-items: center;
@@ -109,37 +112,40 @@ const BreakdownGrid = styled.div`
 `;
 
 const BreakdownItem = styled.div`
-  background: white;
+  background: rgba(26, 31, 58, 0.8);
   padding: 1rem;
   border-radius: 8px;
   border-left: 4px solid ${props => props.color || '#667eea'};
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(102, 126, 234, 0.2);
 `;
 
 const BreakdownLabel = styled.div`
   font-size: 0.9rem;
-  color: #666;
+  color: rgba(255, 255, 255, 0.7);
   margin-bottom: 0.3rem;
 `;
 
 const BreakdownValue = styled.div`
   font-size: 1.3rem;
   font-weight: 700;
-  color: #333;
+  color: rgba(255, 255, 255, 0.95);
 `;
 
 const BreakdownEarnings = styled.div`
   font-size: 1rem;
-  color: #28a745;
+  color: #51cf66;
   font-weight: 600;
   margin-top: 0.3rem;
 `;
 
 const PostsTable = styled.div`
-  background: white;
+  background: rgba(26, 31, 58, 0.6);
+  backdrop-filter: blur(10px);
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(102, 126, 234, 0.2);
 `;
 
 const TableHeader = styled.div`
@@ -157,11 +163,12 @@ const TableRow = styled.div`
   display: grid;
   grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
   gap: 1rem;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid rgba(102, 126, 234, 0.2);
   transition: all 0.3s;
+  background: rgba(26, 31, 58, 0.4);
 
   &:hover {
-    background: #f8f9fa;
+    background: rgba(102, 126, 234, 0.1);
   }
 
   &:last-child {
@@ -171,7 +178,7 @@ const TableRow = styled.div`
 
 const PostTitle = styled.div`
   font-weight: 600;
-  color: #333;
+  color: rgba(255, 255, 255, 0.95);
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -187,23 +194,23 @@ const PostType = styled.span`
 `;
 
 const MetricValue = styled.div`
-  color: #666;
+  color: rgba(255, 255, 255, 0.7);
   display: flex;
   align-items: center;
   gap: 0.3rem;
 `;
 
 const EarningValue = styled.div`
-  color: #28a745;
+  color: #51cf66;
   font-weight: 700;
   font-size: 1.1rem;
 `;
 
 const InfoBox = styled.div`
-  background: #e7f3ff;
-  border: 2px solid #2196f3;
-  border-left: 6px solid #2196f3;
-  color: #1976d2;
+  background: rgba(102, 126, 234, 0.15);
+  border: 2px solid rgba(102, 126, 234, 0.3);
+  border-left: 6px solid #667eea;
+  color: rgba(255, 255, 255, 0.9);
   padding: 1.5rem;
   border-radius: 8px;
   margin-bottom: 2rem;

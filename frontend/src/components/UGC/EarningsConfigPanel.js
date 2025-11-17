@@ -6,19 +6,21 @@ import { FiDollarSign, FiTrendingUp, FiInfo } from 'react-icons/fi';
 const API_BASE = 'http://localhost:8000';
 
 const Container = styled.div`
-  background: white;
+  background: rgba(30, 41, 59, 0.8);
+  backdrop-filter: blur(10px);
   padding: 2rem;
   border-radius: 15px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(102, 126, 234, 0.2);
 `;
 
 const Title = styled.h2`
-  color: #333;
+  color: rgba(255, 255, 255, 0.95);
   margin-bottom: 2rem;
   display: flex;
   align-items: center;
   gap: 0.8rem;
-  border-bottom: 3px solid #28a745;
+  border-bottom: 3px solid #51cf66;
   padding-bottom: 1rem;
 `;
 
@@ -39,14 +41,15 @@ const ConfigGrid = styled.div`
 `;
 
 const ConfigCard = styled.div`
-  background: #f8f9fa;
-  border: 2px solid ${props => props.modified ? '#28a745' : '#e0e0e0'};
+  background: rgba(26, 31, 58, 0.6);
+  backdrop-filter: blur(10px);
+  border: 2px solid ${props => props.modified ? 'rgba(81, 207, 102, 0.5)' : 'rgba(102, 126, 234, 0.3)'};
   border-radius: 12px;
   padding: 1.5rem;
   transition: all 0.3s;
 
   &:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     transform: translateY(-2px);
   }
 `;
@@ -57,7 +60,7 @@ const TypeHeader = styled.div`
   justify-content: space-between;
   margin-bottom: 1rem;
   padding-bottom: 1rem;
-  border-bottom: 2px solid #e0e0e0;
+  border-bottom: 2px solid rgba(102, 126, 234, 0.2);
 `;
 
 const TypeIcon = styled.div`
@@ -66,7 +69,7 @@ const TypeIcon = styled.div`
 
 const TypeName = styled.h3`
   font-size: 1.2rem;
-  color: #333;
+  color: rgba(255, 255, 255, 0.95);
   margin: 0;
 `;
 
@@ -78,7 +81,7 @@ const Label = styled.label`
   display: block;
   margin-bottom: 0.5rem;
   font-weight: 600;
-  color: #555;
+  color: rgba(255, 255, 255, 0.9);
   font-size: 0.9rem;
 `;
 
@@ -92,23 +95,30 @@ const InputWrapper = styled.div`
 const Input = styled.input`
   flex: 1;
   padding: 0.8rem;
-  border: 2px solid ${props => props.hasError ? '#dc3545' : '#e0e0e0'};
+  border: 2px solid ${props => props.hasError ? '#ff6b6b' : 'rgba(102, 126, 234, 0.3)'};
   border-radius: 8px;
   font-size: 1rem;
   font-weight: 600;
   text-align: center;
   transition: all 0.3s;
+  background: rgba(26, 31, 58, 0.6);
+  color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
 
   &:focus {
     outline: none;
-    border-color: #28a745;
+    border-color: #51cf66;
+  }
+
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.5);
   }
 `;
 
 const Suffix = styled.span`
   position: absolute;
   right: 1rem;
-  color: #666;
+  color: rgba(255, 255, 255, 0.7);
   font-weight: 600;
   font-size: 0.9rem;
   pointer-events: none;
@@ -140,7 +150,7 @@ const ButtonGroup = styled.div`
   justify-content: flex-end;
   margin-top: 2rem;
   padding-top: 2rem;
-  border-top: 2px solid #e0e0e0;
+  border-top: 2px solid rgba(102, 126, 234, 0.2);
 `;
 
 const Button = styled.button`
@@ -164,10 +174,10 @@ const Button = styled.button`
       `;
     }
     return `
-      background: white;
-      border: 2px solid #6c757d;
-      color: #6c757d;
-      &:hover { background: #f8f9fa; }
+      background: rgba(26, 31, 58, 0.6);
+      border: 2px solid rgba(102, 126, 234, 0.3);
+      color: rgba(255, 255, 255, 0.9);
+      &:hover { background: rgba(26, 31, 58, 0.8); }
     `;
   }}
 
@@ -179,10 +189,10 @@ const Button = styled.button`
 `;
 
 const AlertBox = styled.div`
-  background: #fff3cd;
-  border: 2px solid #ffc107;
-  border-left: 6px solid #ffc107;
-  color: #856404;
+  background: rgba(255, 212, 59, 0.15);
+  border: 2px solid rgba(255, 212, 59, 0.3);
+  border-left: 6px solid rgba(255, 212, 59, 0.5);
+  color: rgba(255, 255, 255, 0.9);
   padding: 1.5rem;
   border-radius: 8px;
   margin-bottom: 2rem;

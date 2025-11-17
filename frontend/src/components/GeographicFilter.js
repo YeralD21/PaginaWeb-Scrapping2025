@@ -34,19 +34,22 @@ const Header = styled.div`
 const Title = styled.h3`
   font-size: 16px;
   font-weight: 700;
-  background: linear-gradient(135deg, #1f2937, #4b5563);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--text-primary);
   margin: 0 0 2px 0;
   letter-spacing: -0.025em;
+  transition: color 0.15s ease;
+  
+  body[data-theme="dark"] & {
+    color: var(--filter-text-color);
+  }
 `;
 
 const Subtitle = styled.p`
-  color: #64748b;
+  color: var(--text-secondary);
   font-size: 11px;
   margin: 0;
   font-weight: 500;
+  transition: color 0.15s ease;
 `;
 
 const LoadingIndicator = styled.div`
@@ -81,14 +84,19 @@ const FiltersGrid = styled.div`
 `;
 
 const StatsSection = styled.div`
-  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  background: var(--bg-tertiary);
   border-radius: 12px;
   padding: 8px;
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  border: 1px solid var(--border-color);
   min-width: 140px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
   backdrop-filter: blur(10px);
   flex-shrink: 0;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+  
+  body[data-theme="dark"] & {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  }
 `;
 
 const FilterCard = styled.button`
@@ -98,9 +106,9 @@ const FilterCard = styled.button`
   border: 2px solid ${props => props.isSelected ? props.borderColor : 'transparent'};
   background: ${props => props.isSelected ? 
     `linear-gradient(135deg, ${props.bgColor}, ${props.borderColor}15)` : 
-    'rgba(255, 255, 255, 0.8)'};
+    'var(--card-bg)'};
   backdrop-filter: blur(10px);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.15s ease;
   cursor: pointer;
   min-width: 70px;
   text-align: center;
@@ -109,9 +117,17 @@ const FilterCard = styled.button`
     `0 8px 25px -8px ${props.borderColor}40` : 
     '0 2px 4px rgba(0, 0, 0, 0.05)'};
   
+  body[data-theme="dark"] & {
+    box-shadow: ${props => props.isSelected ? 
+      `0 8px 25px -8px ${props.borderColor}40` : 
+      '0 2px 4px rgba(0, 0, 0, 0.3)'};
+  }
+  
   &:hover {
     border-color: ${props => props.borderColor};
-    background: ${props => `linear-gradient(135deg, ${props.bgColor}, ${props.borderColor}20)`};
+    background: ${props => props.isSelected ? 
+      `linear-gradient(135deg, ${props.bgColor}, ${props.borderColor}20)` : 
+      'var(--bg-tertiary)'};
     transform: translateY(-2px) scale(1.02);
     box-shadow: 0 12px 25px -8px ${props => props.borderColor}50;
   }
@@ -124,8 +140,9 @@ const FilterCard = styled.button`
 const CardTitle = styled.div`
   font-weight: 600;
   font-size: 12px;
-  color: ${props => props.isSelected ? props.textColor : '#374151'};
+  color: ${props => props.isSelected ? props.textColor : 'var(--text-primary)'};
   margin-bottom: 2px;
+  transition: color 0.15s ease;
 `;
 
 const StatsNumber = styled.div`
@@ -148,9 +165,10 @@ const StatsNumber = styled.div`
 
 const StatsLabel = styled.div`
   font-size: 9px;
-  color: #6b7280;
+  color: var(--text-secondary);
   margin-top: 1px;
   font-weight: 500;
+  transition: color 0.15s ease;
 `;
 
 const StatsHeader = styled.div`
@@ -162,9 +180,10 @@ const StatsHeader = styled.div`
 
 const StatsTitle = styled.h4`
   font-weight: 600;
-  color: #1f2937;
+  color: var(--text-primary);
   margin: 0;
   font-size: 12px;
+  transition: color 0.15s ease;
 `;
 
 const StatsGrid = styled.div`
@@ -176,19 +195,24 @@ const StatsGrid = styled.div`
 const StatCard = styled.div`
   text-align: center;
   padding: 4px;
-  background: white;
+  background: var(--card-bg);
   border-radius: 4px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   min-width: 45px;
   flex: 1;
+  transition: background-color 0.15s ease;
+  
+  body[data-theme="dark"] & {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  }
 `;
 
 const StatNumber = styled.div`
   font-weight: 700;
   font-size: 11px;
-  color: ${props => props.color || '#1f2937'};
+  color: ${props => props.color || 'var(--text-primary)'};
   margin-bottom: 1px;
-  transition: all 0.3s ease;
+  transition: all 0.3s ease, color 0.15s ease;
   
   &.updating {
     animation: countUp 0.8s cubic-bezier(0.4, 0, 0.2, 1);
@@ -212,26 +236,29 @@ const StatNumber = styled.div`
 
 const StatLabel = styled.div`
   font-size: 7px;
-  color: #4b5563;
+  color: var(--text-secondary);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  transition: color 0.15s ease;
 `;
 
 const StatSubLabel = styled.div`
   font-size: 6px;
-  color: #6b7280;
+  color: var(--text-secondary);
   margin-top: 1px;
   font-weight: 500;
+  transition: color 0.15s ease;
 `;
 
 const ActiveFilterSection = styled.div`
   margin-top: 12px;
   padding: 8px;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   font-size: 12px;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 `;
 
 const ActiveFilterContent = styled.div`
@@ -241,46 +268,69 @@ const ActiveFilterContent = styled.div`
 `;
 
 const ActiveFilterText = styled.div`
-  color: #1e40af;
+  color: var(--text-primary);
   font-weight: 500;
+  transition: color 0.15s ease;
+  
+  body[data-theme="dark"] & {
+    color: #60a5fa;
+  }
 `;
 
 const ClearButton = styled.button`
   padding: 4px 8px;
-  background: white;
+  background: var(--card-bg);
   color: #2563eb;
   border: 1px solid #bfdbfe;
   border-radius: 4px;
   font-size: 10px;
   font-weight: 500;
-  transition: all 0.2s ease;
+  transition: all 0.2s ease, background-color 0.15s ease;
   cursor: pointer;
   
+  body[data-theme="dark"] & {
+    color: #60a5fa;
+    border-color: #3b82f6;
+  }
+  
   &:hover {
-    background: #dbeafe;
+    background: var(--bg-tertiary);
+  }
+  
+  body[data-theme="dark"] &:hover {
+    background: var(--bg-secondary);
   }
 `;
 
 const ToggleButton = styled.button`
   padding: 0.5rem 1rem;
-  background: white;
-  color: #495057;
-  border: 1px solid #e9ecef;
+  background: var(--card-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
   border-radius: 25px;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s ease, background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   display: flex;
   align-items: center;
   gap: 0.5rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  
+  body[data-theme="dark"] & {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
   
   &:hover {
     border-color: #dc3545;
     color: #dc3545;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     transform: translateY(-1px);
+    background: var(--bg-tertiary);
+  }
+  
+  body[data-theme="dark"] &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
   }
   
   &:active {
@@ -290,7 +340,7 @@ const ToggleButton = styled.button`
 
 const ExpandableContent = styled.div`
   overflow: hidden;
-  transition: all 0.3s ease;
+  transition: all 0.3s ease, background-color 0.15s ease, border-color 0.15s ease;
   max-height: ${props => props.isExpanded ? '400px' : '0px'};
   opacity: ${props => props.isExpanded ? '1' : '0'};
   position: absolute;
@@ -298,8 +348,8 @@ const ExpandableContent = styled.div`
   left: 50%;
   transform: translateX(-50%);
   z-index: 1000;
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   box-shadow: 0 8px 25px -8px rgba(0, 0, 0, 0.2);
   margin-top: 8px;
@@ -307,6 +357,10 @@ const ExpandableContent = styled.div`
   flex-direction: column;
   min-width: 300px;
   max-width: 500px;
+  
+  body[data-theme="dark"] & {
+    box-shadow: 0 8px 25px -8px rgba(0, 0, 0, 0.5);
+  }
 `;
 
 const IconWrapper = styled.div`
@@ -458,11 +512,11 @@ const GeographicFilter = ({ onFilterChange, selectedType = 'todos' }) => {
       {/* Botón de toggle */}
       <ToggleButton onClick={toggleExpanded}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <FiFilter style={{ width: '14px', height: '14px', color: '#6b7280' }} />
-          <span>Filtrar Geográficamente</span>
+          <FiFilter style={{ width: '14px', height: '14px', color: 'var(--text-primary)' }} />
+          <span style={{ color: 'var(--text-primary)' }}>Filtrar Geográficamente</span>
         </div>
         <IconWrapper isExpanded={isExpanded}>
-          <FiChevronDown style={{ width: '14px', height: '14px', color: '#6b7280' }} />
+          <FiChevronDown style={{ width: '14px', height: '14px', color: 'var(--text-primary)' }} />
         </IconWrapper>
       </ToggleButton>
 
@@ -477,11 +531,11 @@ const GeographicFilter = ({ onFilterChange, selectedType = 'todos' }) => {
         }}>
           {/* Título */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <FiFilter style={{ width: '16px', height: '16px', color: '#6b7280' }} />
+            <FiFilter style={{ width: '16px', height: '16px', color: 'var(--text-secondary)' }} />
             <span style={{ 
               fontSize: '14px', 
               fontWeight: '600', 
-              color: '#374151',
+              color: 'var(--text-primary)',
               letterSpacing: '0.3px'
             }}>
               Filtros:
@@ -506,9 +560,9 @@ const GeographicFilter = ({ onFilterChange, selectedType = 'todos' }) => {
                   style={{
                     padding: '4px 8px',
                     borderRadius: '4px',
-                    border: `1px solid ${isSelected ? type.borderColor : '#e5e7eb'}`,
-                    background: isSelected ? type.bgColor : 'white',
-                    color: isSelected ? type.textColor : '#6b7280',
+                    border: `1px solid ${isSelected ? type.borderColor : 'var(--border-color)'}`,
+                    background: isSelected ? type.bgColor : 'var(--card-bg)',
+                    color: isSelected ? type.textColor : 'var(--text-primary)',
                     fontSize: '11px',
                     fontWeight: isSelected ? '600' : '500',
                     cursor: 'pointer',
@@ -522,16 +576,16 @@ const GeographicFilter = ({ onFilterChange, selectedType = 'todos' }) => {
                   }}
                   onMouseEnter={(e) => {
                     if (!isSelected) {
-                      e.target.style.background = '#f9fafb';
-                      e.target.style.borderColor = '#d1d5db';
+                      e.target.style.background = 'var(--bg-tertiary)';
+                      e.target.style.borderColor = 'var(--border-color)';
                       e.target.style.transform = 'translateY(-1px)';
                       e.target.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (!isSelected) {
-                      e.target.style.background = 'white';
-                      e.target.style.borderColor = '#e5e7eb';
+                      e.target.style.background = 'var(--card-bg)';
+                      e.target.style.borderColor = 'var(--border-color)';
                       e.target.style.transform = 'translateY(0)';
                       e.target.style.boxShadow = 'none';
                     }
@@ -543,8 +597,8 @@ const GeographicFilter = ({ onFilterChange, selectedType = 'todos' }) => {
                       fontSize: '9px', 
                       fontWeight: '700',
                       opacity: isSelected ? '0.9' : '0.7',
-                      background: isSelected ? 'rgba(255, 255, 255, 0.2)' : '#f3f4f6',
-                      color: isSelected ? 'white' : '#374151',
+                      background: isSelected ? 'rgba(255, 255, 255, 0.2)' : 'var(--bg-tertiary)',
+                      color: isSelected ? 'white' : 'var(--text-primary)',
                       padding: '1px 3px',
                       borderRadius: '2px',
                       minWidth: '16px',
@@ -558,8 +612,8 @@ const GeographicFilter = ({ onFilterChange, selectedType = 'todos' }) => {
                       fontSize: '9px', 
                       fontWeight: '700',
                       opacity: isSelected ? '0.9' : '0.7',
-                      background: isSelected ? 'rgba(255, 255, 255, 0.2)' : '#f3f4f6',
-                      color: isSelected ? 'white' : '#374151',
+                      background: isSelected ? 'rgba(255, 255, 255, 0.2)' : 'var(--bg-tertiary)',
+                      color: isSelected ? 'white' : 'var(--text-primary)',
                       padding: '1px 3px',
                       borderRadius: '2px',
                       minWidth: '16px',
@@ -580,11 +634,11 @@ const GeographicFilter = ({ onFilterChange, selectedType = 'todos' }) => {
               alignItems: 'center', 
               justifyContent: 'space-between',
               padding: '4px 8px',
-              background: '#dbeafe',
+              background: 'var(--bg-tertiary)',
               borderRadius: '4px',
-              border: '1px solid #93c5fd'
+              border: '1px solid var(--border-color)'
             }}>
-              <span style={{ fontSize: '11px', color: '#1e40af', fontWeight: '500' }}>
+              <span style={{ fontSize: '11px', color: 'var(--text-primary)', fontWeight: '500' }}>
                 Filtro activo: {geographicTypes.find(t => t.key === selectedType)?.label}
               </span>
               <button
@@ -592,7 +646,7 @@ const GeographicFilter = ({ onFilterChange, selectedType = 'todos' }) => {
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: '#1e40af',
+                  color: 'var(--text-primary)',
                   fontSize: '10px',
                   cursor: 'pointer',
                   padding: '2px 4px',
@@ -601,7 +655,7 @@ const GeographicFilter = ({ onFilterChange, selectedType = 'todos' }) => {
                   transition: 'background 0.2s ease'
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.background = '#bfdbfe';
+                  e.target.style.background = 'var(--bg-secondary)';
                 }}
                 onMouseLeave={(e) => {
                   e.target.style.background = 'none';
