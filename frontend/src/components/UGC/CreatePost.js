@@ -435,7 +435,28 @@ function CreatePost({ token, onPostCreated }) {
       
       if (response.data.success) {
         console.log('Imagen subida exitosamente:', response.data.image_url);
-        setImagenUrl(response.data.image_url);
+        const uploadedImageUrl = response.data.image_url;
+        setImagenUrl(uploadedImageUrl);
+        
+        // Construir URL completa para la vista previa
+        let fullImageUrl = '';
+        if (uploadedImageUrl.startsWith('http://') || uploadedImageUrl.startsWith('https://')) {
+          fullImageUrl = uploadedImageUrl;
+        } else if (uploadedImageUrl.startsWith('/')) {
+          fullImageUrl = `${API_BASE}${uploadedImageUrl}`;
+        } else {
+          fullImageUrl = `${API_BASE}/uploads/images/${uploadedImageUrl}`;
+        }
+        
+        console.log('🔍 URL construida para vista previa:', {
+          uploadedImageUrl,
+          fullImageUrl,
+          API_BASE
+        });
+        
+        // Actualizar imagePreview con la URL del servidor para que la vista previa muestre la imagen real
+        setImagePreview(fullImageUrl);
+        
         setUploadStatus({ 
           type: 'success', 
           message: `✅ Imagen subida exitosamente (${(response.data.size / 1024).toFixed(1)} KB)` 
@@ -590,7 +611,29 @@ function CreatePost({ token, onPostCreated }) {
               )}
               {imagePreview && (
                 <ImagePreview>
-                  <PreviewImage src={imagePreview} alt="Vista previa" />
+                  <PreviewImage 
+                    src={imagePreview} 
+                    alt="Vista previa"
+                    onError={(e) => {
+                      console.error('❌ Error cargando PreviewImage:', {
+                        src: e.target.src,
+                        imagenUrl: imagenUrl,
+                        imagePreview: imagePreview
+                      });
+                      
+                      // Intentar con imagenUrl si imagePreview falla
+                      if (imagenUrl && imagenUrl !== imagePreview) {
+                        const retryUrl = imagenUrl.startsWith('http') 
+                          ? imagenUrl 
+                          : `http://localhost:8000${imagenUrl.startsWith('/') ? imagenUrl : `/${imagenUrl}`}`;
+                        console.log('🔄 Reintentando PreviewImage con imagenUrl:', retryUrl);
+                        e.target.src = retryUrl;
+                      }
+                    }}
+                    onLoad={(e) => {
+                      console.log('✅ PreviewImage cargada exitosamente:', e.target.src);
+                    }}
+                  />
                   <Button 
                     type="button"
                     onClick={() => {
@@ -709,8 +752,58 @@ function CreatePost({ token, onPostCreated }) {
                   <NewsImage 
                     src={imagePreview} 
                     alt={titulo}
-                    onLoad={() => {
-                      console.log('✅ Imagen cargada exitosamente desde preview');
+                    onLoad={(e) => {
+                      console.log('✅ Imagen cargada exitosamente desde preview:', {
+                        src: e.target.src,
+                        width: e.target.naturalWidth,
+                        height: e.target.naturalHeight
+                      });
+                    }}
+                    onError={(e) => {
+                      const originalSrc = e.target.src;
+                      console.error('❌ Error cargando imagen en vista previa:', {
+                        src: originalSrc,
+                        imagenUrl: imagenUrl,
+                        imagePreview: imagePreview
+                      });
+                      
+                      // Intentar diferentes formatos de URL
+                      const retryAttempt = parseInt(e.target.dataset.retryAttempt || '0');
+                      
+                      if (retryAttempt < 3) {
+                        e.target.dataset.retryAttempt = String(retryAttempt + 1);
+                        
+                        let retryUrl = '';
+                        if (retryAttempt === 0 && imagenUrl) {
+                          // Primer intento: usar imagenUrl directamente
+                          retryUrl = imagenUrl.startsWith('http') 
+                            ? imagenUrl 
+                            : `http://localhost:8000${imagenUrl.startsWith('/') ? imagenUrl : `/${imagenUrl}`}`;
+                        } else if (retryAttempt === 1 && imagenUrl) {
+                          // Segundo intento: solo la ruta relativa
+                          retryUrl = imagenUrl.startsWith('/') ? imagenUrl : `/uploads/images/${imagenUrl}`;
+                        } else if (retryAttempt === 2 && imagenUrl) {
+                          // Tercer intento: URL absoluta completa
+                          retryUrl = `http://localhost:8000${imagenUrl.startsWith('/') ? imagenUrl : `/uploads/images/${imagenUrl}`}`;
+                        }
+                        
+                        if (retryUrl && retryUrl !== originalSrc) {
+                          console.log(`🔄 Reintento ${retryAttempt + 1}/3 con URL alternativa:`, retryUrl);
+                          setTimeout(() => {
+                            e.target.src = retryUrl;
+                          }, 500 * (retryAttempt + 1));
+                          return;
+                        }
+                      }
+                      
+                      // Si falla después de 3 intentos, mostrar placeholder
+                      console.warn('⚠️ No se pudo cargar la imagen después de 3 reintentos');
+                      e.target.style.display = 'none';
+                      // Mostrar un div de error en su lugar
+                      const errorDiv = document.createElement('div');
+                      errorDiv.style.cssText = 'width: 100%; height: 200px; background: rgba(26, 31, 58, 0.4); display: flex; align-items: center; justify-content: center; border-radius: 8px; border: 2px dashed rgba(255, 0, 0, 0.3); color: rgba(255, 255, 255, 0.7);';
+                      errorDiv.textContent = '⚠️ Error al cargar la imagen';
+                      e.target.parentNode.appendChild(errorDiv);
                     }}
                   />
                 ) : (

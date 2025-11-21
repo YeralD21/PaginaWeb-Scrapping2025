@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
-import { FiArrowLeft, FiBarChart2, FiTrendingUp, FiCalendar, FiRefreshCw, FiHelpCircle, FiTarget, FiAward, FiPercent, FiUsers, FiBookOpen } from 'react-icons/fi';
+import styled, { keyframes } from 'styled-components';
+import { FiArrowLeft, FiBarChart2, FiTrendingUp, FiCalendar, FiRefreshCw, FiHelpCircle, FiTarget, FiAward, FiPercent, FiUsers, FiBookOpen, FiChevronDown, FiChevronUp, FiFilter } from 'react-icons/fi';
 import axios from 'axios';
 import { 
   BarChart, 
@@ -281,19 +281,77 @@ const ChartTitle = styled.h3`
   padding-bottom: 0.5rem;
 `;
 
-const DateSelector = styled.div`
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
-  justify-content: center;
+const slideDown = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 `;
 
-const DateButton = styled.button`
-  background: ${props => props.active ? '#dc3545' : 'white'};
+const DateFilterContainer = styled.div`
+  background: white;
+  border-radius: 15px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 2px solid #e9ecef;
+`;
+
+const FilterHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  cursor: pointer;
+  padding: 1rem;
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+  border-radius: 12px;
+  color: white;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(220, 53, 69, 0.3);
+  }
+`;
+
+const FilterTitle = styled.h3`
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const FilterToggle = styled.div`
+  font-size: 1.5rem;
+  transition: transform 0.3s ease;
+  transform: ${props => props.open ? 'rotate(180deg)' : 'rotate(0deg)'};
+`;
+
+const FilterContent = styled.div`
+  display: ${props => props.open ? 'block' : 'none'};
+  animation: ${slideDown} 0.3s ease-out;
+`;
+
+const FilterTabs = styled.div`
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid #e9ecef;
+  padding-bottom: 1rem;
+`;
+
+const FilterTab = styled.button`
+  background: ${props => props.active ? '#dc3545' : 'transparent'};
   color: ${props => props.active ? 'white' : '#1a1a1a'};
   border: 2px solid ${props => props.active ? '#dc3545' : '#e9ecef'};
-  padding: 0.8rem 1.5rem;
+  padding: 0.6rem 1.5rem;
   border-radius: 25px;
   font-weight: 600;
   cursor: pointer;
@@ -301,15 +359,112 @@ const DateButton = styled.button`
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  
+  &:hover {
+    background: ${props => props.active ? '#c82333' : '#dc3545'};
+    color: white;
+    border-color: ${props => props.active ? '#c82333' : '#dc3545'};
+  }
+`;
+
+const MonthsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+`;
+
+const MonthCard = styled.div`
+  background: ${props => props.active ? 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)' : 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)'};
+  color: ${props => props.active ? 'white' : '#1a1a1a'};
+  border: 2px solid ${props => props.active ? '#dc3545' : '#e9ecef'};
+  border-radius: 12px;
+  padding: 1.2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+  box-shadow: ${props => props.active ? '0 4px 15px rgba(220, 53, 69, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.05)'};
+  
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(220, 53, 69, 0.3);
+    border-color: #dc3545;
+  }
+`;
+
+const MonthName = styled.div`
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+`;
+
+const MonthCount = styled.div`
+  font-size: 0.9rem;
+  opacity: ${props => props.active ? '0.9' : '0.7'};
+`;
+
+const DatesGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.8rem;
+  max-height: 500px;
+  overflow-y: auto;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 12px;
+  
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: #e9ecef;
+    border-radius: 4px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #dc3545;
+    border-radius: 4px;
+    
+    &:hover {
+      background: #c82333;
+    }
+  }
+`;
+
+const DateButton = styled.button`
+  background: ${props => props.active ? '#dc3545' : 'white'};
+  color: ${props => props.active ? 'white' : '#1a1a1a'};
+  border: 2px solid ${props => props.active ? '#dc3545' : '#e9ecef'};
+  padding: 0.8rem 1rem;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  box-shadow: ${props => props.active ? '0 4px 12px rgba(220, 53, 69, 0.3)' : '0 2px 6px rgba(0, 0, 0, 0.05)'};
+  font-size: 0.9rem;
 
   &:hover {
     background: ${props => props.active ? '#c82333' : '#dc3545'};
     color: white;
     border-color: ${props => props.active ? '#c82333' : '#dc3545'};
     transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(220, 53, 69, 0.2);
+    box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
   }
+`;
+
+const DateText = styled.div`
+  font-size: 0.85rem;
+`;
+
+const DateCount = styled.div`
+  font-size: 0.75rem;
+  opacity: 0.8;
+  font-weight: 500;
 `;
 
 const LoadingMessage = styled.div`
@@ -341,6 +496,9 @@ function Comparativa() {
   const [error, setError] = useState(null);
   const [fechaSeleccionada, setFechaSeleccionada] = useState(null);
   const [fechasDisponibles, setFechasDisponibles] = useState([]);
+  const [filterOpen, setFilterOpen] = useState(true);
+  const [filterMode, setFilterMode] = useState('fecha'); // 'fecha' o 'mes'
+  const [mesSeleccionado, setMesSeleccionado] = useState(null);
 
   useEffect(() => {
     const fetchFechasDisponibles = async () => {
@@ -394,6 +552,54 @@ function Comparativa() {
       month: '2-digit',
       year: 'numeric'
     });
+  };
+
+  // Agrupar fechas por mes
+  const fechasPorMes = fechasDisponibles.reduce((acc, fechaData) => {
+    const date = new Date(fechaData.fecha);
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const monthKey = `${year}-${month}`;
+    
+    if (!acc[monthKey]) {
+      acc[monthKey] = {
+        year,
+        month,
+        monthName: date.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }),
+        fechas: [],
+        total: 0
+      };
+    }
+    
+    acc[monthKey].fechas.push(fechaData);
+    acc[monthKey].total += fechaData.total;
+    
+    return acc;
+  }, {});
+
+  const mesesDisponibles = Object.values(fechasPorMes).sort((a, b) => {
+    if (a.year !== b.year) return b.year - a.year;
+    return b.month - a.month;
+  });
+
+  // Obtener fechas del mes seleccionado
+  const fechasDelMes = mesSeleccionado 
+    ? fechasPorMes[mesSeleccionado]?.fechas || []
+    : fechasDisponibles;
+
+  const handleMesClick = (monthKey) => {
+    if (mesSeleccionado === monthKey) {
+      setMesSeleccionado(null);
+      setFilterMode('fecha');
+    } else {
+      setMesSeleccionado(monthKey);
+      setFilterMode('fecha');
+      // Seleccionar la primera fecha del mes
+      const fechasDelMes = fechasPorMes[monthKey]?.fechas || [];
+      if (fechasDelMes.length > 0) {
+        setFechaSeleccionada(fechasDelMes[0].fecha);
+      }
+    }
   };
 
 
@@ -589,19 +795,122 @@ function Comparativa() {
 
         {/* Panel derecho con gráficos y estadísticas */}
         <RightPanel>
-          {/* Selector de fechas */}
-          <DateSelector>
-            {fechasDisponibles.map((fechaData) => (
-              <DateButton
-                key={fechaData.fecha}
-                active={fechaData.fecha === fechaSeleccionada}
-                onClick={() => setFechaSeleccionada(fechaData.fecha)}
-              >
-                <FiCalendar />
-                {formatDate(fechaData.fecha)} ({fechaData.total})
-              </DateButton>
-            ))}
-          </DateSelector>
+          {/* Filtro de fechas mejorado */}
+          <DateFilterContainer>
+            <FilterHeader onClick={() => setFilterOpen(!filterOpen)}>
+              <FilterTitle>
+                <FiFilter />
+                Filtrar por Fechas
+              </FilterTitle>
+              <FilterToggle open={filterOpen}>
+                <FiChevronDown />
+              </FilterToggle>
+            </FilterHeader>
+            
+            <FilterContent open={filterOpen}>
+              <FilterTabs>
+                <FilterTab 
+                  active={filterMode === 'mes'}
+                  onClick={() => setFilterMode('mes')}
+                >
+                  <FiCalendar />
+                  Filtrar por Mes
+                </FilterTab>
+                <FilterTab 
+                  active={filterMode === 'fecha'}
+                  onClick={() => setFilterMode('fecha')}
+                >
+                  <FiCalendar />
+                  Filtrar por Fecha
+                </FilterTab>
+              </FilterTabs>
+
+              {filterMode === 'mes' && (
+                <MonthsGrid>
+                  {mesesDisponibles.map((mes) => {
+                    const monthKey = `${mes.year}-${mes.month}`;
+                    return (
+                      <MonthCard
+                        key={monthKey}
+                        active={mesSeleccionado === monthKey}
+                        onClick={() => handleMesClick(monthKey)}
+                      >
+                        <MonthName>{mes.monthName}</MonthName>
+                        <MonthCount active={mesSeleccionado === monthKey}>
+                          {mes.fechas.length} fecha{mes.fechas.length !== 1 ? 's' : ''} • {mes.total} noticias
+                        </MonthCount>
+                      </MonthCard>
+                    );
+                  })}
+                </MonthsGrid>
+              )}
+
+              {filterMode === 'fecha' && (
+                <>
+                  {mesSeleccionado && (
+                    <div style={{
+                      marginBottom: '1rem',
+                      padding: '0.8rem 1.2rem',
+                      background: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
+                      borderRadius: '10px',
+                      color: 'white',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      fontWeight: 600
+                    }}>
+                      <span>
+                        📅 Mostrando fechas de: {fechasPorMes[mesSeleccionado]?.monthName}
+                      </span>
+                      <button
+                        onClick={() => {
+                          setMesSeleccionado(null);
+                        }}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.2)',
+                          border: 'none',
+                          color: 'white',
+                          padding: '0.4rem 0.8rem',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontWeight: 600,
+                          transition: 'all 0.3s ease'
+                        }}
+                        onMouseEnter={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.3)'}
+                        onMouseLeave={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.2)'}
+                      >
+                        Ver todas las fechas
+                      </button>
+                    </div>
+                  )}
+                  <DatesGrid>
+                    {fechasDelMes.length > 0 ? (
+                      fechasDelMes.map((fechaData) => (
+                        <DateButton
+                          key={fechaData.fecha}
+                          active={fechaData.fecha === fechaSeleccionada}
+                          onClick={() => setFechaSeleccionada(fechaData.fecha)}
+                        >
+                          <DateText>{formatDate(fechaData.fecha)}</DateText>
+                          <DateCount>({fechaData.total} noticias)</DateCount>
+                        </DateButton>
+                      ))
+                    ) : (
+                      <div style={{
+                        gridColumn: '1 / -1',
+                        textAlign: 'center',
+                        padding: '2rem',
+                        color: '#6c757d',
+                        fontStyle: 'italic'
+                      }}>
+                        No hay fechas disponibles para este mes
+                      </div>
+                    )}
+                  </DatesGrid>
+                </>
+              )}
+            </FilterContent>
+          </DateFilterContainer>
 
         {/* Estadísticas generales */}
         <StatsGrid>

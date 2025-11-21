@@ -208,11 +208,13 @@ class DuplicateDetector:
             
             similarity_hash = self.generate_similarity_hash(titulo)
             
-            # 1. Verificar duplicado exacto por enlace (más rápido)
+            # 1. Verificar duplicado exacto por enlace (más rápido y confiable)
+            # IMPORTANTE: Verificar por URL sin restricción de tiempo para evitar duplicados
+            # incluso si la noticia fue scrapeada hace mucho tiempo
             if enlace:
+                # Primero verificar sin restricción de tiempo (URL única = noticia única)
                 existing_by_link = db.query(Noticia).filter(
-                    Noticia.enlace == enlace,
-                    Noticia.fecha_extraccion >= datetime.utcnow() - timedelta(hours=self.time_window_hours)
+                    Noticia.enlace == enlace
                 ).first()
                 
                 if existing_by_link:
@@ -221,7 +223,42 @@ class DuplicateDetector:
                         'duplicate_type': 'exact_link',
                         'existing_news': existing_by_link,
                         'similarity_score': 1.0,
-                        'reason': 'Mismo enlace encontrado'
+                        'reason': f'Mismo enlace encontrado (categoría existente: {existing_by_link.categoria})'
+                    })
+                    return result
+                
+                # También verificar variaciones de la URL (con/sin trailing slash)
+                # Solo si la URL original termina en /, buscar también la versión sin /
+                enlace_normalizado = enlace.rstrip('/')
+                if enlace_normalizado != enlace and enlace_normalizado:
+                    # Buscar la versión sin trailing slash
+                    existing_by_link_normalized = db.query(Noticia).filter(
+                        Noticia.enlace == enlace_normalizado
+                    ).first()
+                    
+                    if existing_by_link_normalized:
+                        result.update({
+                            'is_duplicate': True,
+                            'duplicate_type': 'exact_link_normalized',
+                            'existing_news': existing_by_link_normalized,
+                            'similarity_score': 1.0,
+                            'reason': f'Enlace similar encontrado (categoría existente: {existing_by_link_normalized.categoria})'
+                        })
+                        return result
+                
+                # También verificar si existe la versión con trailing slash
+                enlace_con_slash = enlace if enlace.endswith('/') else enlace + '/'
+                existing_by_link_with_slash = db.query(Noticia).filter(
+                    Noticia.enlace == enlace_con_slash
+                ).first()
+                
+                if existing_by_link_with_slash:
+                    result.update({
+                        'is_duplicate': True,
+                        'duplicate_type': 'exact_link_normalized',
+                        'existing_news': existing_by_link_with_slash,
+                        'similarity_score': 1.0,
+                        'reason': f'Enlace similar encontrado (categoría existente: {existing_by_link_with_slash.categoria})'
                     })
                     return result
             

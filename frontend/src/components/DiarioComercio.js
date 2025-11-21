@@ -1,7 +1,9 @@
-  import React, { useState, useEffect } from 'react';
+  import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { FiCalendar, FiClock, FiRefreshCw, FiStar, FiTrendingUp, FiBarChart2, FiGlobe, FiMapPin, FiHome, FiLayers, FiFileText, FiPlay, FiShare2, FiBookmark, FiHeart, FiMessageCircle } from 'react-icons/fi';
+import { FiCalendar, FiClock, FiRefreshCw, FiStar, FiTrendingUp, FiBarChart2, FiGlobe, FiMapPin, FiHome, FiLayers, FiFileText, FiPlay, FiShare2, FiBookmark, FiHeart, FiMessageCircle, FiChevronDown, FiX, FiArrowLeft } from 'react-icons/fi';
 import NoticiaDetalleComercio from './NoticiaDetalleComercio';
+import ChatBot from './ChatBot';
 
 // Styled Components
 const ComercioContainer = styled.div`
@@ -22,6 +24,7 @@ const LoadingSpinner = styled.div`
 `;
 
 const DiarioComercio = () => {
+  const navigate = useNavigate();
   const [noticias, setNoticias] = useState([]);
   const [loading, setLoading] = useState(true);
   const [fechaSeleccionada, setFechaSeleccionada] = useState(null);
@@ -29,11 +32,40 @@ const DiarioComercio = () => {
   const [mostrarDetalle, setMostrarDetalle] = useState(false);
   const [noticiaSeleccionada, setNoticiaSeleccionada] = useState(null);
   const [mostrarSeccionSuscripcion, setMostrarSeccionSuscripcion] = useState(false);
+  const [mostrarFiltroFechas, setMostrarFiltroFechas] = useState(false);
+  const filtroRef = useRef(null);
 
   useEffect(() => {
     loadNoticiasComercio();
     loadFechasDisponibles();
   }, []);
+
+  // Cerrar el modal al hacer click fuera
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (mostrarFiltroFechas && filtroRef.current && !filtroRef.current.contains(event.target)) {
+        // Verificar si el click fue en el botón de abrir el filtro
+        const target = event.target;
+        const isFilterButton = target.closest('button')?.textContent?.includes('Buscar por fecha') || 
+                              target.closest('button')?.textContent?.includes('Limpiar filtro');
+        
+        if (!isFilterButton) {
+          setMostrarFiltroFechas(false);
+        }
+      }
+    };
+
+    if (mostrarFiltroFechas) {
+      // Pequeño delay para evitar que se cierre inmediatamente al abrir
+      setTimeout(() => {
+        document.addEventListener('mousedown', handleClickOutside);
+      }, 100);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [mostrarFiltroFechas]);
 
   const loadNoticiasComercio = async () => {
     try {
@@ -57,7 +89,7 @@ const DiarioComercio = () => {
 
   const loadFechasDisponibles = async () => {
     try {
-      const response = await fetch('http://localhost:8000/noticias/fechas-disponibles');
+      const response = await fetch('http://localhost:8000/noticias/fechas-disponibles/El Comercio');
       const data = await response.json();
       setFechasDisponibles(data.fechas || []);
       if (data.fechas && data.fechas.length > 0) {
@@ -275,13 +307,40 @@ const DiarioComercio = () => {
         zIndex: 100,
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
       }}>
-         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative' }}>
+           <button
+            onClick={() => navigate('/')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              background: 'rgba(26, 26, 26, 0.1)',
+              color: '#1a1a1a',
+              border: '1px solid rgba(26, 26, 26, 0.2)',
+              padding: '0.6rem 1.2rem',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+              fontWeight: '600',
+              fontFamily: 'Arial, sans-serif',
+              transition: 'all 0.3s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.background = 'rgba(26, 26, 26, 0.15)';
+              e.target.style.borderColor = 'rgba(26, 26, 26, 0.3)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = 'rgba(26, 26, 26, 0.1)';
+              e.target.style.borderColor = 'rgba(26, 26, 26, 0.2)';
+            }}
+          >
+            <FiArrowLeft style={{ fontSize: '1rem' }} />
+            Volver al Menú
+          </button>
            <img src="/images/logos/comercio.png" alt="El Comercio" style={{ height: '60px', width: 'auto', maxWidth: '400px', objectFit: 'contain' }} />
            <button
             onClick={() => setMostrarSeccionSuscripcion(true)}
             style={{
-              position: 'absolute',
-              right: '2rem',
               background: '#1a1a1a',
               color: 'white',
               border: 'none',
@@ -387,50 +446,262 @@ const DiarioComercio = () => {
         </div>
       </div>
 
-      {/* Filtro de fechas */}
+      {/* Filtro de fechas mejorado */}
       <div style={{
         background: '#f8f9fa',
         padding: '0.8rem 0',
-        borderBottom: '1px solid #e0e0e0'
+        borderBottom: '1px solid #e0e0e0',
+        position: 'relative'
       }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 2rem' }}>
+        <div style={{ 
+          maxWidth: '1200px', 
+          margin: '0 auto', 
+          padding: '0 1rem',
+          width: '100%',
+          boxSizing: 'border-box'
+        }}>
           <div style={{
             display: 'flex',
             alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '1rem'
+          }}>
+            <button
+              onClick={() => setMostrarFiltroFechas(!mostrarFiltroFechas)}
+              style={{
+            display: 'flex',
+            alignItems: 'center',
             gap: '0.5rem',
+                background: fechaSeleccionada ? '#2c5530' : 'white',
+                color: fechaSeleccionada ? 'white' : '#333',
+                border: `2px solid ${fechaSeleccionada ? '#2c5530' : '#e0e0e0'}`,
+                padding: '0.6rem 1.2rem',
+                borderRadius: '25px',
             fontSize: '0.9rem',
             fontWeight: '600',
-            fontFamily: 'Arial, sans-serif'
-          }}>
-            <FiCalendar style={{ fontSize: '1rem' }} />
-            Filtrar por fecha
-          </div>
-          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-            {fechasDisponibles.map((fecha) => (
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                fontFamily: 'Arial, sans-serif',
+                boxShadow: fechaSeleccionada ? '0 2px 8px rgba(44, 85, 48, 0.2)' : '0 2px 4px rgba(0,0,0,0.1)'
+              }}
+            >
+              <FiCalendar style={{ fontSize: '1rem' }} />
+              {fechaSeleccionada 
+                ? fechasDisponibles.find(f => f.fecha === fechaSeleccionada)?.fecha_formateada || 'Fecha seleccionada'
+                : 'Buscar por fecha'}
+              <FiChevronDown style={{ 
+                fontSize: '0.8rem',
+                transform: mostrarFiltroFechas ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.3s ease'
+              }} />
+            </button>
+            
+            {fechaSeleccionada && (
               <button
-                key={fecha.fecha}
-                onClick={() => setFechaSeleccionada(fecha.fecha)}
+                onClick={() => {
+                  setFechaSeleccionada(null);
+                  setMostrarFiltroFechas(false);
+                }}
                 style={{
-                  background: fechaSeleccionada === fecha.fecha ? '#2c5530' : 'white',
-                  color: fechaSeleccionada === fecha.fecha ? 'white' : '#333',
-                  border: `2px solid ${fechaSeleccionada === fecha.fecha ? '#2c5530' : '#e0e0e0'}`,
-                  padding: '0.4rem 0.8rem',
-                  borderRadius: '20px',
-                  fontSize: '0.8rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.3rem',
-                  fontFamily: 'Arial, sans-serif'
+                  background: 'transparent',
+                  color: '#666',
+                  border: 'none',
+                  padding: '0.4rem 0.8rem',
+                  borderRadius: '15px',
+                  fontSize: '0.8rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+            fontFamily: 'Arial, sans-serif'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.background = '#f0f0f0';
+                  e.target.style.color = '#333';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = 'transparent';
+                  e.target.style.color = '#666';
                 }}
               >
-                <FiClock style={{ fontSize: '0.7rem' }} />
-                {fecha.fecha_formateada} ({fecha.total_noticias})
+                <FiX style={{ fontSize: '0.8rem' }} />
+                Limpiar filtro
+              </button>
+            )}
+          </div>
+
+          {/* Modal/Dropdown de fechas */}
+          {mostrarFiltroFechas && (
+            <div
+              ref={filtroRef}
+              style={{
+                position: 'absolute',
+                top: '100%',
+                left: '1rem',
+                right: '1rem',
+                maxWidth: '1200px',
+                margin: '0.5rem auto 0',
+                background: 'white',
+                borderRadius: '12px',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+                border: '1px solid #e0e0e0',
+                zIndex: 1000,
+                maxHeight: '70vh',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+            >
+              {/* Header del modal */}
+              <div style={{
+                padding: '1rem 1.5rem',
+                borderBottom: '1px solid #e0e0e0',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                background: '#f8f9fa'
+              }}>
+                <h3 style={{
+                  margin: 0,
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  color: '#333',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  <FiCalendar />
+                  Seleccionar fecha ({fechasDisponibles.length} fechas disponibles)
+                </h3>
+                <button
+                  onClick={() => setMostrarFiltroFechas(false)}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    fontSize: '1.2rem',
+                    color: '#666',
+                    cursor: 'pointer',
+                    padding: '0.2rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '4px',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.background = '#e0e0e0';
+                    e.target.style.color = '#333';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = 'transparent';
+                    e.target.style.color = '#666';
+                  }}
+                >
+                  <FiX />
+                </button>
+          </div>
+
+              {/* Contenido del modal - Fechas agrupadas por mes */}
+              <div style={{
+                padding: '1rem',
+                overflowY: 'auto',
+                maxHeight: 'calc(70vh - 80px)'
+              }}>
+                {(() => {
+                  // Agrupar fechas por mes/año
+                  const fechasAgrupadas = {};
+                  fechasDisponibles.forEach(fecha => {
+                    const fechaObj = new Date(fecha.fecha);
+                    const mesAno = fechaObj.toLocaleDateString('es-ES', { year: 'numeric', month: 'long' });
+                    if (!fechasAgrupadas[mesAno]) {
+                      fechasAgrupadas[mesAno] = [];
+                    }
+                    fechasAgrupadas[mesAno].push(fecha);
+                  });
+
+                  // Ordenar meses (más reciente primero)
+                  const mesesOrdenados = Object.keys(fechasAgrupadas).sort((a, b) => {
+                    const fechaA = new Date(fechasAgrupadas[a][0].fecha);
+                    const fechaB = new Date(fechasAgrupadas[b][0].fecha);
+                    return fechaB - fechaA;
+                  });
+
+                  return mesesOrdenados.map(mesAno => (
+                    <div key={mesAno} style={{ marginBottom: '1.5rem' }}>
+                      <h4 style={{
+                        margin: '0 0 0.8rem 0',
+                        fontSize: '0.9rem',
+                        fontWeight: '600',
+                        color: '#2c5530',
+                        textTransform: 'capitalize',
+                        paddingBottom: '0.5rem',
+                        borderBottom: '2px solid #2c5530'
+                      }}>
+                        {mesAno}
+                      </h4>
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+                        gap: '0.5rem'
+                      }}>
+                        {fechasAgrupadas[mesAno]
+                          .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+                          .map((fecha) => (
+              <button
+                key={fecha.fecha}
+                              onClick={() => {
+                                setFechaSeleccionada(fecha.fecha);
+                                setMostrarFiltroFechas(false);
+                              }}
+                style={{
+                                background: fechaSeleccionada === fecha.fecha ? '#2c5530' : '#f8f9fa',
+                  color: fechaSeleccionada === fecha.fecha ? 'white' : '#333',
+                  border: `2px solid ${fechaSeleccionada === fecha.fecha ? '#2c5530' : '#e0e0e0'}`,
+                                padding: '0.6rem 0.8rem',
+                                borderRadius: '8px',
+                  fontSize: '0.8rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                  display: 'flex',
+                                flexDirection: 'column',
+                  alignItems: 'center',
+                                gap: '0.2rem',
+                                fontFamily: 'Arial, sans-serif',
+                                textAlign: 'center'
+                              }}
+                              onMouseEnter={(e) => {
+                                if (fechaSeleccionada !== fecha.fecha) {
+                                  e.target.style.background = '#e8f5e9';
+                                  e.target.style.borderColor = '#2c5530';
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                if (fechaSeleccionada !== fecha.fecha) {
+                                  e.target.style.background = '#f8f9fa';
+                                  e.target.style.borderColor = '#e0e0e0';
+                                }
+                              }}
+                            >
+                              <span>{fecha.fecha_formateada}</span>
+                              <span style={{
+                                fontSize: '0.7rem',
+                                opacity: 0.8,
+                                fontWeight: '500'
+                              }}>
+                                {fecha.total_noticias} noticias
+                              </span>
               </button>
             ))}
           </div>
+                    </div>
+                  ));
+                })()}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -864,7 +1135,7 @@ const DiarioComercio = () => {
           </div>
         </div>
       </div>
-
+      <ChatBot context="comercio" />
     </ComercioContainer>
   );
 };

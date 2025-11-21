@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { FiArrowLeft, FiCalendar, FiClock, FiFilter, FiTrendingUp, FiEye, FiShare2 } from 'react-icons/fi';
+import { FiArrowLeft, FiCalendar, FiClock, FiFilter, FiTrendingUp, FiEye, FiShare2, FiChevronDown } from 'react-icons/fi';
 import { useNoticiasDiario } from '../hooks/useNoticiasDiario';
+import ChatBot from './ChatBot';
 
 const Container = styled.div`
   min-height: 100vh;
@@ -189,17 +191,254 @@ const MainContent = styled.div`
   z-index: 1;
 `;
 
-// Layout de cards independientes
-const CardsGrid = styled.div`
+// Layout principal similar a elpopular.pe
+const MainLayout = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-  gap: 2.5rem;
-  margin-bottom: 4rem;
+  grid-template-columns: 2fr 1fr;
+  gap: 2rem;
+  margin-bottom: 3rem;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+// Noticia destacada grande (izquierda)
+const FeaturedArticle = styled.article`
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 15px 50px rgba(5, 150, 105, 0.1);
+  border: 2px solid rgba(34, 197, 94, 0.15);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  position: relative;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 60px rgba(5, 150, 105, 0.15);
+  }
+`;
+
+const FeaturedImage = styled.div`
+  height: 450px;
+  background: ${props => props.imageUrl ? `url(${props.imageUrl})` : 'linear-gradient(135deg, #059669 0%, #10b981 50%, #22c55e 100%)'};
+  background-size: cover;
+  background-position: center;
+  position: relative;
+`;
+
+const FeaturedByline = styled.div`
+  font-size: 0.9rem;
+  color: #059669;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+`;
+
+const FeaturedContent = styled.div`
+  padding: 1rem 2rem 0.75rem 2rem;
+  background: rgba(255, 255, 255, 0.98);
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+`;
+
+const FeaturedTitle = styled.h2`
+  font-size: 2rem;
+  font-weight: 800;
+  margin: 0 0 0 0;
+  line-height: 1.3;
+  color: #1f2937;
+  font-family: 'Inter', sans-serif;
+`;
+
+// Sidebar con cards horizontales largos (derecha)
+const SidebarNews = styled.aside`
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+`;
+
+const SidebarCard = styled.article`
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 8px 25px rgba(5, 150, 105, 0.08);
+  border: 2px solid rgba(34, 197, 94, 0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  display: flex;
+  flex-direction: row;
+  height: 150px;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 35px rgba(5, 150, 105, 0.12);
+    border-color: rgba(34, 197, 94, 0.2);
+  }
+`;
+
+const SidebarImage = styled.div`
+  width: 200px;
+  flex-shrink: 0;
+  background: ${props => props.imageUrl ? `url(${props.imageUrl})` : 'linear-gradient(135deg, #059669 0%, #10b981 100%)'};
+  background-size: cover;
+  background-position: center;
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, rgba(0, 0, 0, 0.3) 0%, transparent 100%);
+  }
+`;
+
+const SidebarContent = styled.div`
+  flex: 1;
+  padding: 1rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+`;
+
+const SidebarCategory = styled.span`
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: inline-block;
+  width: fit-content;
+  margin-bottom: 0.5rem;
+`;
+
+const SidebarTitle = styled.h3`
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.3;
+  color: #1f2937;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  flex: 1;
+`;
+
+const SidebarMeta = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 0.5rem;
+`;
+
+// Grid de cards cuadrados pequeños (abajo)
+const BottomNewsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-top: 2rem;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
-    gap: 2rem;
   }
+`;
+
+const SquareCard = styled.article`
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 8px 25px rgba(5, 150, 105, 0.08);
+  border: 2px solid rgba(34, 197, 94, 0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 35px rgba(5, 150, 105, 0.12);
+    border-color: rgba(34, 197, 94, 0.2);
+  }
+`;
+
+const SquareImage = styled.div`
+  height: 180px;
+  background: ${props => props.imageUrl ? `url(${props.imageUrl})` : 'linear-gradient(135deg, #059669 0%, #10b981 100%)'};
+  background-size: cover;
+  background-position: center;
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.4) 100%);
+  }
+`;
+
+const SquareOverlay = styled.div`
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 1rem;
+  color: white;
+  z-index: 2;
+`;
+
+const SquareContent = styled.div`
+  padding: 1.25rem;
+  background: rgba(255, 255, 255, 0.98);
+`;
+
+const SquareCategory = styled.span`
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: inline-block;
+  margin-bottom: 0.75rem;
+`;
+
+const SquareTitle = styled.h3`
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.3;
+  color: #1f2937;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+`;
+
+const SquareMeta = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+  color: #6b7280;
 `;
 
 const NewsCard = styled.article`
@@ -479,29 +718,32 @@ const FilterTitle = styled.h3`
 `;
 
 const DateFilterContainer = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.5rem;
-  align-items: center;
+  position: relative;
+  display: inline-block;
 `;
 
-const DateButton = styled.button`
-  background: ${props => props.active ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)' : 'rgba(255, 255, 255, 0.9)'};
-  color: ${props => props.active ? 'white' : '#059669'};
-  border: 2px solid ${props => props.active ? 'transparent' : 'rgba(34, 197, 94, 0.3)'};
-  padding: 1rem 2rem;
+const DateDropdownButton = styled.button`
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  color: white;
+  border: 2px solid transparent;
+  padding: 1.2rem 2.5rem;
   border-radius: 35px;
   cursor: pointer;
   font-size: 1.1rem;
   font-weight: 700;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
-  box-shadow: ${props => props.active ? '0 12px 35px rgba(5, 150, 105, 0.4)' : '0 8px 25px rgba(5, 150, 105, 0.1)'};
+  box-shadow: 0 12px 35px rgba(5, 150, 105, 0.4);
   backdrop-filter: blur(20px);
   position: relative;
   overflow: hidden;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 280px;
+  justify-content: space-between;
 
   &::before {
     content: '';
@@ -515,11 +757,8 @@ const DateButton = styled.button`
   }
 
   &:hover {
-    background: ${props => props.active ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)' : 'linear-gradient(135deg, #059669 0%, #10b981 100%)'};
-    color: white;
-    border-color: transparent;
     transform: translateY(-4px) scale(1.05);
-    box-shadow: 0 16px 50px rgba(5, 150, 105, 0.4);
+    box-shadow: 0 16px 50px rgba(5, 150, 105, 0.5);
     
     &::before {
       left: 100%;
@@ -529,6 +768,143 @@ const DateButton = styled.button`
   &:active {
     transform: translateY(-2px) scale(1.02);
   }
+
+  svg {
+    transition: transform 0.3s ease;
+    transform: ${props => props.$isOpen ? 'rotate(180deg)' : 'rotate(0deg)'};
+  }
+`;
+
+const DateDropdownOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: transparent;
+  z-index: 99999;
+  opacity: ${props => props.$isOpen ? 1 : 0};
+  visibility: ${props => props.$isOpen ? 'visible' : 'hidden'};
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+  pointer-events: ${props => props.$isOpen ? 'auto' : 'none'};
+`;
+
+const DateDropdownContent = styled.div`
+  position: fixed;
+  top: ${props => props.$top || 'auto'}px;
+  left: ${props => props.$left || 'auto'}px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 249, 250, 0.98) 100%);
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(5, 150, 105, 0.3);
+  border: 2px solid rgba(34, 197, 94, 0.2);
+  backdrop-filter: blur(20px);
+  z-index: 100000;
+  pointer-events: ${props => props.$isOpen ? 'auto' : 'none'};
+  min-width: 320px;
+  max-width: 400px;
+  max-height: 500px;
+  overflow-y: auto;
+  opacity: ${props => props.$isOpen ? 1 : 0};
+  transform: ${props => props.$isOpen ? 'translateY(0) scale(1)' : 'translateY(-10px) scale(0.95)'};
+  visibility: ${props => props.$isOpen ? 'visible' : 'hidden'};
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Scrollbar styling */
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(5, 150, 105, 0.1);
+    border-radius: 10px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+    border-radius: 10px;
+    
+    &:hover {
+      background: linear-gradient(135deg, #047857 0%, #059669 100%);
+    }
+  }
+`;
+
+const DateDropdownHeader = styled.div`
+  padding: 1.5rem;
+  border-bottom: 2px solid rgba(34, 197, 94, 0.2);
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  color: white;
+  border-radius: 20px 20px 0 0;
+  font-weight: 700;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+`;
+
+const DateDropdownList = styled.div`
+  padding: 0.5rem;
+`;
+
+const DateOption = styled.button`
+  width: 100%;
+  background: ${props => props.$active ? 'linear-gradient(135deg, rgba(5, 150, 105, 0.15) 0%, rgba(16, 185, 129, 0.15) 100%)' : 'transparent'};
+  color: ${props => props.$active ? '#059669' : '#1f2937'};
+  border: 2px solid ${props => props.$active ? 'rgba(5, 150, 105, 0.4)' : 'transparent'};
+  padding: 1rem 1.5rem;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: ${props => props.$active ? '700' : '600'};
+  transition: all 0.3s ease;
+  text-align: left;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(5, 150, 105, 0.1), transparent);
+    transition: left 0.4s;
+  }
+
+  &:hover {
+    background: ${props => props.$active ? 'linear-gradient(135deg, rgba(5, 150, 105, 0.2) 0%, rgba(16, 185, 129, 0.2) 100%)' : 'rgba(5, 150, 105, 0.08)'};
+    border-color: ${props => props.$active ? 'rgba(5, 150, 105, 0.5)' : 'rgba(5, 150, 105, 0.3)'};
+    transform: translateX(4px);
+    
+    &::before {
+      left: 100%;
+    }
+  }
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+const DateOptionText = styled.span`
+  flex: 1;
+`;
+
+const DateOptionCount = styled.span`
+  background: ${props => props.$active ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)' : 'rgba(5, 150, 105, 0.15)'};
+  color: ${props => props.$active ? 'white' : '#059669'};
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-left: 1rem;
 `;
 
 const NoNewsMessage = styled.div`
@@ -568,6 +944,9 @@ const NoNewsMessage = styled.div`
 function DiarioPopular() {
   const navigate = useNavigate();
   const [fechaSeleccionada, setFechaSeleccionada] = useState(null);
+  const [dropdownAbierto, setDropdownAbierto] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
+  const dropdownButtonRef = React.useRef(null);
   
   const { 
     noticias, 
@@ -603,6 +982,46 @@ function DiarioPopular() {
   const handleFechaChange = (fecha) => {
     setFechaSeleccionada(fecha);
     fetchNoticiasPorFecha(fecha);
+    setDropdownAbierto(false);
+  };
+
+  const toggleDropdown = () => {
+    if (!dropdownAbierto && dropdownButtonRef.current) {
+      const rect = dropdownButtonRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + window.scrollY + 10,
+        left: rect.left + window.scrollX
+      });
+    }
+    setDropdownAbierto(!dropdownAbierto);
+  };
+
+  const cerrarDropdown = () => {
+    setDropdownAbierto(false);
+  };
+
+  // Cerrar dropdown al hacer click fuera
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownAbierto && !event.target.closest('[data-date-dropdown]')) {
+        cerrarDropdown();
+      }
+    };
+
+    if (dropdownAbierto) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [dropdownAbierto]);
+
+  const obtenerTextoFechaSeleccionada = () => {
+    if (!fechaSeleccionada) {
+      return 'Seleccionar fecha';
+    }
+    const fecha = fechasDisponibles.find(f => f.fecha === fechaSeleccionada);
+    return fecha ? `${fecha.fecha_formateada} (${fecha.total_noticias})` : 'Seleccionar fecha';
   };
 
   const formatDate = (dateString) => {
@@ -650,48 +1069,140 @@ function DiarioPopular() {
               <FiFilter />
               Filtrar por fecha
             </FilterTitle>
-            <DateFilterContainer>
-              {fechasDisponibles.map((fecha) => (
-                <DateButton
-                  key={fecha.fecha}
-                  active={fechaSeleccionada === fecha.fecha}
-                  onClick={() => handleFechaChange(fecha.fecha)}
-                >
-                  {fecha.fecha_formateada} ({fecha.total_noticias})
-                </DateButton>
-              ))}
+            <DateFilterContainer data-date-dropdown>
+              <DateDropdownButton 
+                ref={dropdownButtonRef}
+                onClick={toggleDropdown}
+                $isOpen={dropdownAbierto}
+              >
+                <FiCalendar />
+                <span>{obtenerTextoFechaSeleccionada()}</span>
+                <FiChevronDown />
+              </DateDropdownButton>
+              
+              {dropdownAbierto && createPortal(
+                <>
+                  <DateDropdownOverlay 
+                    $isOpen={dropdownAbierto}
+                    onClick={cerrarDropdown}
+                  />
+                  <DateDropdownContent 
+                    $isOpen={dropdownAbierto}
+                    $top={dropdownPosition.top}
+                    $left={dropdownPosition.left}
+                  >
+                    <DateDropdownHeader>
+                      <FiCalendar />
+                      Fechas disponibles ({fechasDisponibles.length})
+                    </DateDropdownHeader>
+                    <DateDropdownList>
+                      {fechasDisponibles.map((fecha) => (
+                        <DateOption
+                          key={fecha.fecha}
+                          $active={fechaSeleccionada === fecha.fecha}
+                          onClick={() => handleFechaChange(fecha.fecha)}
+                        >
+                          <DateOptionText>{fecha.fecha_formateada}</DateOptionText>
+                          <DateOptionCount $active={fechaSeleccionada === fecha.fecha}>
+                            {fecha.total_noticias}
+                          </DateOptionCount>
+                        </DateOption>
+                      ))}
+                    </DateDropdownList>
+                  </DateDropdownContent>
+                </>,
+                document.body
+              )}
             </DateFilterContainer>
           </FilterSection>
         )}
         
         {!loading && !error && noticias.length > 0 && (
-          <CardsGrid>
-            {noticiasOrdenadas.map((noticia, index) => (
-              <NewsCard key={index} onClick={() => navigate(`/noticia/${noticia.id}`)}>
-                <CardImage imageUrl={noticia.imagen_url}>
-                  <CardOverlay>
-                    <CardCategory>{noticia.categoria}</CardCategory>
-                    <CardTitle>{noticia.titulo}</CardTitle>
-                    <CardMeta>
-                      <CardMetaItem>
+          <>
+            {/* Layout principal: Noticia destacada + Sidebar */}
+            <MainLayout>
+              {/* Noticia destacada grande (primera noticia con imagen) */}
+              {noticiasOrdenadas.length > 0 && noticiasOrdenadas[0] && (
+                <FeaturedArticle onClick={() => navigate(`/noticia/${noticiasOrdenadas[0].id}`)}>
+                  <FeaturedImage imageUrl={noticiasOrdenadas[0].imagen_url} />
+                  <FeaturedContent>
+                    <FeaturedByline>
+                      Por {noticiasOrdenadas[0].diario_nombre || 'El Popular'}
+                    </FeaturedByline>
+                    <FeaturedTitle style={{ marginBottom: '0.5rem' }}>{noticiasOrdenadas[0].titulo}</FeaturedTitle>
+                    <CardMeta style={{ marginTop: 0, marginBottom: 0, paddingBottom: 0 }}>
+                      <CardMetaItem $isFeatured style={{ padding: '0.35rem 0.75rem' }}>
                         <FiCalendar />
-                        {formatDate(noticia.fecha_publicacion)}
+                        {formatDate(noticiasOrdenadas[0].fecha_publicacion)}
                       </CardMetaItem>
-                      <CardMetaItem>
+                      <CardMetaItem $isFeatured style={{ padding: '0.35rem 0.75rem' }}>
                         <FiClock />
-                        {formatTime(noticia.fecha_publicacion)}
+                        {formatTime(noticiasOrdenadas[0].fecha_publicacion)}
                       </CardMetaItem>
                     </CardMeta>
-                  </CardOverlay>
-                </CardImage>
-                <CardContent>
-                  <CardExcerpt>
-                    {noticia.contenido || 'Sin contenido disponible...'}
-                  </CardExcerpt>
-                </CardContent>
-              </NewsCard>
-            ))}
-          </CardsGrid>
+                  </FeaturedContent>
+                </FeaturedArticle>
+              )}
+
+              {/* Sidebar con cards horizontales (siguientes 4 noticias) */}
+              <SidebarNews>
+                {noticiasOrdenadas.slice(1, 5).map((noticia, index) => (
+                  <SidebarCard key={index} onClick={() => navigate(`/noticia/${noticia.id}`)}>
+                    {noticia.imagen_url && (
+                      <SidebarImage imageUrl={noticia.imagen_url} />
+                    )}
+                    <SidebarContent>
+                      <div>
+                        <SidebarCategory>{noticia.categoria}</SidebarCategory>
+                        <SidebarTitle>{noticia.titulo}</SidebarTitle>
+                      </div>
+                      <SidebarMeta>
+                        <span>
+                          <FiCalendar style={{ marginRight: '0.25rem' }} />
+                          {formatDate(noticia.fecha_publicacion)}
+                        </span>
+                      </SidebarMeta>
+                    </SidebarContent>
+                  </SidebarCard>
+                ))}
+              </SidebarNews>
+            </MainLayout>
+
+            {/* Grid de cards cuadrados pequeños (resto de noticias) */}
+            {noticiasOrdenadas.length > 5 && (
+              <BottomNewsGrid>
+                {noticiasOrdenadas.slice(5).map((noticia, index) => (
+                  <SquareCard key={index + 6} onClick={() => navigate(`/noticia/${noticia.id}`)}>
+                    {noticia.imagen_url && (
+                      <SquareImage imageUrl={noticia.imagen_url}>
+                        <SquareOverlay>
+                          <SidebarCategory style={{ marginBottom: '0.5rem' }}>
+                            {noticia.categoria}
+                          </SidebarCategory>
+                        </SquareOverlay>
+                      </SquareImage>
+                    )}
+                    <SquareContent>
+                      {!noticia.imagen_url && (
+                        <SquareCategory>{noticia.categoria}</SquareCategory>
+                      )}
+                      <SquareTitle>{noticia.titulo}</SquareTitle>
+                      <SquareMeta>
+                        <span>
+                          <FiCalendar style={{ marginRight: '0.25rem' }} />
+                          {formatDate(noticia.fecha_publicacion)}
+                        </span>
+                        <span>
+                          <FiClock style={{ marginRight: '0.25rem' }} />
+                          {formatTime(noticia.fecha_publicacion)}
+                        </span>
+                      </SquareMeta>
+                    </SquareContent>
+                  </SquareCard>
+                ))}
+              </BottomNewsGrid>
+            )}
+          </>
         )}
         
         {!loading && !error && noticias.length === 0 && (
@@ -700,6 +1211,7 @@ function DiarioPopular() {
           </NoNewsMessage>
         )}
       </MainContent>
+      <ChatBot context="popular" />
     </Container>
   );
 }

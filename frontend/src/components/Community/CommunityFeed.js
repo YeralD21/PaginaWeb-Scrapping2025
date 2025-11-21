@@ -1,34 +1,109 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import styled from 'styled-components';
+import { FiArrowLeft } from 'react-icons/fi';
 import { useAuth } from '../../contexts/AuthContext';
 import ReactionBar from './ReactionBar';
+
+// Styled Components para el diseño elegante similar a user-dashboard
+const AppContainer = styled.div`
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1f3a 0%, #2d3561 50%, #1a1f3a 100%);
+  display: flex;
+  flex-direction: column;
+`;
+
+const Header = styled.header`
+  background: rgba(26, 31, 58, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+  color: white;
+  padding: 1rem 2rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+`;
+
+const HeaderContent = styled.div`
+  max-width: 100%;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+`;
+
+const HeaderLeft = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+`;
+
+const HeaderTitle = styled.h1`
+  font-size: 1.5rem;
+  margin: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const HeaderSubtitle = styled.p`
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0.25rem 0 0 0;
+`;
+
+const BackButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+  color: white;
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-right: 1rem;
+
+  &:hover {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.3) 100%);
+    border-color: rgba(102, 126, 234, 0.5);
+    transform: translateY(-2px);
+  }
+`;
 
 const Container = styled.div`
   max-width: 1400px;
   margin: 0 auto;
   padding: 2rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  min-height: 100vh;
-`;
-
-const Header = styled.div`
-  text-align: center;
-  color: white;
-  margin-bottom: 3rem;
+  flex: 1;
+  width: 100%;
 `;
 
 const Title = styled.h1`
-  font-size: 3.5rem;
+  font-size: 2.5rem;
   font-weight: 800;
   margin-bottom: 1rem;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  color: rgba(255, 255, 255, 0.95);
+  text-align: center;
 `;
 
 const Subtitle = styled.p`
-  font-size: 1.3rem;
-  opacity: 0.95;
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.8);
   font-weight: 300;
+  text-align: center;
+  margin-bottom: 2rem;
 `;
 
 const Badge = styled.span`
@@ -80,16 +155,19 @@ const FeedGrid = styled.div`
 `;
 
 const PostCard = styled.div`
-  background: white;
+  background: rgba(26, 31, 58, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(102, 126, 234, 0.2);
   border-radius: 20px;
   overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   transition: all 0.3s;
   cursor: pointer;
 
   &:hover {
     transform: translateY(-10px);
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 12px 40px rgba(102, 126, 234, 0.2);
+    border-color: rgba(102, 126, 234, 0.4);
   }
 `;
 
@@ -148,12 +226,12 @@ const PostType = styled.span`
 `;
 
 const PostDate = styled.span`
-  color: #888;
+  color: rgba(255, 255, 255, 0.7);
   font-size: 0.85rem;
 `;
 
 const PostTitle = styled.h3`
-  color: #333;
+  color: rgba(255, 255, 255, 0.95);
   font-size: 1.4rem;
   margin-bottom: 0.8rem;
   font-weight: 700;
@@ -161,7 +239,7 @@ const PostTitle = styled.h3`
 `;
 
 const PostDescription = styled.p`
-  color: #666;
+  color: rgba(255, 255, 255, 0.8);
   font-size: 0.95rem;
   margin-bottom: 1rem;
   line-height: 1.6;
@@ -176,7 +254,7 @@ const PostFooter = styled.div`
   justify-content: space-between;
   align-items: center;
   padding-top: 1rem;
-  border-top: 2px solid #f0f0f0;
+  border-top: 2px solid rgba(102, 126, 234, 0.2);
 `;
 
 const AuthorInfo = styled.div`
@@ -199,7 +277,7 @@ const AuthorAvatar = styled.div`
 `;
 
 const AuthorName = styled.div`
-  color: #555;
+  color: rgba(255, 255, 255, 0.9);
   font-size: 0.9rem;
   font-weight: 600;
 `;
@@ -214,7 +292,7 @@ const Metric = styled.div`
   display: flex;
   align-items: center;
   gap: 0.3rem;
-  color: #888;
+  color: rgba(255, 255, 255, 0.7);
   font-size: 0.9rem;
 `;
 
@@ -254,11 +332,13 @@ const Loading = styled.div`
 const EmptyState = styled.div`
   text-align: center;
   padding: 4rem;
-  color: white;
+  color: rgba(255, 255, 255, 0.9);
   font-size: 1.3rem;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
+  background: rgba(26, 31, 58, 0.95);
   backdrop-filter: blur(10px);
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 `;
 
 const ModalOverlay = styled.div`
@@ -373,6 +453,7 @@ const TIPO_EMOJIS = {
 };
 
 function CommunityFeed() {
+  const navigate = useNavigate();
   const { user, token } = useAuth();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -504,16 +585,25 @@ function CommunityFeed() {
   }
 
   return (
-    <Container>
+    <AppContainer>
+      {/* Header */}
       <Header>
-        <Title>
-          🌐 COMUNIDAD
-          <Badge>NUEVO!</Badge>
-        </Title>
-        <Subtitle>
-          Contenido creado por nuestra comunidad de usuarios
-        </Subtitle>
+        <HeaderContent>
+          <HeaderLeft>
+            <BackButton onClick={() => navigate('/')}>
+              <FiArrowLeft />
+              Volver
+            </BackButton>
+            <span style={{ fontSize: '2rem' }}>🌐</span>
+            <div>
+              <HeaderTitle>COMUNIDAD</HeaderTitle>
+              <HeaderSubtitle>Contenido creado por nuestra comunidad de usuarios</HeaderSubtitle>
+            </div>
+          </HeaderLeft>
+        </HeaderContent>
       </Header>
+
+      <Container>
 
       <FilterBar>
         <FilterButton 
@@ -877,7 +967,8 @@ function CommunityFeed() {
           </ModalContent>
         </ModalOverlay>
       )}
-    </Container>
+      </Container>
+    </AppContainer>
   );
 }
 

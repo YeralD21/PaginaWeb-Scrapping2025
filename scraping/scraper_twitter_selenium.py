@@ -20,14 +20,23 @@ class ScraperTwitterSelenium:
     def __init__(self):
         self.base_url = "https://twitter.com"
         
-        # Cuentas de noticias peruanas
-        self.news_accounts = [
-            'elcomercio_peru',
-            'DiarioCorreo',
+        # Cuentas oficiales de noticias (PRIORITARIAS)
+        self.priority_accounts = [
+            'elcorreo_com',      # Diario Correo oficial
+            'elcomercio_peru',   # El Comercio oficial
+            'CNNEE',             # CNN en Español oficial
+            'elpopular_pe'       # El Popular oficial
+        ]
+        
+        # Otras cuentas de noticias (secundarias)
+        self.other_accounts = [
             'rppnoticias',
             'Peru21',
             'cnnespanol'
         ]
+        
+        # Combinar todas las cuentas (prioritarias primero)
+        self.news_accounts = self.priority_accounts + self.other_accounts
         
         self.driver = None
     

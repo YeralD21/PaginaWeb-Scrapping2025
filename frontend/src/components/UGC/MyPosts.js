@@ -68,6 +68,9 @@ const PostImage = styled.img`
   object-fit: cover;
   border-radius: 8px;
   margin-bottom: 1rem;
+  display: block;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(102, 126, 234, 0.2);
 `;
 
 const PostTitle = styled.h3`
@@ -203,6 +206,22 @@ function MyPosts({ token }) {
     fetchPosts();
   }, [token]);
 
+  // Debug: Log posts cuando cambian (usando data en lugar de posts)
+  useEffect(() => {
+    if (data && data.posts && data.posts.length > 0) {
+      console.log('📋 Mis posts cargados:', data.posts);
+      data.posts.forEach((post, index) => {
+        console.log(`Post ${index + 1}:`, {
+          id: post.id,
+          tipo: post.tipo,
+          titulo: post.titulo,
+          imagen_url: post.imagen_url,
+          tiene_imagen: !!post.imagen_url
+        });
+      });
+    }
+  }, [data]);
+
   if (loading) {
     return (
       <Container>
@@ -273,18 +292,6 @@ function MyPosts({ token }) {
                 </PostDate>
               </PostHeader>
 
-              {/* Mostrar imagen si es una noticia y tiene imagen */}
-              {post.tipo === 'noticia' && post.imagen_url && (
-                <PostImage 
-                  src={post.imagen_url.startsWith('http') ? post.imagen_url : `http://localhost:8000${post.imagen_url}`}
-                  alt={post.titulo || 'Imagen de noticia'}
-                  onError={(e) => {
-                    console.error('Error cargando imagen:', post.imagen_url);
-                    e.target.style.display = 'none';
-                  }}
-                />
-              )}
-
               {/* Mostrar título y descripción si es una noticia */}
               {post.tipo === 'noticia' && (
                 <>
@@ -292,6 +299,111 @@ function MyPosts({ token }) {
                   {post.descripcion && <PostDescription>"{post.descripcion}"</PostDescription>}
                   {post.fuente && <PostSource>📰 Fuente: {post.fuente}</PostSource>}
                 </>
+              )}
+
+              {/* Mostrar imagen si existe (para cualquier tipo) */}
+              {post.imagen_url && (
+                <PostImage 
+                  src={(() => {
+                    // Construir URL correctamente
+                    const imgUrl = (post.imagen_url || '').trim();
+                    console.log('🔍 Construyendo URL para imagen en MyPosts:', {
+                      imagen_url_original: imgUrl,
+                      post_id: post.id,
+                      post_tipo: post.tipo
+                    });
+                    
+                    if (!imgUrl) {
+                      console.warn('⚠️ imagen_url está vacía o es null');
+                      return '';
+                    }
+                    
+                    // Normalizar la URL
+                    let finalUrl = '';
+                    if (imgUrl.startsWith('http://') || imgUrl.startsWith('https://')) {
+                      finalUrl = imgUrl;
+                      console.log('✅ URL absoluta detectada:', finalUrl);
+                    } else if (imgUrl.startsWith('/uploads/')) {
+                      // Si ya tiene /uploads/, solo agregar API_BASE
+                      finalUrl = `${API_BASE}${imgUrl}`;
+                      console.log('✅ URL construida (con /uploads/):', finalUrl);
+                    } else if (imgUrl.startsWith('/')) {
+                      finalUrl = `${API_BASE}${imgUrl}`;
+                      console.log('✅ URL construida (con /):', finalUrl);
+                    } else {
+                      // Si no tiene /, asumir que es /uploads/images/{filename}
+                      finalUrl = `${API_BASE}/uploads/images/${imgUrl}`;
+                      console.log('✅ URL construida (sin /, asumiendo uploads/images/):', finalUrl);
+                    }
+                    
+                    return finalUrl;
+                  })()}
+                  alt={post.titulo || post.descripcion || 'Imagen de publicación'}
+                  onError={(e) => {
+                    const originalSrc = e.target.src;
+                    const imgUrl = (post.imagen_url || '').trim();
+                    
+                    console.error('❌ Error cargando imagen en MyPosts:', {
+                      imagen_url_original: imgUrl,
+                      url_construida: originalSrc,
+                      post_id: post.id,
+                      post_tipo: post.tipo,
+                      error: e.target.error
+                    });
+                    
+                    // Intentar diferentes formatos de URL antes de mostrar placeholder
+                    const retryAttempt = parseInt(e.target.dataset.retryAttempt || '0');
+                    
+                    if (retryAttempt < 3) {
+                      e.target.dataset.retryAttempt = String(retryAttempt + 1);
+                      
+                      // Intentar con diferentes formatos
+                      let retryUrl = '';
+                      if (retryAttempt === 0) {
+                        // Primer intento: URL completa con API_BASE
+                        if (imgUrl.startsWith('/uploads/')) {
+                          retryUrl = `${API_BASE}${imgUrl}`;
+                        } else if (imgUrl.startsWith('/')) {
+                          retryUrl = `${API_BASE}${imgUrl}`;
+                        } else {
+                          retryUrl = `${API_BASE}/uploads/images/${imgUrl}`;
+                        }
+                      } else if (retryAttempt === 1) {
+                        // Segundo intento: solo la ruta relativa
+                        retryUrl = imgUrl.startsWith('/') ? imgUrl : `/uploads/images/${imgUrl}`;
+                      } else {
+                        // Tercer intento: URL absoluta con protocolo
+                        retryUrl = `http://localhost:8000${imgUrl.startsWith('/') ? imgUrl : `/uploads/images/${imgUrl}`}`;
+                      }
+                      
+                      if (retryUrl !== originalSrc) {
+                        console.log(`🔄 Reintento ${retryAttempt + 1}/3 con URL alternativa:`, retryUrl);
+                        setTimeout(() => {
+                          e.target.src = retryUrl;
+                        }, 500 * (retryAttempt + 1)); // Esperar un poco más en cada reintento
+                        return;
+                      }
+                    }
+                    
+                    // Si ya intentamos 3 veces y falló, mostrar placeholder
+                    console.warn('⚠️ No se pudo cargar la imagen después de 3 reintentos');
+                    e.target.style.display = 'block';
+                    e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23ddd" width="400" height="300"/%3E%3Ctext fill="%23999" font-family="sans-serif" font-size="20" dy="10.5" font-weight="bold" x="50%25" y="50%25" text-anchor="middle"%3EImagen no disponible%3C/text%3E%3C/svg%3E';
+                  }}
+                  onLoad={(e) => {
+                    console.log('✅ Imagen cargada exitosamente en MyPosts:', {
+                      imagen_url: post.imagen_url,
+                      url_final: e.target.src,
+                      post_id: post.id,
+                      width: e.target.naturalWidth,
+                      height: e.target.naturalHeight
+                    });
+                    // Limpiar el flag de reintento si la imagen carga exitosamente
+                    if (e.target.dataset.retryAttempt) {
+                      delete e.target.dataset.retryAttempt;
+                    }
+                  }}
+                />
               )}
 
               <PostContent>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { FiShare2, FiBookmark, FiHeart, FiMessageCircle, FiArrowLeft, FiUser, FiCalendar, FiClock, FiEye } from 'react-icons/fi';
 
@@ -295,9 +296,19 @@ const SubscriberButton = styled.button`
 `;
 
 const NoticiaDetalleComercio = ({ noticiaId, onBack, onNoticiaClick }) => {
+  const navigate = useNavigate();
   const [noticia, setNoticia] = useState(null);
   const [noticiasRelacionadas, setNoticiasRelacionadas] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Función para manejar el retroceso
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+    } else {
+      navigate(-1); // Retroceder en el historial
+    }
+  };
 
   useEffect(() => {
     if (noticiaId) {
@@ -463,7 +474,7 @@ const NoticiaDetalleComercio = ({ noticiaId, onBack, onNoticiaClick }) => {
       <MainContent>
         {/* Artículo */}
         <ArticleContent>
-          <BackButton onClick={onBack}>
+          <BackButton onClick={handleBack}>
             <FiArrowLeft />
             Volver a noticias
           </BackButton>

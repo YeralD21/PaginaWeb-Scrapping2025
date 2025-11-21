@@ -228,7 +228,9 @@ async def upload_image(
         )
     
     # Crear directorio de uploads si no existe
-    upload_dir = os.path.join("backend", "uploads", "images")
+    # Usar ruta relativa al archivo actual para consistencia con main.py
+    backend_dir = os.path.dirname(os.path.abspath(__file__))
+    upload_dir = os.path.join(backend_dir, "uploads", "images")
     os.makedirs(upload_dir, exist_ok=True)
     
     # Generar nombre único para el archivo
@@ -251,11 +253,28 @@ async def upload_image(
     
     logger.info(f"Imagen subida por usuario {current_user.id}: {unique_filename} -> {image_url}")
     
+    # Verificar que el archivo existe y es accesible
+    if not os.path.exists(file_path):
+        logger.error(f"❌ Error crítico: Archivo guardado pero no encontrado en {file_path}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error al guardar la imagen"
+        )
+    
+    # Verificar tamaño del archivo guardado
+    saved_file_size = os.path.getsize(file_path)
+    if saved_file_size != file_size:
+        logger.warning(f"⚠️ Tamaño del archivo guardado ({saved_file_size}) no coincide con el tamaño original ({file_size})")
+    
+    logger.info(f"✅ Imagen guardada y verificada: {file_path} ({saved_file_size} bytes)")
+    
     return {
         "success": True,
         "image_url": image_url,
         "filename": unique_filename,
-        "size": file_size
+        "size": file_size,
+        "saved_size": saved_file_size,
+        "file_path": file_path  # Solo para debug, no debería enviarse en producción
     }
 
 # Endpoint de servir imágenes movido a main.py usando StaticFiles
@@ -291,6 +310,7 @@ async def create_post(
             )
         
         logger.info(f"🔍 Tipo validado: {post_data.tipo}")
+        logger.info(f"🔍 Creando post con imagen_url: {post_data.imagen_url}")
         
         # Crear post en estado pending_review
         new_post = Post(
@@ -307,6 +327,9 @@ async def create_post(
         db.add(new_post)
         db.commit()
         db.refresh(new_post)
+        
+        # Verificar que imagen_url se guardó correctamente
+        logger.info(f"✅ Post creado con ID {new_post.id}, imagen_url guardada: {new_post.imagen_url}")
         
         # Enviar notificación al usuario
         NotificationService.notificar_envio_revision(

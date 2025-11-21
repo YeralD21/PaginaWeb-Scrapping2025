@@ -2,9 +2,10 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 import logging
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Set
 import sys
 import os
+from urllib.parse import urlparse, urlunparse
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'backend'))
 from image_extractor import extract_image_from_element
@@ -17,6 +18,7 @@ class ScraperPopularImproved:
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         })
+        self.processed_urls: Set[str] = set()
     
     def get_full_article_content(self, article_url: str) -> str:
         """Extrae el contenido completo de un artículo individual"""
@@ -79,6 +81,33 @@ class ScraperPopularImproved:
             logging.warning(f"Error extrayendo contenido completo de {article_url}: {e}")
             return ""
     
+    def _normalize_url(self, url: str) -> str:
+        """Normaliza una URL eliminando parámetros de consulta y fragmentos para detectar duplicados"""
+        if not url:
+            return ""
+        try:
+            parsed = urlparse(url)
+            # Reconstruir URL sin query params ni fragment
+            normalized = urlunparse((
+                parsed.scheme,
+                parsed.netloc,
+                parsed.path,
+                parsed.params,
+                '',  # Sin query params
+                ''   # Sin fragment
+            ))
+            return normalized.rstrip('/')
+        except Exception:
+            return url
+    
+    def _is_duplicate(self, url: str) -> bool:
+        """Verifica si una URL ya fue procesada"""
+        normalized = self._normalize_url(url)
+        if normalized in self.processed_urls:
+            return True
+        self.processed_urls.add(normalized)
+        return False
+    
     def _find_image_url(self, element, article_url: str = None) -> Optional[str]:
         """Busca la URL de imagen en un elemento usando el extractor mejorado"""
         try:
@@ -133,6 +162,11 @@ class ScraperPopularImproved:
                                 else:
                                     full_url = href
                                 
+                                # Verificar duplicados antes de procesar
+                                if self._is_duplicate(full_url):
+                                    logging.debug(f"⚠️ URL duplicada omitida: {full_url}")
+                                    continue
+                                
                                 # Buscar imagen usando el extractor mejorado
                                 imagen_url = self._find_image_url(link, article_url=full_url)
                                 
@@ -178,6 +212,12 @@ class ScraperPopularImproved:
                                 
                                 if link and not link.startswith('http'):
                                     link = self.base_url + link
+                                
+                                # Verificar duplicados antes de procesar
+                                if not link or self._is_duplicate(link):
+                                    if link:
+                                        logging.debug(f"⚠️ URL duplicada omitida: {link}")
+                                    continue
                                 
                                 # Extraer contenido completo del artículo
                                 print(f"🔍 Extrayendo contenido de El Popular: {link}")
@@ -276,10 +316,18 @@ class ScraperPopularImproved:
     
     def get_all_news(self) -> List[Dict]:
         """Obtiene todas las noticias de todas las categorías"""
+        # Limpiar URLs procesadas al inicio de cada ejecución completa
+        self.processed_urls.clear()
+        
         all_news = []
         all_news.extend(self.get_deportes())
         all_news.extend(self.get_espectaculos())
         all_news.extend(self.get_mundo())
+        
+        # Estadísticas de duplicados
+        total_processed = len(self.processed_urls)
+        logging.info(f"📊 El Popular: {len(all_news)} noticias únicas procesadas de {total_processed} URLs encontradas")
+        
         return all_news
 
 if __name__ == "__main__":

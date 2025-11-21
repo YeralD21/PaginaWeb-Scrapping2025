@@ -18,14 +18,23 @@ class ScraperTwitter:
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
         
-        # Cuentas de noticias peruanas para scrapear
-        self.news_accounts = [
-            'elcomercio_peru',
-            'DiarioCorreo',
+        # Cuentas oficiales de noticias (PRIORITARIAS)
+        self.priority_accounts = [
+            'elcorreo_com',      # Diario Correo oficial
+            'elcomercio_peru',   # El Comercio oficial
+            'CNNEE',             # CNN en Español oficial
+            'elpopular_pe'       # El Popular oficial
+        ]
+        
+        # Otras cuentas de noticias (secundarias)
+        self.other_accounts = [
             'rppnoticias',
             'Peru21',
-            'cnnespanol'
+            'DiarioCorreo'
         ]
+        
+        # Combinar todas las cuentas (prioritarias primero)
+        self.news_accounts = self.priority_accounts + self.other_accounts
     
     def get_all_news(self) -> List[Dict]:
         """Obtiene tweets - Modo Mock (sin Playwright por ahora)"""

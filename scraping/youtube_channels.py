@@ -12,7 +12,25 @@ Todos los canales han sido verificados manualmente y tienen videos públicos.
 """
 
 YOUTUBE_CHANNELS = [
-    # ===== NOTICIAS PERUANAS =====
+    # ===== CANALES OFICIALES SOLICITADOS (PRIORITARIOS) =====
+    
+    # CNN en Español - Canal oficial @cnnee ✓ (VERIFICADO: Nov 2025)
+    {
+        "channel_id": "UC_lEiu6917IJz03TnntWUaQ",
+        "handle": "@cnnee",
+        "diario_nombre": "CNN en Español",
+        "url": "https://www.youtube.com/@cnnee",
+    },
+    
+    # El Comercio Perú - Canal oficial @DiarioElComercio ✓ (VERIFICADO: Nov 2025)
+    {
+        "channel_id": "UCA5MMdT1ePEEi9ACfCelIKQ",
+        "handle": "@DiarioElComercio",
+        "diario_nombre": "El Comercio",
+        "url": "https://www.youtube.com/@DiarioElComercio",
+    },
+    
+    # ===== NOTICIAS PERUANAS (SECUNDARIOS) =====
     
     # RPP Noticias - Principal medio de noticias de Perú ✓ (VERIFICADO: Nov 2025)
     {
@@ -28,23 +46,9 @@ YOUTUBE_CHANNELS = [
         "diario_nombre": "América TV",
         "url": "https://www.youtube.com/@americatv",
     },
-    # El Comercio Perú - Diario peruano ✓ (VERIFICADO)
-    {
-        "channel_id": "UCA5MMdT1ePEEi9ACfCelIKQ",
-        "handle": "@elcomercioperu",
-        "diario_nombre": "El Comercio",
-        "url": "https://www.youtube.com/@elcomercioperu",
-    },
     
-    # ===== NOTICIAS INTERNACIONALES EN ESPAÑOL =====
+    # ===== NOTICIAS INTERNACIONALES EN ESPAÑOL (SECUNDARIOS) =====
     
-    # CNN en Español - Noticias internacionales ✓ (VERIFICADO)
-    {
-        "channel_id": "UC_lEiu6917IJz03TnntWUaQ",
-        "handle": "@CNNEE",
-        "diario_nombre": "CNN en Español",
-        "url": "https://www.youtube.com/@CNNEE",
-    },
     # BBC News Mundo - Noticias BBC en español ✓ (VERIFICADO)
     {
         "channel_id": "UCVHNftB4Z2juvIY1R8dRg1Q",
@@ -60,7 +64,7 @@ YOUTUBE_CHANNELS = [
         "url": "https://www.youtube.com/@ElPais",
     },
     
-    # ===== NOTICIAS INTERNACIONALES (INGLÉS) =====
+    # ===== NOTICIAS INTERNACIONALES (INGLÉS) (SECUNDARIOS) =====
     
     # CNN - Canal principal de CNN ✓ (VERIFICADO)
     {

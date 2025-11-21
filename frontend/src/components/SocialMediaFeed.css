@@ -153,20 +153,22 @@
   gap: 2rem;
   padding: 2rem;
   min-height: calc(100vh - 100px);
+  width: 100%;
 }
 
 /* ========================================
    🔖 SIDEBAR
 ======================================== */
 .sidebar {
-  background: var(--bg-secondary);
+  background: rgba(26, 31, 58, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(102, 126, 234, 0.2);
   border-radius: 16px;
   padding: 1.5rem;
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   height: fit-content;
   position: sticky;
   top: 120px;
-  border: 1px solid var(--border-color);
 }
 
 .refresh-button {
@@ -323,6 +325,7 @@
 ======================================== */
 .main-content {
   min-height: 400px;
+  background: transparent;
 }
 
 .loading-container {
@@ -331,7 +334,7 @@
   align-items: center;
   justify-content: center;
   padding: 4rem;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .loading-spinner {
@@ -392,13 +395,13 @@
 .section-title {
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--text-primary);
+  color: rgba(255, 255, 255, 0.95);
   margin-bottom: 1.5rem;
   display: flex;
   align-items: center;
   gap: 0.75rem;
   padding-bottom: 1rem;
-  border-bottom: 2px solid var(--border-color);
+  border-bottom: 2px solid rgba(102, 126, 234, 0.2);
 }
 
 .section-icon {
@@ -428,21 +431,22 @@
    🃏 TARJETA DE NOTICIA
 ======================================== */
 .news-card {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
+  background: rgba(26, 31, 58, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(102, 126, 234, 0.2);
   border-radius: 16px;
   overflow: hidden;
   transition: all 0.3s ease;
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 .news-card:hover {
   transform: translateY(-6px);
-  box-shadow: var(--shadow-lg);
-  border-color: var(--accent-color);
+  box-shadow: 0 12px 40px rgba(102, 126, 234, 0.2);
+  border-color: rgba(102, 126, 234, 0.4);
 }
 
 .news-image-container {
@@ -606,7 +610,7 @@
 .news-title {
   font-size: 1.125rem;
   font-weight: 700;
-  color: var(--text-primary);
+  color: rgba(255, 255, 255, 0.95);
   line-height: 1.4;
   margin: 0;
   display: -webkit-box;
@@ -617,7 +621,7 @@
 
 .news-description {
   font-size: 0.9rem;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.8);
   line-height: 1.6;
   margin: 0;
 }
@@ -682,20 +686,21 @@
 }
 
 .text-news-card {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-left: 4px solid var(--accent-color);
+  background: rgba(26, 31, 58, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  border-left: 4px solid rgba(102, 126, 234, 0.5);
   border-radius: 12px;
   padding: 1.5rem;
   transition: all 0.3s ease;
   cursor: pointer;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 .text-news-card:hover {
   transform: translateX(8px);
-  box-shadow: var(--shadow-md);
-  border-left-color: var(--accent-color);
+  box-shadow: 0 12px 40px rgba(102, 126, 234, 0.2);
+  border-left-color: rgba(102, 126, 234, 0.7);
   border-left-width: 6px;
 }
 
@@ -739,14 +744,14 @@
 .text-news-title {
   font-size: 1.125rem;
   font-weight: 700;
-  color: var(--text-primary);
+  color: rgba(255, 255, 255, 0.95);
   line-height: 1.4;
   margin: 0 0 0.875rem 0;
 }
 
 .text-news-description {
   font-size: 0.95rem;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.8);
   line-height: 1.6;
   margin: 0 0 1rem 0;
 }

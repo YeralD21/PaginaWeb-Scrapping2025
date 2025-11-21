@@ -68,6 +68,7 @@ class NoticiaResponse(BaseModel):
     contenido: Optional[str]
     enlace: Optional[str]
     imagen_url: Optional[str]
+    video_url: Optional[str] = None  # URL de video si existe
     categoria: str
     fecha_publicacion: Optional[datetime]
     fecha_extraccion: datetime
@@ -213,6 +214,14 @@ if SUBSCRIPTIONS_ENABLED:
     app.include_router(subscription_router)
     logger.info("✅ Rutas de suscripciones disponibles: /subscriptions")
 
+# ===== INCLUIR RUTAS CHATBOT =====
+try:
+    from chatbot_routes import router as chatbot_router
+    app.include_router(chatbot_router)
+    logger.info("✅ Rutas del ChatBot disponibles: /chatbot")
+except ImportError as e:
+    logger.warning(f"⚠️  Rutas del ChatBot no disponibles: {e}")
+
 @app.get("/")
 async def root():
     return {"message": "API de Scraping de Diarios Peruanos", "version": "1.0.0"}
@@ -259,6 +268,7 @@ async def get_noticias(
             contenido=noticia.contenido,
             enlace=noticia.enlace,
             imagen_url=noticia.imagen_url,
+            video_url=getattr(noticia, 'video_url', None),
             categoria=noticia.categoria,
             fecha_publicacion=noticia.fecha_publicacion,
             fecha_extraccion=noticia.fecha_extraccion,
@@ -367,6 +377,7 @@ async def get_noticias_por_diario(
                 contenido=noticia.contenido,
                 enlace=noticia.enlace,
                 imagen_url=noticia.imagen_url,
+                video_url=getattr(noticia, 'video_url', None),
                 categoria=noticia.categoria,
                 fecha_publicacion=noticia.fecha_publicacion,
                 fecha_extraccion=noticia.fecha_extraccion,
@@ -517,6 +528,7 @@ async def get_noticias_relevantes_anteriores(
             contenido=noticia.contenido,
             enlace=noticia.enlace,
             imagen_url=noticia.imagen_url,
+            video_url=getattr(noticia, 'video_url', None),
             categoria=noticia.categoria,
             fecha_publicacion=noticia.fecha_publicacion,
             fecha_extraccion=noticia.fecha_extraccion,
@@ -595,6 +607,7 @@ async def get_noticias_por_fecha(
                 contenido=noticia.contenido,
                 enlace=noticia.enlace,
                 imagen_url=noticia.imagen_url,
+                video_url=getattr(noticia, 'video_url', None),
                 categoria=noticia.categoria,
                 fecha_publicacion=noticia.fecha_publicacion,
                 fecha_extraccion=noticia.fecha_extraccion,
@@ -797,6 +810,7 @@ async def get_noticia_by_id(
         contenido=noticia.contenido,
         enlace=noticia.enlace,
         imagen_url=noticia.imagen_url,
+        video_url=getattr(noticia, 'video_url', None),
         categoria=noticia.categoria,
         fecha_publicacion=noticia.fecha_publicacion,
         fecha_extraccion=noticia.fecha_extraccion,
@@ -1236,21 +1250,72 @@ async def obtener_noticias_trending(
     categoria: Optional[str] = Query(None),
     db: Session = Depends(get_db)
 ):
-    """Obtener noticias trending o de alta urgencia"""
-    query = db.query(Noticia).join(Diario)
+    """Obtener noticias trending basadas en múltiples métricas"""
+    from datetime import datetime, timedelta
+    from sqlalchemy import case, func
     
-    # Filtrar por noticias de alerta o trending
-    trending_filter = (Noticia.es_alerta == True) | (Noticia.es_trending == True)
-    query = query.filter(trending_filter)
+    # Obtener noticias de los últimos 7 días (más relevantes para trending)
+    fecha_limite = datetime.utcnow() - timedelta(days=7)
+    query = db.query(Noticia).join(Diario).filter(
+        Noticia.fecha_extraccion >= fecha_limite
+    )
     
     if categoria:
         query = query.filter(Noticia.categoria == categoria)
     
-    # Ordenar por urgencia y fecha
+    # Calcular score de trending basado en múltiples factores
+    # 1. Noticias marcadas como trending o alerta tienen prioridad
+    # 2. Popularidad score (si existe)
+    # 3. Tiempo de lectura (noticias más largas pueden ser más importantes)
+    # 4. Recencia (más reciente = más trending)
+    # 5. Sentimiento extremo (positivo o negativo fuerte)
+    
+    trending_score = (
+        case(
+            (Noticia.es_trending == True, 100),
+            (Noticia.es_alerta == True, 80),
+            else_=0
+        ) +
+        func.coalesce(Noticia.popularidad_score, 0) * 10 +
+        func.coalesce(Noticia.tiempo_lectura_min, 1) * 2 +
+        case(
+            (Noticia.sentimiento == 'positivo', 5),
+            (Noticia.sentimiento == 'negativo', 5),
+            else_=0
+        ) +
+        case(
+            (Noticia.nivel_urgencia == 'critica', 30),
+            (Noticia.nivel_urgencia == 'alta', 20),
+            (Noticia.nivel_urgencia == 'media', 10),
+            else_=0
+        )
+    )
+    
+    # Ordenar por score de trending y luego por fecha
     noticias = query.order_by(
-        Noticia.nivel_urgencia.desc(),
+        trending_score.desc(),
         Noticia.fecha_extraccion.desc()
-    ).limit(limit).all()
+    ).limit(limit * 2).all()  # Obtener más para filtrar mejor
+    
+    # Si no hay suficientes noticias trending, incluir noticias recientes con alta popularidad
+    if len(noticias) < limit:
+        query_fallback = db.query(Noticia).join(Diario).filter(
+            Noticia.fecha_extraccion >= fecha_limite
+        )
+        if categoria:
+            query_fallback = query_fallback.filter(Noticia.categoria == categoria)
+        
+        noticias_fallback = query_fallback.order_by(
+            func.coalesce(Noticia.popularidad_score, 0).desc(),
+            Noticia.fecha_extraccion.desc()
+        ).limit(limit).all()
+        
+        # Combinar y eliminar duplicados
+        noticias_ids = {n.id for n in noticias}
+        noticias.extend([n for n in noticias_fallback if n.id not in noticias_ids])
+    
+    # Limitar al número solicitado
+    noticias = noticias[:limit]
     
     result = []
     for noticia in noticias:
@@ -1543,6 +1608,7 @@ async def get_social_media_news(
                 contenido=noticia.contenido,
                 enlace=noticia.enlace,
                 imagen_url=noticia.imagen_url,
+                video_url=getattr(noticia, 'video_url', None),
                 categoria=noticia.categoria,
                 fecha_publicacion=noticia.fecha_publicacion,
                 fecha_extraccion=noticia.fecha_extraccion,

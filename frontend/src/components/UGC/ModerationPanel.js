@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import Swal from 'sweetalert2';
 import styled from 'styled-components';
 
 const Container = styled.div`
@@ -71,6 +72,9 @@ const PostImage = styled.img`
   object-fit: cover;
   border-radius: 8px;
   margin: 1rem 0;
+  display: block;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(102, 126, 234, 0.2);
 `;
 
 const PostContent = styled.div`
@@ -248,22 +252,60 @@ function ModerationPanel({ token, onUpdate }) {
     fetchPendingPosts();
   }, [token]);
 
+  // Debug: Log posts cuando cambian
+  useEffect(() => {
+    if (pendingPosts.length > 0) {
+      console.log('📋 Posts pendientes cargados:', pendingPosts);
+      pendingPosts.forEach((post, index) => {
+        console.log(`Post ${index + 1}:`, {
+          id: post.id,
+          tipo: post.tipo,
+          titulo: post.titulo,
+          imagen_url: post.imagen_url,
+          tiene_imagen: !!post.imagen_url
+        });
+      });
+    }
+  }, [pendingPosts]);
+
   const handleApprove = async (postId) => {
     try {
       await axios.post(`${API_BASE}/admin/posts/${postId}/approve`, {}, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      alert('✅ Publicación aprobada exitosamente');
+      
+      Swal.fire({
+        title: '✅ Noticia aceptada correctamente',
+        text: 'La publicación ha sido aprobada y ahora es visible en la sección de comunidad',
+        icon: 'success',
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#51cf66',
+        timer: 3000,
+        timerProgressBar: true
+      });
+      
       fetchPendingPosts();
       if (onUpdate) onUpdate();
     } catch (err) {
-      alert('❌ Error al aprobar publicación: ' + (err.response?.data?.detail || err.message));
+      Swal.fire({
+        title: '❌ Error',
+        text: 'Error al aprobar publicación: ' + (err.response?.data?.detail || err.message),
+        icon: 'error',
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#ff6b6b'
+      });
     }
   };
 
   const handleReject = async () => {
     if (!rejectReason.trim()) {
-      alert('⚠️ Debes proporcionar un motivo de rechazo');
+      Swal.fire({
+        title: '⚠️ Motivo requerido',
+        text: 'Debes proporcionar un motivo de rechazo',
+        icon: 'warning',
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#ffa94d'
+      });
       return;
     }
 
@@ -273,25 +315,53 @@ function ModerationPanel({ token, onUpdate }) {
       }, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      alert('✅ Publicación rechazada exitosamente');
+      
+      Swal.fire({
+        title: '❌ Noticia rechazada',
+        text: 'La publicación ha sido rechazada y no será visible en la sección de comunidad',
+        icon: 'error',
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#ff6b6b',
+        timer: 3000,
+        timerProgressBar: true
+      });
+      
       setShowRejectModal(false);
       setRejectReason('');
       setSelectedPost(null);
       fetchPendingPosts();
       if (onUpdate) onUpdate();
     } catch (err) {
-      alert('❌ Error al rechazar publicación: ' + (err.response?.data?.detail || err.message));
+      Swal.fire({
+        title: '❌ Error',
+        text: 'Error al rechazar publicación: ' + (err.response?.data?.detail || err.message),
+        icon: 'error',
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#ff6b6b'
+      });
     }
   };
 
   const handleSuspendUser = async () => {
     if (!suspendReason.trim()) {
-      alert('⚠️ Debes proporcionar un motivo de suspensión');
+      Swal.fire({
+        title: '⚠️ Motivo requerido',
+        text: 'Debes proporcionar un motivo de suspensión',
+        icon: 'warning',
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#ffa94d'
+      });
       return;
     }
 
     if (suspendType === 'temporal' && (!suspendDays || suspendDays <= 0)) {
-      alert('⚠️ Debes proporcionar los días de suspensión');
+      Swal.fire({
+        title: '⚠️ Días requeridos',
+        text: 'Debes proporcionar los días de suspensión',
+        icon: 'warning',
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#ffa94d'
+      });
       return;
     }
 
@@ -305,7 +375,25 @@ function ModerationPanel({ token, onUpdate }) {
 
       // Luego suspender al usuario (esto requeriría un endpoint adicional)
       // Por ahora solo mostramos el mensaje
-      alert(`✅ Publicación rechazada y usuario marcado para suspensión ${suspendType === 'indefinido' ? 'indefinida' : `por ${suspendDays} días`}`);
+      const suspensionText = suspendType === 'indefinido' 
+        ? 'indefinida' 
+        : `por ${suspendDays} día${suspendDays > 1 ? 's' : ''}`;
+      
+      Swal.fire({
+        title: '🚫 Noticia rechazada y usuario suspendido',
+        html: `
+          <div style="text-align: left; margin-top: 1rem;">
+            <p><strong>Publicación:</strong> Rechazada</p>
+            <p><strong>Usuario:</strong> Suspendido ${suspensionText}</p>
+            <p><strong>Motivo:</strong> ${suspendReason}</p>
+          </div>
+        `,
+        icon: 'warning',
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#ffa94d',
+        timer: 4000,
+        timerProgressBar: true
+      });
       
       setShowSuspendModal(false);
       setSuspendReason('');
@@ -315,7 +403,13 @@ function ModerationPanel({ token, onUpdate }) {
       fetchPendingPosts();
       if (onUpdate) onUpdate();
     } catch (err) {
-      alert('❌ Error: ' + (err.response?.data?.detail || err.message));
+      Swal.fire({
+        title: '❌ Error',
+        text: 'Error al procesar la acción: ' + (err.response?.data?.detail || err.message),
+        icon: 'error',
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#ff6b6b'
+      });
     }
   };
 
@@ -338,7 +432,17 @@ function ModerationPanel({ token, onUpdate }) {
           ✅ No hay publicaciones pendientes de revisión
         </EmptyState>
       ) : (
-        pendingPosts.map(post => (
+        pendingPosts.map(post => {
+          // Debug: Log de datos del post
+          console.log('📋 Post en ModerationPanel:', {
+            id: post.id,
+            tipo: post.tipo,
+            titulo: post.titulo,
+            imagen_url: post.imagen_url,
+            tiene_imagen_url: !!post.imagen_url
+          });
+          
+          return (
           <PostCard key={post.id}>
             <PostHeader>
               <PostType>
@@ -358,19 +462,118 @@ function ModerationPanel({ token, onUpdate }) {
               </PostDate>
             </PostHeader>
 
+            {/* Título y descripción para noticias */}
             {post.tipo === 'noticia' && (
               <>
                 {post.titulo && <PostTitle>{post.titulo}</PostTitle>}
                 {post.descripcion && <PostDescription>"{post.descripcion}"</PostDescription>}
-                {post.imagen_url && (
-                  <PostImage 
-                    src={post.imagen_url.startsWith('http') ? post.imagen_url : `${API_BASE}${post.imagen_url}`}
-                    alt={post.titulo || 'Imagen de noticia'}
-                    onError={(e) => e.target.style.display = 'none'}
-                  />
-                )}
-                {post.fuente && <div style={{color: '#888', fontSize: '0.9rem'}}>📰 Fuente: {post.fuente}</div>}
+                {post.fuente && <div style={{color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.9rem', marginBottom: '1rem'}}>📰 Fuente: {post.fuente}</div>}
               </>
+            )}
+
+            {/* Mostrar imagen si existe (para cualquier tipo) */}
+            {post.imagen_url && (
+              <PostImage 
+                src={(() => {
+                  // Construir URL correctamente
+                  const imgUrl = (post.imagen_url || '').trim();
+                  console.log('🔍 Construyendo URL para imagen en ModerationPanel:', {
+                    imagen_url_original: imgUrl,
+                    post_id: post.id,
+                    post_tipo: post.tipo
+                  });
+                  
+                  if (!imgUrl) {
+                    console.warn('⚠️ imagen_url está vacía o es null');
+                    return '';
+                  }
+                  
+                  // Normalizar la URL
+                  let finalUrl = '';
+                  if (imgUrl.startsWith('http://') || imgUrl.startsWith('https://')) {
+                    finalUrl = imgUrl;
+                    console.log('✅ URL absoluta detectada:', finalUrl);
+                  } else if (imgUrl.startsWith('/uploads/')) {
+                    // Si ya tiene /uploads/, solo agregar API_BASE
+                    finalUrl = `${API_BASE}${imgUrl}`;
+                    console.log('✅ URL construida (con /uploads/):', finalUrl);
+                  } else if (imgUrl.startsWith('/')) {
+                    finalUrl = `${API_BASE}${imgUrl}`;
+                    console.log('✅ URL construida (con /):', finalUrl);
+                  } else {
+                    // Si no tiene /, asumir que es /uploads/images/{filename}
+                    finalUrl = `${API_BASE}/uploads/images/${imgUrl}`;
+                    console.log('✅ URL construida (sin /, asumiendo uploads/images/):', finalUrl);
+                  }
+                  
+                  return finalUrl;
+                })()}
+                alt={post.titulo || post.descripcion || 'Imagen de publicación'}
+                onError={(e) => {
+                  const originalSrc = e.target.src;
+                  const imgUrl = (post.imagen_url || '').trim();
+                  
+                  console.error('❌ Error cargando imagen en ModerationPanel:', {
+                    imagen_url_original: imgUrl,
+                    url_construida: originalSrc,
+                    post_id: post.id,
+                    post_tipo: post.tipo,
+                    error: e.target.error
+                  });
+                  
+                  // Intentar diferentes formatos de URL antes de mostrar placeholder
+                  const retryAttempt = parseInt(e.target.dataset.retryAttempt || '0');
+                  
+                  if (retryAttempt < 3) {
+                    e.target.dataset.retryAttempt = String(retryAttempt + 1);
+                    
+                    // Intentar con diferentes formatos
+                    let retryUrl = '';
+                    if (retryAttempt === 0) {
+                      // Primer intento: URL completa con API_BASE
+                      if (imgUrl.startsWith('/uploads/')) {
+                        retryUrl = `${API_BASE}${imgUrl}`;
+                      } else if (imgUrl.startsWith('/')) {
+                        retryUrl = `${API_BASE}${imgUrl}`;
+                      } else {
+                        retryUrl = `${API_BASE}/uploads/images/${imgUrl}`;
+                      }
+                    } else if (retryAttempt === 1) {
+                      // Segundo intento: solo la ruta relativa
+                      retryUrl = imgUrl.startsWith('/') ? imgUrl : `/uploads/images/${imgUrl}`;
+                    } else {
+                      // Tercer intento: URL absoluta con protocolo
+                      retryUrl = `http://localhost:8000${imgUrl.startsWith('/') ? imgUrl : `/uploads/images/${imgUrl}`}`;
+                    }
+                    
+                    if (retryUrl !== originalSrc) {
+                      console.log(`🔄 Reintento ${retryAttempt + 1}/3 con URL alternativa:`, retryUrl);
+                      setTimeout(() => {
+                        e.target.src = retryUrl;
+                      }, 500 * (retryAttempt + 1)); // Esperar un poco más en cada reintento
+                      return;
+                    }
+                  }
+                  
+                  // Si ya intentamos 3 veces y falló, mostrar placeholder
+                  console.warn('⚠️ No se pudo cargar la imagen después de 3 reintentos');
+                  e.target.style.display = 'block';
+                  e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23ddd" width="400" height="300"/%3E%3Ctext fill="%23999" font-family="sans-serif" font-size="20" dy="10.5" font-weight="bold" x="50%25" y="50%25" text-anchor="middle"%3EImagen no disponible%3C/text%3E%3C/svg%3E';
+                }}
+                onLoad={(e) => {
+                  console.log('✅ Imagen cargada exitosamente en ModerationPanel:', {
+                    imagen_url: post.imagen_url,
+                    url_final: e.target.src,
+                    post_id: post.id,
+                    width: e.target.naturalWidth,
+                    height: e.target.naturalHeight
+                  });
+                  // Limpiar el flag de reintento si la imagen carga exitosamente
+                  if (e.target.dataset.retryAttempt) {
+                    delete e.target.dataset.retryAttempt;
+                  }
+                }}
+              />
             )}
 
             <PostContent>
@@ -416,8 +619,9 @@ function ModerationPanel({ token, onUpdate }) {
                 🚫 Rechazar y Suspender Usuario
               </ActionButton>
             </ButtonGroup>
-          </PostCard>
-        ))
+            </PostCard>
+          );
+        })
       )}
 
       {/* Modal de Rechazo */}

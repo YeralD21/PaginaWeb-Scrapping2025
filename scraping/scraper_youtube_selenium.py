@@ -13,7 +13,20 @@ from typing import List, Dict, Optional
 import time
 from hashlib import md5
 
-from scraping.youtube_channels import YOUTUBE_CHANNELS
+# Importación relativa para evitar problemas cuando se ejecuta desde el directorio scraping
+try:
+    from youtube_channels import YOUTUBE_CHANNELS
+except ImportError:
+    # Si falla, intentar importación absoluta
+    try:
+        import sys
+        import os
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from youtube_channels import YOUTUBE_CHANNELS
+    except ImportError:
+        # Si no existe el archivo, usar lista vacía como fallback
+        YOUTUBE_CHANNELS = []
+        logger.warning("youtube_channels.py no encontrado, usando lista vacía")
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

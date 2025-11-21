@@ -25,6 +25,9 @@ import UnifiedNews from './components/UnifiedNews';
 import SocialMediaFeed from './components/SocialMediaFeed';
 import SubscriptionModal from './components/Subscriptions/SubscriptionModal';
 import LoginModal from './components/Auth/LoginModal';
+import ChatBot from './components/ChatBot';
+import AdSense from './components/AdSense';
+import AdDetail from './components/AdDetail';
 
 const Container = styled.div`
   width: 100%;
@@ -374,13 +377,53 @@ const DateButton = styled.button.withConfig({
 `;
 
 const MainContent = styled.div`
-  max-width: 1400px;
+  max-width: 1600px;
   margin: 0 auto;
   padding: 2rem 2rem 2rem 1rem;
   display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: 1rem;
+  grid-template-columns: 200px 280px 1fr;
+  gap: 1.5rem;
   align-items: start;
+  
+  @media (max-width: 1400px) {
+    grid-template-columns: 280px 1fr;
+    max-width: 1400px;
+  }
+  
+  @media (max-width: 968px) {
+    grid-template-columns: 1fr;
+    padding: 1rem;
+  }
+`;
+
+const AdSidebar = styled.div`
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 120px;
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+  width: 100%;
+  min-width: 180px;
+  
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+  }
+  
+  @media (max-width: 1400px) {
+    display: none;
+  }
 `;
 
 const LeftPanel = styled.div`
@@ -410,10 +453,11 @@ const LeftPanelTitle = styled.h3`
   color: #dc3545;
   font-size: 1.2rem;
   font-weight: 700;
-  margin: 0 0 1rem 0;
+  margin: 0;
   text-align: center;
   border-bottom: 2px solid #dc3545;
-  padding-bottom: 0.5rem;
+  padding-bottom: 0.15rem;
+  line-height: 1.2;
 `;
 
 const TextNewsCard = styled.article`
@@ -496,12 +540,14 @@ const RelevantNewsCard = styled.article`
   border-left: 3px solid #ffd700;
   transition: all 0.3s ease;
   cursor: pointer;
-  margin-bottom: 1rem;
+  margin-bottom: 0;
+  margin-top: 0;
   position: relative;
   display: flex;
   flex-direction: column;
-  min-height: ${props => props.$hasImage ? '320px' : 'auto'};
+  min-height: ${props => props.$hasImage ? '280px' : '150px'};
   width: 100%;
+  flex-shrink: 0;
   
   &:hover {
     transform: translateX(4px);
@@ -595,6 +641,8 @@ const RelevantNewsContent = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 100px;
+  background: var(--card-bg);
+  z-index: 1;
 `;
 
 const RelevantNewsTitle = styled.h4`
@@ -608,6 +656,7 @@ const RelevantNewsTitle = styled.h4`
   -webkit-box-orient: vertical;
   overflow: hidden;
   flex: 1;
+  min-height: 3.5rem;
 `;
 
 const RelevantNewsMeta = styled.div`
@@ -1373,13 +1422,14 @@ const ComparisonCard = styled.article`
   border-radius: 15px;
   border: 1px solid var(--border-color);
   box-shadow: 0 8px 20px rgba(220, 53, 69, 0.08);
-  padding: 1.5rem;
+  padding: 0;
   background: var(--card-bg);
   transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
-  gap: 0.8rem;
+  gap: 0;
   position: relative;
+  overflow: hidden;
   overflow: hidden;
 
   body[data-theme="dark"] & {
@@ -1408,8 +1458,20 @@ const ComparisonCard = styled.article`
   }
 `;
 
+const ComparisonImage = styled.div`
+  width: 100%;
+  height: 200px;
+  background: ${props => props.imageUrl ? `url(${props.imageUrl})` : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'};
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  overflow: hidden;
+`;
+
 const ComparisonBadge = styled.span`
-  align-self: flex-start;
+  position: absolute;
+  top: 0.8rem;
+  left: 0.8rem;
   background: linear-gradient(135deg, #1da1f2 0%, #0084ff 100%);
   color: white;
   padding: 0.3rem 0.8rem;
@@ -1419,6 +1481,14 @@ const ComparisonBadge = styled.span`
   letter-spacing: 0.05em;
   text-transform: uppercase;
   box-shadow: 0 4px 12px rgba(0, 132, 255, 0.3);
+  z-index: 10;
+`;
+
+const ComparisonContent = styled.div`
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
 `;
 
 const ComparisonCardTitle = styled.h4`
@@ -1566,6 +1636,82 @@ const ComparisonError = styled.div`
   margin-bottom: 1rem;
 `;
 
+// Función para decodificar entidades HTML y corregir encoding
+function decodeHTMLEntities(text) {
+  if (!text) return '';
+  
+  // Crear un elemento temporal para decodificar HTML entities
+  const txt = document.createElement('textarea');
+  txt.innerHTML = text;
+  let decoded = txt.value;
+  
+  // Mapa completo de correcciones de encoding incorrecto
+  const encodingFixes = [
+    // Caracteres con Ć (encoding incorrecto común)
+    { bad: /Ć³/g, good: 'ó' },
+    { bad: /Ć©/g, good: 'é' },
+    { bad: /Ć¡/g, good: 'á' },
+    { bad: /Ć­/g, good: 'í' },
+    { bad: /Ćº/g, good: 'ú' },
+    { bad: /Ć±/g, good: 'ñ' },
+    { bad: /Ć'/g, good: 'Ñ' },
+    { bad: /Ć"/g, good: '¿' },
+    { bad: /Ć¿/g, good: '¿' },
+    { bad: /Ć¼/g, good: 'ü' },
+    { bad: /Ć"/g, good: 'á' },
+    { bad: /Ć©/g, good: 'é' },
+    { bad: /Ć­/g, good: 'í' },
+    { bad: /Ć³/g, good: 'ó' },
+    { bad: /Ćº/g, good: 'ú' },
+    // Caracteres con Ã (otro encoding incorrecto común)
+    { bad: /Ã³/g, good: 'ó' },
+    { bad: /Ã©/g, good: 'é' },
+    { bad: /Ã¡/g, good: 'á' },
+    { bad: /Ã­/g, good: 'í' },
+    { bad: /Ãº/g, good: 'ú' },
+    { bad: /Ã±/g, good: 'ñ' },
+    { bad: /Ã'/g, good: 'Ñ' },
+    { bad: /Ã"/g, good: '¿' },
+    { bad: /Ã¿/g, good: '¿' },
+    { bad: /Ã¼/g, good: 'ü' },
+    // Caracteres con Ā (encoding incorrecto adicional)
+    { bad: /Āæ/g, good: '¿' },
+    { bad: /ĀæQu/g, good: '¿Qu' }, // Caso específico "ĀæQu" -> "¿Qu"
+    { bad: /Ā/g, good: '' }, // Eliminar caracteres Ā sueltos
+    // Casos específicos de encoding doble incorrecto
+    { bad: /QuĆ©/g, good: 'Qué' },
+    { bad: /por quĆ©/g, good: 'por qué' },
+    { bad: /quĆ©/g, good: 'qué' },
+    // Otros problemas comunes
+    { bad: /â€™/g, good: "'" },
+    { bad: /â€œ/g, good: '"' },
+    { bad: /â€/g, good: '"' },
+    { bad: /â€"/g, good: '—' },
+    { bad: /â€"/g, good: '–' },
+  ];
+  
+  // Aplicar todas las correcciones
+  encodingFixes.forEach(({ bad, good }) => {
+    decoded = decoded.replace(bad, good);
+  });
+  
+  // Intentar decodificar como UTF-8 si aún hay problemas
+  try {
+    // Si hay caracteres que parecen estar mal codificados, intentar repararlos
+    if (decoded.includes('Ć') || decoded.includes('Ã') || decoded.includes('Ā')) {
+      // Intentar reparar encoding doble
+      decoded = decoded
+        .replace(/Ć/g, '')
+        .replace(/Ã/g, '')
+        .replace(/Ā/g, '');
+    }
+  } catch (e) {
+    console.warn('Error en decodificación:', e);
+  }
+  
+  return decoded.trim();
+}
+
 // Componente para la vista de noticias Premium
 function PremiumNewsView() {
   const navigate = useNavigate();
@@ -1584,6 +1730,9 @@ function PremiumNewsView() {
   
   // Ref para evitar que el modal se cierre automáticamente
   const modalOpenRef = useRef(false);
+  
+  // Ref para rastrear si acabamos de mostrar el login modal para una noticia premium
+  const loginModalShownForPremiumRef = useRef(false);
 
   // Función para cargar noticias premium (memoizada para evitar recreaciones)
   const fetchPremiumNews = useCallback(async () => {
@@ -1591,7 +1740,24 @@ function PremiumNewsView() {
     setError(null);
     try {
       const response = await axios.get('http://localhost:8000/noticias?es_premium=true&limit=100');
-      setPremiumNews(response.data);
+      const news = response.data || [];
+      
+      // Debug: Verificar qué noticias tienen imágenes
+      console.log('Noticias premium cargadas:', news.length);
+      const withImages = news.filter(n => n.imagen_url && n.imagen_url.trim() !== '');
+      console.log('Noticias con imágenes:', withImages.length);
+      if (withImages.length > 0) {
+        console.log('Ejemplo de imagen URL:', withImages[0].imagen_url);
+      }
+      
+      // Procesar noticias: decodificar títulos y verificar imágenes
+      const processedNews = news.map(noticia => ({
+        ...noticia,
+        titulo: decodeHTMLEntities(noticia.titulo || ''),
+        imagen_url: noticia.imagen_url && noticia.imagen_url.trim() !== '' ? noticia.imagen_url : null
+      }));
+      
+      setPremiumNews(processedNews);
     } catch (err) {
       console.error('Error fetching premium news:', err);
       setError('Error al cargar noticias premium');
@@ -1621,6 +1787,28 @@ function PremiumNewsView() {
     }
   }, [token, user]); // Solo token y user, refreshSubscription es estable desde el contexto
 
+  // Callback para cerrar el modal de login
+  const handleLoginModalClose = useCallback(() => {
+    setShowLoginModal(false);
+    if (loginModalShownForPremiumRef && loginModalShownForPremiumRef.current !== undefined) {
+      loginModalShownForPremiumRef.current = false;
+    }
+    // Si cierra sin loguearse, limpiar la noticia pendiente
+    if (!isAuthenticated()) {
+      setPendingPremiumNews(null);
+    }
+  }, [isAuthenticated]);
+
+  // Callback para cambiar a registro desde login
+  const handleSwitchToRegister = useCallback(() => {
+    // Mantener la noticia pendiente al cambiar a registro
+    setShowLoginModal(false);
+    if (loginModalShownForPremiumRef && loginModalShownForPremiumRef.current !== undefined) {
+      loginModalShownForPremiumRef.current = false;
+    }
+    // El registro también manejará la noticia pendiente
+  }, []);
+
   const handleNewsClick = async (noticia) => {
     console.log('Click en noticia premium:', noticia.titulo);
     
@@ -1628,6 +1816,7 @@ function PremiumNewsView() {
     if (!userIsAuthenticated) {
       console.log('Usuario no autenticado, mostrando modal de login');
       setPendingPremiumNews(noticia);
+      loginModalShownForPremiumRef.current = true; // Marcar que mostramos login para premium
       setShowLoginModal(true);
       return;
     }
@@ -1668,25 +1857,24 @@ function PremiumNewsView() {
   // Cuando el usuario se loguea después de hacer click en noticia premium, mostrar planes
   useEffect(() => {
     // Verificar si el usuario se acaba de loguear y hay una noticia premium pendiente
-    if (isAuthenticated() && token && pendingPremiumNews) {
-      // Si el modal de login está abierto, esperar a que se cierre
-      if (showLoginModal) {
-        // El modal de login se cerrará automáticamente después del login exitoso
-        // Esperamos un momento para que se cierre antes de mostrar el modal de suscripción
+    if (isAuthenticated() && token && pendingPremiumNews && !showSubscriptionModal) {
+      // Si mostramos el login modal para esta noticia premium, esperar a que se cierre
+      if (loginModalShownForPremiumRef.current) {
+        // El modal de login se cerrará automáticamente después del login exitoso (800ms)
+        // Esperamos un poco más para asegurar que se cerró completamente
         const timer = setTimeout(() => {
-          if (!showLoginModal) {
-            setShowLoginModal(false);
-            modalOpenRef.current = true;
-            setShowSubscriptionModal(true);
-          }
-        }, 800);
+          setShowLoginModal(false);
+          loginModalShownForPremiumRef.current = false;
+          modalOpenRef.current = true;
+          setShowSubscriptionModal(true);
+        }, 1000); // 800ms del login + 200ms de margen
         return () => clearTimeout(timer);
-      } else if (!showSubscriptionModal) {
-        // Si el login modal ya se cerró y no hay modal de suscripción abierto, mostrar planes
+      } else if (!showLoginModal) {
+        // Si el login modal ya se cerró y no hay modal de suscripción abierto, mostrar planes directamente
         const timer = setTimeout(() => {
           modalOpenRef.current = true;
           setShowSubscriptionModal(true);
-        }, 300);
+        }, 100);
         return () => clearTimeout(timer);
       }
     }
@@ -1696,12 +1884,12 @@ function PremiumNewsView() {
     <div style={{
       minHeight: '100vh',
       background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0f0f0f 100%)',
-      padding: '2rem 0',
+      padding: '0.5rem 0',
       color: '#fff'
     }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1rem' }}>
         {/* Botón Volver al Menú Principal */}
-        <div style={{ marginBottom: '2rem' }}>
+        <div style={{ marginBottom: '0.5rem' }}>
           <button
             onClick={() => navigate('/')}
             style={{
@@ -1735,15 +1923,15 @@ function PremiumNewsView() {
         {/* Header Premium */}
         <div style={{
           textAlign: 'center',
-          marginBottom: '3rem',
-          padding: '2rem',
+          marginBottom: '0.75rem',
+          padding: '1rem',
           background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 215, 0, 0.05) 100%)',
           borderRadius: '20px',
           border: '2px solid rgba(255, 215, 0, 0.3)'
         }}>
           <h1 style={{
-            fontSize: '3rem',
-            margin: '0 0 1rem 0',
+            fontSize: '2rem',
+            margin: '0 0 0.5rem 0',
             background: 'linear-gradient(135deg, #ffd700 0%, #ffed4e 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
@@ -1751,18 +1939,18 @@ function PremiumNewsView() {
           }}>
             ⭐ Noticias Premium
           </h1>
-          <p style={{ fontSize: '1.2rem', color: '#ccc', margin: '0' }}>
+          <p style={{ fontSize: '0.95rem', color: '#ccc', margin: '0' }}>
             Contenido exclusivo de alto impacto y análisis profundo
           </p>
           {!hasActiveSubscription && (
             <div style={{
-              marginTop: '1.5rem',
-              padding: '1rem',
+              marginTop: '0.75rem',
+              padding: '0.6rem',
               background: 'rgba(255, 215, 0, 0.1)',
               borderRadius: '10px',
               border: '1px solid rgba(255, 215, 0, 0.3)'
             }}>
-              <p style={{ margin: '0 0 1rem 0', color: '#ffd700' }}>
+              <p style={{ margin: '0 0 0.75rem 0', color: '#ffd700', fontSize: '0.9rem' }}>
                 🔒 Suscríbete para acceder a todo el contenido premium
               </p>
               <button
@@ -1772,12 +1960,12 @@ function PremiumNewsView() {
                   setShowSubscriptionModal(true);
                 }}
                 style={{
-                  padding: '0.75rem 2rem',
+                  padding: '0.6rem 1.5rem',
                   background: 'linear-gradient(135deg, #ffd700 0%, #ffed4e 100%)',
                   color: '#000',
                   border: 'none',
                   borderRadius: '25px',
-                  fontSize: '1rem',
+                  fontSize: '0.9rem',
                   fontWeight: 'bold',
                   cursor: 'pointer',
                   boxShadow: '0 4px 15px rgba(255, 215, 0, 0.4)',
@@ -1794,17 +1982,17 @@ function PremiumNewsView() {
 
         {/* Grid de Noticias Premium */}
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '3rem', color: '#ffd700' }}>
+          <div style={{ textAlign: 'center', padding: '2rem', color: '#ffd700' }}>
             <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⏳</div>
             <div>Cargando noticias premium...</div>
           </div>
         ) : error ? (
-          <div style={{ textAlign: 'center', padding: '3rem', color: '#ff6b6b' }}>
+          <div style={{ textAlign: 'center', padding: '2rem', color: '#ff6b6b' }}>
             <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>❌</div>
             <div>{error}</div>
           </div>
         ) : premiumNews.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '3rem', color: '#ccc' }}>
+          <div style={{ textAlign: 'center', padding: '2rem', color: '#ccc' }}>
             <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>📰</div>
             <div>No hay noticias premium disponibles en este momento</div>
           </div>
@@ -1813,6 +2001,7 @@ function PremiumNewsView() {
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
             gap: '1.5rem',
+            marginTop: '0.5rem',
             marginBottom: '2rem'
           }}>
             {premiumNews.map((noticia) => (
@@ -1864,41 +2053,141 @@ function PremiumNewsView() {
                   ⭐ PREMIUM
                 </div>
 
-                {/* Imagen - Mejorada */}
-                {noticia.imagen_url && (
-                  <div style={{
-                    width: '100%',
-                    height: '220px',
-                    overflow: 'hidden',
-                    position: 'relative'
-                  }}>
-                    <img
-                      src={noticia.imagen_url}
-                      alt={noticia.titulo}
-                      style={{
+                {/* Video o Imagen - Mejorada con validación robusta */}
+                {(() => {
+                  const videoUrl = noticia.video_url;
+                  const imageUrl = noticia.imagen_url;
+                  
+                  // Priorizar video sobre imagen
+                  const hasValidVideo = videoUrl && 
+                                       typeof videoUrl === 'string' && 
+                                       videoUrl.trim() !== '' &&
+                                       videoUrl !== 'null' &&
+                                       videoUrl !== 'undefined' &&
+                                       (videoUrl.includes('youtube') || videoUrl.includes('youtu.be') || videoUrl.includes('video') || videoUrl.includes('embed'));
+                  
+                  const hasValidImage = !hasValidVideo && imageUrl && 
+                                      typeof imageUrl === 'string' && 
+                                      imageUrl.trim() !== '' &&
+                                      imageUrl !== 'null' &&
+                                      imageUrl !== 'undefined' &&
+                                      (imageUrl.startsWith('http://') || imageUrl.startsWith('https://') || imageUrl.startsWith('data:'));
+                  
+                  // Mostrar video si existe
+                  if (hasValidVideo) {
+                    // Extraer ID de YouTube si es necesario
+                    let embedUrl = videoUrl;
+                    if (videoUrl.includes('youtube.com/watch') || videoUrl.includes('youtu.be/')) {
+                      const youtubeIdMatch = videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+                      if (youtubeIdMatch) {
+                        embedUrl = `https://www.youtube.com/embed/${youtubeIdMatch[1]}`;
+                      }
+                    }
+                    
+                    return (
+                      <div style={{
                         width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        transition: 'transform 0.3s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'scale(1.05)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'scale(1)';
-                      }}
-                    />
-                    {/* Overlay sutil en la imagen */}
-                    <div style={{
-                      position: 'absolute',
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      height: '60px',
-                      background: 'linear-gradient(to top, rgba(0, 0, 0, 0.6) 0%, transparent 100%)'
-                    }} />
-                  </div>
-                )}
+                        height: '220px',
+                        overflow: 'hidden',
+                        position: 'relative',
+                        background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 215, 0, 0.05) 100%)'
+                      }}>
+                        <iframe
+                          src={embedUrl}
+                          title={noticia.titulo || 'Video premium'}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            border: 'none',
+                            display: 'block'
+                          }}
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                        {/* Badge de video */}
+                        <div style={{
+                          position: 'absolute',
+                          top: '0.5rem',
+                          left: '0.5rem',
+                          background: 'rgba(255, 0, 0, 0.9)',
+                          color: 'white',
+                          padding: '0.3rem 0.6rem',
+                          borderRadius: '4px',
+                          fontSize: '0.7rem',
+                          fontWeight: 'bold',
+                          zIndex: 10
+                        }}>
+                          ▶ VIDEO
+                        </div>
+                      </div>
+                    );
+                  } else if (hasValidImage) {
+                    return (
+                      <div style={{
+                        width: '100%',
+                        height: '220px',
+                        overflow: 'hidden',
+                        position: 'relative',
+                        background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 215, 0, 0.05) 100%)'
+                      }}>
+                        <img
+                          src={imageUrl}
+                          alt={noticia.titulo || 'Noticia premium'}
+                          onError={(e) => {
+                            // Si la imagen falla al cargar, mostrar placeholder
+                            console.warn('Error cargando imagen premium:', imageUrl);
+                            const parent = e.target.parentElement;
+                            parent.innerHTML = `
+                              <div style="width: 100%; height: 220px; background: linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0.08) 100%); display: flex; align-items: center; justify-content: center; border-bottom: 2px solid rgba(255, 215, 0, 0.3);">
+                                <span style="font-size: 3rem; opacity: 0.3;">📰</span>
+                              </div>
+                            `;
+                          }}
+                          onLoad={() => {
+                            console.log('✅ Imagen premium cargada:', imageUrl);
+                          }}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            transition: 'transform 0.3s ease',
+                            display: 'block'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'scale(1.05)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'scale(1)';
+                          }}
+                        />
+                        {/* Overlay sutil en la imagen */}
+                        <div style={{
+                          position: 'absolute',
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          height: '60px',
+                          background: 'linear-gradient(to top, rgba(0, 0, 0, 0.6) 0%, transparent 100%)'
+                        }} />
+                      </div>
+                    );
+                  } else {
+                    // Placeholder cuando no hay imagen válida
+                    return (
+                      <div style={{
+                        width: '100%',
+                        height: '220px',
+                        background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0.08) 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderBottom: '2px solid rgba(255, 215, 0, 0.3)'
+                      }}>
+                        <span style={{ fontSize: '3rem', opacity: 0.3 }}>📰</span>
+                      </div>
+                    );
+                  }
+                })()}
 
                 {/* Contenido */}
                 <div style={{ 
@@ -1923,7 +2212,7 @@ function PremiumNewsView() {
                     minHeight: '4.2rem',
                     flexShrink: 0
                   }}>
-                    {noticia.titulo}
+                    {noticia.titulo ? decodeHTMLEntities(noticia.titulo) : 'Sin título'}
                   </h3>
 
                   {/* Spacer para empujar el contenido hacia abajo */}
@@ -2007,20 +2296,8 @@ function PremiumNewsView() {
       {/* Modal de Login (para noticias premium) */}
       {showLoginModal && (
         <LoginModal
-          onClose={() => {
-            setShowLoginModal(false);
-            loginModalShownForPremiumRef.current = false;
-            // Si cierra sin loguearse, limpiar la noticia pendiente
-            if (!isAuthenticated()) {
-              setPendingPremiumNews(null);
-            }
-          }}
-          onSwitchToRegister={() => {
-            // Mantener la noticia pendiente al cambiar a registro
-            setShowLoginModal(false);
-            loginModalShownForPremiumRef.current = false;
-            // El registro también manejará la noticia pendiente
-          }}
+          onClose={handleLoginModalClose}
+          onSwitchToRegister={handleSwitchToRegister}
           skipRedirect={true}
           onLoginSuccess={() => {
             // Cuando el login es exitoso, el efecto detectará el cambio y mostrará el modal de suscripción
@@ -2055,6 +2332,7 @@ function PremiumNewsView() {
           }}
         />
       )}
+      <ChatBot context="premium" />
     </div>
   );
 }
@@ -2154,31 +2432,66 @@ function MainView() {
   // Ref para rastrear si acabamos de mostrar el login modal para una noticia premium
   const loginModalShownForPremiumRef = useRef(false);
 
-  // Cuando el usuario se loguea después de hacer click en noticia premium, mostrar planes
+  // Cuando el usuario se loguea después de hacer click en noticia premium, verificar suscripción
   useEffect(() => {
     // Verificar si el usuario se acaba de loguear y hay una noticia premium pendiente
     if (isAuthenticated() && token && pendingPremiumNews && !showSubscriptionModal) {
+      const checkSubscriptionAndNavigate = async () => {
+        // Verificar si el usuario tiene suscripción activa
+        try {
+          console.log('Verificando suscripción después del login para noticia premium:', pendingPremiumNews.id);
+          const statusResponse = await axios.get('http://localhost:8000/subscriptions/status', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          
+          const hasActive = statusResponse.data?.has_active && statusResponse.data?.active_subscription;
+          
+          if (hasActive) {
+            // Tiene suscripción activa, navegar a la noticia
+            console.log('✅ Usuario tiene suscripción activa, navegando a noticia:', pendingPremiumNews.id);
+            await refreshSubscription(token);
+            const newsId = pendingPremiumNews.id;
+            setPendingPremiumNews(null);
+            loginModalShownForPremiumRef.current = false;
+            setShowLoginModal(false);
+            // Usar replace para evitar que el usuario pueda volver atrás
+            navigate(`/noticia/${newsId}`, { replace: true });
+          } else {
+            // No tiene suscripción activa, mostrar planes
+            console.log('⚠️ Usuario no tiene suscripción activa, mostrando planes');
+            loginModalShownForPremiumRef.current = false;
+            setShowLoginModal(false);
+            modalOpenRef.current = true;
+            setShowSubscriptionModal(true);
+          }
+        } catch (err) {
+          console.error('❌ Error verificando suscripción después del login:', err);
+          // En caso de error, mostrar planes de todos modos
+          loginModalShownForPremiumRef.current = false;
+          setShowLoginModal(false);
+          modalOpenRef.current = true;
+          setShowSubscriptionModal(true);
+        }
+      };
+
       // Si mostramos el login modal para esta noticia premium, esperar a que se cierre
       if (loginModalShownForPremiumRef.current) {
         // El modal de login se cerrará automáticamente después del login exitoso (800ms)
-        // Esperamos un poco más para asegurar que se cerró completamente
+        // Esperamos un poco más para asegurar que se cerró completamente y el token esté disponible
         const timer = setTimeout(() => {
-          setShowLoginModal(false);
-          loginModalShownForPremiumRef.current = false;
-          modalOpenRef.current = true;
-          setShowSubscriptionModal(true);
-        }, 1000); // 800ms del login + 200ms de margen
+          checkSubscriptionAndNavigate();
+        }, 1200); // 800ms del login + 400ms de margen para asegurar que el token esté disponible
         return () => clearTimeout(timer);
-      } else if (!showLoginModal) {
-        // Si el login modal ya se cerró y no hay modal de suscripción abierto, mostrar planes directamente
+      } else {
+        // Si el login modal ya se cerró o no se mostró, verificar suscripción inmediatamente
+        // pero con un pequeño delay para asegurar que el token esté disponible
         const timer = setTimeout(() => {
-          modalOpenRef.current = true;
-          setShowSubscriptionModal(true);
-        }, 100);
+          checkSubscriptionAndNavigate();
+        }, 300);
         return () => clearTimeout(timer);
       }
     }
-  }, [isAuthenticated, token, pendingPremiumNews, showLoginModal, showSubscriptionModal]);
+  }, [isAuthenticated, token, pendingPremiumNews, showLoginModal, showSubscriptionModal, navigate, refreshSubscription]);
 
   const openSubscriptionModal = (news) => {
     setPendingPremiumNews(news || null);
@@ -2189,6 +2502,28 @@ function MainView() {
     setPendingPremiumNews(null);
     setShowSubscriptionModal(false);
   };
+
+  // Callback para cerrar el modal de login
+  const handleLoginModalClose = useCallback(() => {
+    setShowLoginModal(false);
+    if (loginModalShownForPremiumRef && loginModalShownForPremiumRef.current !== undefined) {
+      loginModalShownForPremiumRef.current = false;
+    }
+    // Si cierra sin loguearse, limpiar la noticia pendiente
+    if (!isAuthenticated()) {
+      setPendingPremiumNews(null);
+    }
+  }, [isAuthenticated]);
+
+  // Callback para cambiar a registro desde login
+  const handleSwitchToRegister = useCallback(() => {
+    // Mantener la noticia pendiente al cambiar a registro
+    setShowLoginModal(false);
+    if (loginModalShownForPremiumRef && loginModalShownForPremiumRef.current !== undefined) {
+      loginModalShownForPremiumRef.current = false;
+    }
+    // El registro también manejará la noticia pendiente
+  }, []);
 
   const handleNoticiaClick = async (noticia) => {
     // Si es una noticia premium, manejar el flujo de suscripción
@@ -2364,7 +2699,27 @@ function MainView() {
   // Función para obtener el texto del botón según la selección actual
   const getDateFilterButtonText = () => {
     if (selectedDate) {
-      const date = new Date(selectedDate);
+      // Manejar diferentes formatos de fecha y evitar problemas de zona horaria
+      let date;
+      if (typeof selectedDate === 'string') {
+        // Si es un string en formato YYYY-MM-DD, crear la fecha en hora local
+        const parts = selectedDate.split('T')[0].split('-');
+        if (parts.length === 3) {
+          date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        } else {
+          date = new Date(selectedDate);
+        }
+      } else if (selectedDate instanceof Date) {
+        date = selectedDate;
+      } else {
+        date = new Date(selectedDate);
+      }
+      
+      // Verificar que la fecha sea válida
+      if (isNaN(date.getTime())) {
+        return 'Filtrar por fecha';
+      }
+      
       return date.toLocaleDateString('es-ES', { 
         day: '2-digit', 
         month: '2-digit', 
@@ -2512,20 +2867,103 @@ function MainView() {
 
   const fetchNoticiasRelevantes = async (fechaExcluir = null) => {
     try {
+      // Cargar noticias premium directamente con un límite mayor
       const params = new URLSearchParams({
-        dias: '7',
-        limit: '12'
+        es_premium: 'true',
+        limit: '50' // Aumentar el límite para mostrar más noticias
       });
       
       if (fechaExcluir) {
         params.append('excluir_fecha', fechaExcluir);
       }
       
-      const response = await axios.get(`http://localhost:8000/noticias/relevantes-anteriores?${params}`);
-      setNoticiasRelevantes(response.data);
+      const response = await axios.get(`http://localhost:8000/noticias?${params.toString()}`);
+      let news = response.data || [];
+      
+      // Eliminar duplicados por ID y por título (normalizado)
+      const seenIds = new Set();
+      const seenTitles = new Set();
+      const uniqueNews = [];
+      
+      for (const noticia of news) {
+        // Verificar duplicados por ID
+        if (noticia.id && seenIds.has(noticia.id)) {
+          continue;
+        }
+        
+        // Verificar duplicados por título normalizado
+        const normalizedTitle = (noticia.titulo || '').toLowerCase().trim();
+        if (normalizedTitle && seenTitles.has(normalizedTitle)) {
+          continue;
+        }
+        
+        // Agregar a la lista única
+        if (noticia.id) seenIds.add(noticia.id);
+        if (normalizedTitle) seenTitles.add(normalizedTitle);
+        uniqueNews.push(noticia);
+      }
+      
+      // Procesar noticias: decodificar títulos y verificar imágenes
+      const processedNews = uniqueNews.map(noticia => ({
+        ...noticia,
+        titulo: decodeHTMLEntities(noticia.titulo || ''),
+        imagen_url: noticia.imagen_url && noticia.imagen_url.trim() !== '' && 
+                   noticia.imagen_url !== 'null' && noticia.imagen_url !== 'undefined' &&
+                   (noticia.imagen_url.startsWith('http://') || 
+                    noticia.imagen_url.startsWith('https://') || 
+                    noticia.imagen_url.startsWith('data:')) 
+                   ? noticia.imagen_url : null
+      }));
+      
+      console.log(`✅ Noticias premium cargadas: ${news.length}, únicas: ${processedNews.length}`);
+      setNoticiasRelevantes(processedNews);
     } catch (error) {
       console.error('Error fetching noticias relevantes:', error);
-      // No mostrar error aquí para no interferir con la carga principal
+      // Fallback: intentar con el endpoint original
+      try {
+        const params = new URLSearchParams({
+          dias: '7',
+          limit: '50'
+        });
+        
+        if (fechaExcluir) {
+          params.append('excluir_fecha', fechaExcluir);
+        }
+        
+        const response = await axios.get(`http://localhost:8000/noticias/relevantes-anteriores?${params}`);
+        let news = response.data || [];
+        
+        // Eliminar duplicados
+        const seenIds = new Set();
+        const seenTitles = new Set();
+        const uniqueNews = [];
+        
+        for (const noticia of news) {
+          if (noticia.id && seenIds.has(noticia.id)) continue;
+          const normalizedTitle = (noticia.titulo || '').toLowerCase().trim();
+          if (normalizedTitle && seenTitles.has(normalizedTitle)) continue;
+          
+          if (noticia.id) seenIds.add(noticia.id);
+          if (normalizedTitle) seenTitles.add(normalizedTitle);
+          uniqueNews.push(noticia);
+        }
+        
+        // Procesar noticias: decodificar títulos y verificar imágenes
+        const processedNews = uniqueNews.map(noticia => ({
+          ...noticia,
+          titulo: decodeHTMLEntities(noticia.titulo || ''),
+          imagen_url: noticia.imagen_url && noticia.imagen_url.trim() !== '' && 
+                     noticia.imagen_url !== 'null' && noticia.imagen_url !== 'undefined' &&
+                     (noticia.imagen_url.startsWith('http://') || 
+                      noticia.imagen_url.startsWith('https://') || 
+                      noticia.imagen_url.startsWith('data:')) 
+                     ? noticia.imagen_url : null
+        }));
+        
+        setNoticiasRelevantes(processedNews);
+      } catch (fallbackError) {
+        console.error('Error en fallback de noticias relevantes:', fallbackError);
+      }
     }
   };
 
@@ -2594,21 +3032,25 @@ function MainView() {
   };
 
   const handleDateFilter = (date, filteredNews, monthData) => {
+    console.log('🔍 handleDateFilter llamado:', { date, filteredNewsLength: filteredNews?.length, monthData });
     if (date) {
       // Filtro por fecha específica
       setSelectedDate(date);
       setSelectedMonth(null);
-      setDateFilter(filteredNews);
+      setDateFilter(filteredNews || []);
+      console.log('✅ Filtro por fecha establecido:', date, 'Noticias:', filteredNews?.length);
     } else if (monthData) {
       // Filtro por mes completo
       setSelectedMonth(monthData.key);
       setSelectedDate(null);
-      setDateFilter(filteredNews);
+      setDateFilter(filteredNews || []);
+      console.log('✅ Filtro por mes establecido:', monthData.key, 'Noticias:', filteredNews?.length);
     } else {
       // Limpiar filtros
       setSelectedDate(null);
       setSelectedMonth(null);
       setDateFilter(null);
+      console.log('✅ Filtros de fecha limpiados');
     }
   };
 
@@ -2665,7 +3107,31 @@ function MainView() {
   };
 
   // Filtrar noticias por categoría, diario y fecha si están seleccionados
-  let noticiasAMostrar = dateFilter || noticias;
+  // Priorizar dateFilter si existe y tiene noticias (filtro de fecha activo)
+  let noticiasAMostrar = (dateFilter && Array.isArray(dateFilter) && dateFilter.length > 0) ? dateFilter : noticias;
+  
+  console.log('📊 Noticias a mostrar:', {
+    dateFilterLength: dateFilter?.length || 0,
+    noticiasLength: noticias.length,
+    noticiasAMostrarLength: noticiasAMostrar.length,
+    selectedDate: selectedDate ? (() => {
+      // Manejar diferentes formatos de fecha y evitar problemas de zona horaria
+      let date;
+      if (typeof selectedDate === 'string') {
+        const parts = selectedDate.split('T')[0].split('-');
+        if (parts.length === 3) {
+          date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        } else {
+          date = new Date(selectedDate);
+        }
+      } else {
+        date = new Date(selectedDate);
+      }
+      return isNaN(date.getTime()) ? null : date.toLocaleDateString('es-ES');
+    })() : null,
+    selectedMonth,
+    usandoDateFilter: (dateFilter && dateFilter.length > 0)
+  });
   
   // Eliminar duplicados por ID (asegurar que cada noticia aparezca solo una vez)
   const seenIds = new Set();
@@ -3292,14 +3758,54 @@ function MainView() {
                   )}
 
                   {/* Contenido según el nivel */}
-                  {dateFilterLevel === 'year' && getAvailableYears().map((year) => (
+                  {dateFilterLevel === 'year' && getAvailableYears().map((year) => {
+                    return (
                     <div
                       key={year.year}
-                      onClick={() => {
+                      onClick={async () => {
                         setSelectedYear(year.year);
                         setDateFilterLevel('month');
                         setSelectedMonthInYear(null);
                         setSelectedDate(null);
+                        
+                        // Cargar todas las noticias del año desde el backend
+                        // Obtener todos los meses y días del año
+                        const months = getAvailableMonths(year.year);
+                        const allYearNews = [];
+                        
+                        console.log(`📅 Cargando noticias para año ${year.year}, meses:`, months.length);
+                        
+                        try {
+                          // Cargar noticias para cada mes y día
+                          for (const month of months) {
+                            const days = getAvailableDays(year.year, month.month);
+                            for (const day of days) {
+                              const fechaFormateada = day.date instanceof Date 
+                                ? day.date.toISOString().split('T')[0]
+                                : day.date.split('T')[0];
+                              try {
+                                const response = await axios.get(`http://localhost:8000/noticias/por-fecha?fecha=${fechaFormateada}`);
+                                if (response.data && response.data.length > 0) {
+                                  allYearNews.push(...response.data);
+                                }
+                              } catch (err) {
+                                console.warn(`⚠️ Error cargando noticias para ${fechaFormateada}:`, err);
+                              }
+                            }
+                          }
+                          
+                          console.log(`✅ Noticias cargadas para año ${year.year}:`, allYearNews.length);
+                          handleDateFilter(null, allYearNews, { key: year.year.toString(), year: year.year });
+                        } catch (error) {
+                          console.error('❌ Error cargando noticias del año:', error);
+                          // Fallback: filtrar sobre noticias en memoria
+                          const yearFilteredNews = noticias.filter(noticia => {
+                            if (!noticia.fecha_publicacion) return false;
+                            const noticiaDate = new Date(noticia.fecha_publicacion);
+                            return noticiaDate.getFullYear() === year.year;
+                          });
+                          handleDateFilter(null, yearFilteredNews, { key: year.year.toString(), year: year.year });
+                        }
                       }}
                       style={{
                         padding: '8px 12px',
@@ -3338,15 +3844,67 @@ function MainView() {
                         {year.totalNoticias}
                       </span>
                     </div>
-                  ))}
+                    );
+                  })}
 
-                  {dateFilterLevel === 'month' && selectedYear && getAvailableMonths(selectedYear).map((month) => (
+                  {dateFilterLevel === 'month' && selectedYear && getAvailableMonths(selectedYear).map((month) => {
+                    return (
                     <div
                       key={month.month}
-                      onClick={() => {
+                      onClick={async () => {
                         setSelectedMonthInYear(month.month);
                         setDateFilterLevel('day');
                         setSelectedDate(null);
+                        
+                        // Cargar todas las noticias del mes desde el backend
+                        // Obtener todos los días del mes y cargar noticias para cada uno
+                        const days = getAvailableDays(selectedYear, month.month);
+                        const allMonthNews = [];
+                        
+                        console.log(`📅 Cargando noticias para mes ${month.month}/${selectedYear}, días:`, days.length);
+                        
+                        try {
+                          // Cargar noticias para cada día del mes
+                          for (const day of days) {
+                            const fechaFormateada = day.date instanceof Date 
+                              ? day.date.toISOString().split('T')[0]
+                              : day.date.split('T')[0];
+                            try {
+                              const response = await axios.get(`http://localhost:8000/noticias/por-fecha?fecha=${fechaFormateada}`);
+                              if (response.data && response.data.length > 0) {
+                                allMonthNews.push(...response.data);
+                              }
+                            } catch (err) {
+                              console.warn(`⚠️ Error cargando noticias para ${fechaFormateada}:`, err);
+                            }
+                          }
+                          
+                          console.log(`✅ Noticias cargadas para mes ${month.month}/${selectedYear}:`, allMonthNews.length);
+                          
+                          const monthData = {
+                            key: `${selectedYear}-${month.month - 1}`,
+                            name: month.monthName,
+                            year: selectedYear,
+                            month: month.month
+                          };
+                          handleDateFilter(null, allMonthNews, monthData);
+                        } catch (error) {
+                          console.error('❌ Error cargando noticias del mes:', error);
+                          // Fallback: filtrar sobre noticias en memoria
+                          const monthFilteredNews = noticias.filter(noticia => {
+                            if (!noticia.fecha_publicacion) return false;
+                            const noticiaDate = new Date(noticia.fecha_publicacion);
+                            return noticiaDate.getFullYear() === selectedYear && 
+                                   noticiaDate.getMonth() + 1 === month.month;
+                          });
+                          const monthData = {
+                            key: `${selectedYear}-${month.month - 1}`,
+                            name: month.monthName,
+                            year: selectedYear,
+                            month: month.month
+                          };
+                          handleDateFilter(null, monthFilteredNews, monthData);
+                        }
                       }}
                       style={{
                         padding: '8px 12px',
@@ -3385,16 +3943,59 @@ function MainView() {
                         {month.totalNoticias}
                       </span>
                     </div>
-                  ))}
+                    );
+                  })}
 
-                  {dateFilterLevel === 'day' && selectedYear && selectedMonthInYear && getAvailableDays(selectedYear, selectedMonthInYear).map((day) => (
+                  {dateFilterLevel === 'day' && selectedYear && selectedMonthInYear && getAvailableDays(selectedYear, selectedMonthInYear).map((day) => {
+                    return (
                     <div
                       key={day.day}
-                      onClick={() => {
-                        setSelectedDate(day.date);
+                      onClick={async () => {
+                        // Formatear fecha para el endpoint (YYYY-MM-DD) y para el estado
+                        let fechaFormateada;
+                        let fechaParaEstado;
+                        
+                        if (day.date instanceof Date) {
+                          // Si es un objeto Date, formatear correctamente
+                          const year = day.date.getFullYear();
+                          const month = String(day.date.getMonth() + 1).padStart(2, '0');
+                          const dayNum = String(day.date.getDate()).padStart(2, '0');
+                          fechaFormateada = `${year}-${month}-${dayNum}`;
+                          fechaParaEstado = fechaFormateada;
+                        } else if (typeof day.date === 'string') {
+                          // Si es un string, usar directamente (ya debería estar en formato YYYY-MM-DD)
+                          fechaFormateada = day.date.split('T')[0];
+                          fechaParaEstado = fechaFormateada;
+                        } else {
+                          // Fallback
+                          fechaFormateada = day.date;
+                          fechaParaEstado = day.date;
+                        }
+                        
+                        // Establecer la fecha en el estado usando el formato YYYY-MM-DD
+                        setSelectedDate(fechaParaEstado);
                         setShowDateDropdown(false);
-                        // Aplicar filtro de fecha
-                        handleDateFilter(day.date);
+                        
+                        console.log('📅 Cargando noticias para fecha:', fechaFormateada);
+                        // Cargar noticias desde el backend para esta fecha específica
+                        try {
+                          const response = await axios.get(`http://localhost:8000/noticias/por-fecha?fecha=${fechaFormateada}`);
+                          const filteredNews = response.data || [];
+                          console.log(`✅ Noticias cargadas desde backend para ${fechaFormateada}:`, filteredNews.length);
+                          // Aplicar filtro de fecha con las noticias del backend, usando la fecha formateada
+                          handleDateFilter(fechaParaEstado, filteredNews);
+                        } catch (error) {
+                          console.error('❌ Error cargando noticias por fecha:', error);
+                          // Fallback: filtrar sobre noticias en memoria
+                          const filteredNews = noticias.filter(noticia => {
+                            if (!noticia.fecha_publicacion) return false;
+                            const noticiaDate = new Date(noticia.fecha_publicacion);
+                            const parts = fechaFormateada.split('-');
+                            const selectedDateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                            return noticiaDate.toDateString() === selectedDateObj.toDateString();
+                          });
+                          handleDateFilter(fechaParaEstado, filteredNews);
+                        }
                       }}
                       style={{
                         padding: '8px 12px',
@@ -3433,7 +4034,8 @@ function MainView() {
                         {day.totalNoticias}
                       </span>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -3570,13 +4172,18 @@ function MainView() {
         
         {!loading && !error && noticias.length > 0 && (
           <>
+            {/* Sidebar de Anuncios - Lado Izquierdo */}
+            <AdSidebar>
+              <AdSense height="600px" />
+            </AdSidebar>
+            
             {/* Panel izquierdo - Noticias Relevantes de Días Anteriores */}
             <LeftPanel>
               <LeftPanelTitle>⭐ Noticias Premium</LeftPanelTitle>
               {noticiasRelevantes.length > 0 ? (
                 noticiasRelevantes.map((noticia, index) => (
                   <RelevantNewsCard 
-                    key={`relevant-${noticia.id}`} 
+                    key={`premium-${noticia.id}-${index}-${noticia.enlace || ''}`} 
                     onClick={() => handleNoticiaClick(noticia)}
                     style={getPremiumStyle(noticia)}
                     $hasImage={!!noticia.imagen_url}
@@ -3596,7 +4203,9 @@ function MainView() {
                           {noticia.categoria}
                         </RelevantNewsCategory>
                       </RelevantNewsMeta>
-                      <RelevantNewsTitle>{noticia.titulo}</RelevantNewsTitle>
+                      <RelevantNewsTitle>
+                        {noticia.titulo ? decodeHTMLEntities(noticia.titulo) : 'Sin título'}
+                      </RelevantNewsTitle>
                       <RelevantNewsDiario>
                         {noticia.diario_nombre}
                       </RelevantNewsDiario>
@@ -3753,7 +4362,21 @@ function MainView() {
                       borderRadius: '15px',
                       fontSize: '0.9rem'
                     }}>
-                      Fecha: {selectedDate.toLocaleDateString('es-ES')}
+                      Fecha: {selectedDate ? (() => {
+                        // Manejar diferentes formatos de fecha y evitar problemas de zona horaria
+                        let date;
+                        if (typeof selectedDate === 'string') {
+                          const parts = selectedDate.split('T')[0].split('-');
+                          if (parts.length === 3) {
+                            date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                          } else {
+                            date = new Date(selectedDate);
+                          }
+                        } else {
+                          date = new Date(selectedDate);
+                        }
+                        return isNaN(date.getTime()) ? '' : date.toLocaleDateString('es-ES');
+                      })() : ''}
                     </span>
                   )}
                   {selectedMonth && (
@@ -3903,45 +4526,55 @@ function MainView() {
                         <ComparisonGrid>
                           {comparisonData.items.slice(0, 9).map((item) => (
                             <ComparisonCard key={`cmp-${item.id}`}>
-                              <ComparisonBadge>{item.plataforma}</ComparisonBadge>
-                              <ComparisonCardTitle>{item.titulo}</ComparisonCardTitle>
-                              <ComparisonMeta>
-                                {item.categoria && (
-                                  <span>#{item.categoria}</span>
-                                )}
-                                {item.autor && (
-                                  <span>Autor: {item.autor}</span>
-                                )}
-                                {item.fecha_publicacion ? (
-                                  <span>{formatDate(item.fecha_publicacion)}</span>
-                                ) : null}
-                              </ComparisonMeta>
-                              {item.enlace && (
-                                <ComparisonLink href={item.enlace} target="_blank" rel="noopener noreferrer">
-                                  Ver publicación original ↗
-                                </ComparisonLink>
-                              )}
-                              {item.coincidencias_diarios && item.coincidencias_diarios.length > 0 ? (
-                                <ComparisonMatches>
-                                  <ComparisonMatchesTitle>Coincidencias aproximadas en diarios:</ComparisonMatchesTitle>
-                                  {item.coincidencias_diarios.map(match => (
-                                    <ComparisonMatchItem key={`match-${match.id}`}>
-                                      <div style={{ flex: 1 }}>
-                                        <strong>{match.diario}</strong>
-                                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{match.titulo}</div>
-                                      </div>
-                                      <span>{`${Math.round((match.similaridad || 0) * 100)}%`}</span>
-                                    </ComparisonMatchItem>
-                                  ))}
-                                </ComparisonMatches>
+                              {item.imagen_url && item.imagen_url.trim() !== '' ? (
+                                <ComparisonImage imageUrl={item.imagen_url}>
+                                  <ComparisonBadge>{item.plataforma}</ComparisonBadge>
+                                </ComparisonImage>
                               ) : (
-                                <ComparisonMatches>
-                                  <ComparisonMatchesTitle>Sin coincidencias detectadas en diarios web</ComparisonMatchesTitle>
-                                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                                    Esta noticia proviene de redes sociales y no se encontró cobertura similar en el scraping de diarios.
-                                  </div>
-                                </ComparisonMatches>
+                                <ComparisonBadge style={{ position: 'relative', top: '0', left: '0', margin: '1.5rem 1.5rem 0 1.5rem' }}>
+                                  {item.plataforma}
+                                </ComparisonBadge>
                               )}
+                              <ComparisonContent>
+                                <ComparisonCardTitle>{item.titulo}</ComparisonCardTitle>
+                                <ComparisonMeta>
+                                  {item.categoria && (
+                                    <span>#{item.categoria}</span>
+                                  )}
+                                  {item.autor && (
+                                    <span>Autor: {item.autor}</span>
+                                  )}
+                                  {item.fecha_publicacion ? (
+                                    <span>{formatDate(item.fecha_publicacion)}</span>
+                                  ) : null}
+                                </ComparisonMeta>
+                                {item.enlace && (
+                                  <ComparisonLink href={item.enlace} target="_blank" rel="noopener noreferrer">
+                                    Ver publicación original ↗
+                                  </ComparisonLink>
+                                )}
+                                {item.coincidencias_diarios && item.coincidencias_diarios.length > 0 ? (
+                                  <ComparisonMatches>
+                                    <ComparisonMatchesTitle>Coincidencias aproximadas en diarios:</ComparisonMatchesTitle>
+                                    {item.coincidencias_diarios.map(match => (
+                                      <ComparisonMatchItem key={`match-${match.id}`}>
+                                        <div style={{ flex: 1 }}>
+                                          <strong>{match.diario}</strong>
+                                          <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{match.titulo}</div>
+                                        </div>
+                                        <span>{`${Math.round((match.similaridad || 0) * 100)}%`}</span>
+                                      </ComparisonMatchItem>
+                                    ))}
+                                  </ComparisonMatches>
+                                ) : (
+                                  <ComparisonMatches>
+                                    <ComparisonMatchesTitle>Sin coincidencias detectadas en diarios web</ComparisonMatchesTitle>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                      Esta noticia proviene de redes sociales y no se encontró cobertura similar en el scraping de diarios.
+                                    </div>
+                                  </ComparisonMatches>
+                                )}
+                              </ComparisonContent>
                             </ComparisonCard>
                           ))}
                         </ComparisonGrid>
@@ -4148,15 +4781,39 @@ function MainView() {
         </>
       )}
       </MainContent>
-      <SubscriptionModal
-        isOpen={showSubscriptionModal}
-        onClose={closeSubscriptionModal}
-        pendingNews={pendingPremiumNews}
-        onSubscriptionSuccess={() => {
-          closeSubscriptionModal();
-          refreshSubscription();
-        }}
-      />
+      
+      {/* Modal de Login (para noticias premium) */}
+      {showLoginModal && (
+        <LoginModal
+          isOpen={showLoginModal}
+          onClose={handleLoginModalClose}
+          onSwitchToRegister={handleSwitchToRegister}
+          skipRedirect={true}
+          onLoginSuccess={async () => {
+            console.log('✅ Login exitoso desde noticia premium, noticia pendiente:', pendingPremiumNews);
+            // No hacer nada aquí, el useEffect se encargará de verificar suscripción y navegar
+            // después de que el token esté disponible
+          }}
+        />
+      )}
+      
+      {/* Modal de Suscripción */}
+      {showSubscriptionModal && (
+        <SubscriptionModal
+          isOpen={showSubscriptionModal}
+          onClose={closeSubscriptionModal}
+          pendingNews={pendingPremiumNews}
+          onSubscriptionSuccess={() => {
+            closeSubscriptionModal();
+            refreshSubscription();
+            if (pendingPremiumNews) {
+              navigate(`/noticia/${pendingPremiumNews.id}`);
+            }
+          }}
+        />
+      )}
+      
+      <ChatBot />
     </Container>
   );
 }
@@ -4175,6 +4832,7 @@ function App() {
           <Route path="/diario/cnn-en-español" element={<DiarioCNN />} />
           <Route path="/comparativa" element={<Comparativa />} />
           <Route path="/noticia/:id" element={<NoticiaDetalle />} />
+          <Route path="/anuncio/:adId" element={<AdDetail />} />
           <Route path="/alertas" element={<AlertManager />} />
           <Route path="/buscar" element={<AdvancedSearch />} />
           <Route path="/analytics" element={<AnalyticsDashboard />} />

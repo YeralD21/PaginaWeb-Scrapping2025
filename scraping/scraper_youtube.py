@@ -13,7 +13,20 @@ import xml.etree.ElementTree as ET
 import requests
 from requests import RequestException
 
-from scraping.youtube_channels import YOUTUBE_CHANNELS
+# Importación relativa para evitar problemas cuando se ejecuta desde el directorio scraping
+try:
+    from youtube_channels import YOUTUBE_CHANNELS
+except ImportError:
+    # Si falla, intentar importación absoluta
+    try:
+        import sys
+        import os
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from youtube_channels import YOUTUBE_CHANNELS
+    except ImportError:
+        # Si no existe el archivo, usar lista vacía como fallback
+        YOUTUBE_CHANNELS = []
+        logger.warning("youtube_channels.py no encontrado, usando lista vacía")
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -103,44 +116,121 @@ class ScraperYouTube:
         return None
 
     def get_all_news(self) -> List[Dict]:
-        """Obtiene videos reales o mock si no están disponibles."""
+        """Obtiene videos REALES de YouTube. Solo usa mock si es absolutamente necesario."""
         if self.force_mock:
-            logger.info("Usando modo mock forzado para YouTube (YOUTUBE_FORCE_MOCK=true)")
+            logger.warning("⚠️ Usando modo mock forzado para YouTube (YOUTUBE_FORCE_MOCK=true)")
             return self._generate_mock_batch()
 
+        # PRIORIDAD: Intentar obtener videos reales primero
         try:
-            real_videos = self._fetch_real_videos()
-            if real_videos:
-                logger.info(f"Videos reales obtenidos de YouTube: {len(real_videos)}")
-                return real_videos
-            logger.warning("No se obtuvieron videos reales, generando datos mock")
+            logger.info("🚀 Intentando obtener videos REALES de YouTube desde feeds RSS...")
+            real_videos = self._fetch_real_videos(max_items_per_channel=10)  # Aumentar a 10 videos por canal
+            
+            if real_videos and len(real_videos) > 0:
+                logger.info(f"✅ Videos REALES obtenidos de YouTube: {len(real_videos)}")
+                logger.info(f"📊 Canales scrapeados: {len(set(v.get('diario_nombre', '') for v in real_videos))}")
+                
+                # Verificar que los videos tengan enlaces válidos
+                valid_videos = [v for v in real_videos if v.get('enlace') and v.get('enlace').startswith('http')]
+                if len(valid_videos) < len(real_videos):
+                    logger.warning(f"⚠️ {len(real_videos) - len(valid_videos)} videos sin enlace válido fueron filtrados")
+                
+                if valid_videos:
+                    logger.info(f"✅ Retornando {len(valid_videos)} videos REALES válidos")
+                    return valid_videos
+                else:
+                    logger.error("❌ No se encontraron videos válidos con enlaces reales")
+            else:
+                logger.warning("⚠️ No se obtuvieron videos reales del feed RSS")
+                
         except Exception as exc:
-            logger.error(f"Error obteniendo videos reales de YouTube: {exc}", exc_info=True)
+            logger.error(f"❌ Error obteniendo videos reales de YouTube: {exc}", exc_info=True)
+            logger.warning("⚠️ Intentando obtener videos de canales específicos como último recurso...")
+            
+            # Último intento: solo los 2 canales solicitados
+            try:
+                priority_channels = [
+                    {"channel_id": "UC_lEiu6917IJz03TnntWUaQ", "diario_nombre": "CNN en Español", "handle": "@cnnee"},
+                    {"channel_id": "UCA5MMdT1ePEEi9ACfCelIKQ", "diario_nombre": "El Comercio", "handle": "@DiarioElComercio"}
+                ]
+                
+                priority_videos = []
+                for channel_config in priority_channels:
+                    try:
+                        channel_videos = self._fetch_channel_feed(
+                            channel_config["channel_id"], 
+                            max_items=10, 
+                            source=channel_config
+                        )
+                        if channel_videos:
+                            priority_videos.extend(channel_videos)
+                            logger.info(f"✅ {len(channel_videos)} videos obtenidos de {channel_config['diario_nombre']}")
+                    except Exception as e:
+                        logger.error(f"❌ Error obteniendo videos de {channel_config['diario_nombre']}: {e}")
+                
+                if priority_videos:
+                    logger.info(f"✅ Total de videos prioritarios obtenidos: {len(priority_videos)}")
+                    return priority_videos
+            except Exception as e2:
+                logger.error(f"❌ Error en intento de recuperación: {e2}")
 
+        # SOLO como último recurso: usar mock
+        logger.warning("⚠️ No se pudieron obtener videos reales, usando mock como último recurso")
         return self._generate_mock_batch()
 
-    def _fetch_real_videos(self, max_items_per_channel: int = 5) -> List[Dict]:
-        """Obtiene videos usando los feeds RSS oficiales de los canales."""
+    def _fetch_real_videos(self, max_items_per_channel: int = 10) -> List[Dict]:
+        """Obtiene videos REALES usando los feeds RSS oficiales de los canales."""
         all_videos: List[Dict] = []
+        
+        # Priorizar los 2 canales solicitados por el usuario
+        priority_channels = [
+            {"channel_id": "UC_lEiu6917IJz03TnntWUaQ", "diario_nombre": "CNN en Español", "handle": "@cnnee", "url": "https://www.youtube.com/@cnnee"},
+            {"channel_id": "UCA5MMdT1ePEEi9ACfCelIKQ", "diario_nombre": "El Comercio", "handle": "@DiarioElComercio", "url": "https://www.youtube.com/@DiarioElComercio"}
+        ]
+        
+        # Primero scrapear los canales prioritarios
+        logger.info("🎯 Priorizando canales oficiales: CNN en Español (@cnnee) y El Comercio (@DiarioElComercio)")
+        for priority_channel in priority_channels:
+            try:
+                logger.info(f"📡 Scrapeando canal prioritario: {priority_channel['diario_nombre']} ({priority_channel['handle']})")
+                channel_videos = self._fetch_channel_feed(
+                    priority_channel["channel_id"], 
+                    max_items_per_channel, 
+                    source=priority_channel
+                )
+                if channel_videos:
+                    all_videos.extend(channel_videos)
+                    logger.info(f"✅ {len(channel_videos)} videos REALES agregados desde {priority_channel['diario_nombre']}")
+                else:
+                    logger.warning(f"⚠️ No se encontraron videos recientes para {priority_channel['diario_nombre']}")
+            except RequestException as req_exc:
+                logger.error(f"❌ Error de red descargando feed de {priority_channel['diario_nombre']}: {req_exc}")
+            except Exception as exc:
+                logger.error(f"❌ Error procesando feed de {priority_channel['diario_nombre']}: {exc}", exc_info=True)
 
+        # Luego scrapear otros canales si están configurados (opcional)
         for source in self.channel_sources:
             channel_id = source.get('channel_id')
             if not channel_id:
                 continue
+            
+            # Saltar si ya fue procesado como canal prioritario
+            if channel_id in ["UC_lEiu6917IJz03TnntWUaQ", "UCA5MMdT1ePEEi9ACfCelIKQ"]:
+                continue
 
             display_name = source.get('diario_nombre', 'YouTube')
             try:
-                logger.info(f"Descargando feed de YouTube para {display_name} ({channel_id})")
+                logger.info(f"📡 Descargando feed de YouTube para {display_name} ({channel_id})")
                 channel_videos = self._fetch_channel_feed(channel_id, max_items_per_channel, source)
                 if channel_videos:
                     all_videos.extend(channel_videos)
-                    logger.info(f"{len(channel_videos)} videos agregados desde {display_name}")
+                    logger.info(f"✅ {len(channel_videos)} videos agregados desde {display_name}")
                 else:
-                    logger.warning(f"No se encontraron videos recientes para {display_name}")
+                    logger.warning(f"⚠️ No se encontraron videos recientes para {display_name}")
             except RequestException as req_exc:
-                logger.error(f"Error de red descargando feed de {display_name}: {req_exc}")
+                logger.error(f"❌ Error de red descargando feed de {display_name}: {req_exc}")
             except Exception as exc:
-                logger.error(f"Error procesando feed de {display_name}: {exc}", exc_info=True)
+                logger.error(f"❌ Error procesando feed de {display_name}: {exc}", exc_info=True)
 
         return all_videos
 
@@ -148,26 +238,33 @@ class ScraperYouTube:
         """Descarga y procesa el feed RSS de un canal de YouTube."""
         config = source or self._get_channel_config(channel_identifier)
         if not config:
-            logger.warning(f"Canal de YouTube no configurado: {channel_identifier}")
+            logger.warning(f"⚠️ Canal de YouTube no configurado: {channel_identifier}")
             return []
 
         channel_id = config.get("channel_id") or channel_identifier.split("/", 1)[-1]
         display_name = config.get("diario_nombre", channel_id)
+        handle = config.get("handle", "")
+        
+        # Construir URL del feed RSS
         feed_url = self.FEED_URL_TEMPLATE.format(channel_id=channel_id)
+        logger.info(f"📡 Obteniendo feed RSS de {display_name} ({handle}) desde: {feed_url}")
         
         try:
-            response = self.http_session.get(feed_url, timeout=15)
+            response = self.http_session.get(feed_url, timeout=20)
             response.raise_for_status()
             
             # Verificar si el feed está vacío o es inválido
             if not response.content or len(response.content) < 100:
                 logger.warning(f"⚠️ Feed vacío o inválido para {display_name}")
                 return []
+            
+            logger.info(f"✅ Feed RSS obtenido exitosamente para {display_name} ({len(response.content)} bytes)")
                 
         except RequestException as e:
-            if hasattr(e.response, 'status_code'):
+            if hasattr(e, 'response') and e.response is not None:
                 if e.response.status_code == 404:
-                    logger.error(f"❌ Canal no encontrado (404): {display_name} (ID: {channel_id})")
+                    logger.error(f"❌ Canal no encontrado (404): {display_name} (ID: {channel_id}, Handle: {handle})")
+                    logger.error(f"   URL del feed: {feed_url}")
                 elif e.response.status_code == 403:
                     logger.error(f"❌ Acceso denegado (403): {display_name} - El feed puede estar deshabilitado")
                 else:
@@ -177,6 +274,8 @@ class ScraperYouTube:
             return []
         except Exception as e:
             logger.error(f"❌ Error inesperado al obtener feed de {display_name}: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             return []
 
         root = ET.fromstring(response.content)
@@ -224,15 +323,37 @@ class ScraperYouTube:
 
             categoria = self.classify_video(titulo, descripcion)
 
-            # Asegurar que el enlace sea válido
+            # Asegurar que el enlace sea válido y contenga video_id real
             if not enlace or not enlace.startswith('http'):
-                logger.warning(f"Enlace inválido para video: {titulo[:50]}")
+                logger.warning(f"⚠️ Enlace inválido para video: {titulo[:50]}")
                 continue
+            
+            # Validar que el video_id sea real (11 caracteres alfanuméricos)
+            if not video_id or len(video_id) != 11:
+                logger.warning(f"⚠️ Video ID inválido para video: {titulo[:50]} (ID: {video_id})")
+                # Intentar extraer video_id del enlace si no se encontró
+                if 'watch?v=' in enlace:
+                    video_id = enlace.split('watch?v=')[1].split('&')[0]
+                    if len(video_id) == 11:
+                        logger.info(f"✅ Video ID extraído del enlace: {video_id}")
+                    else:
+                        logger.warning(f"⚠️ Video ID extraído también es inválido: {video_id}")
+                        continue
+                else:
+                    continue
+            
+            # Construir enlace completo si no está completo
+            if not enlace.startswith('https://www.youtube.com'):
+                if video_id:
+                    enlace = f"https://www.youtube.com/watch?v={video_id}"
+                else:
+                    logger.warning(f"⚠️ No se puede construir enlace válido para: {titulo[:50]}")
+                    continue
             
             videos.append({
                 'titulo': titulo,
                 'contenido': descripcion or f"Video publicado por {autor}.",
-                'enlace': enlace,  # CRÍTICO: Este debe ser la URL completa del video
+                'enlace': enlace,  # CRÍTICO: URL completa y válida del video de YouTube
                 'imagen_url': thumbnail_url,
                 'categoria': categoria,
                 'fecha_publicacion': fecha_publicacion,
@@ -244,11 +365,11 @@ class ScraperYouTube:
                     'youtube_channel_id': channel_id,
                     'youtube_handle': config.get('handle'),
                     'youtube_channel_url': config.get('url') or f"https://www.youtube.com/channel/{channel_id}",
-                    'video_id': video_id  # Agregar video_id para facilitar embed
+                    'video_id': video_id  # Video ID real de 11 caracteres
                 }
             })
             
-            logger.info(f"Video agregado: {titulo[:50]}... | URL: {enlace[:60]}...")
+            logger.info(f"✅ Video REAL agregado: {titulo[:50]}... | Video ID: {video_id} | URL: {enlace}")
 
         return videos
 

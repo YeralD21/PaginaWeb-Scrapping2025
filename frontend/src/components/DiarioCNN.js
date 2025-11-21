@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { FiCalendar, FiClock, FiRefreshCw, FiStar, FiTrendingUp, FiBarChart2, FiGlobe, FiMapPin, FiHome, FiLayers, FiFileText, FiPlay, FiShare2, FiBookmark, FiHeart, FiMessageCircle, FiExternalLink, FiImage } from 'react-icons/fi';
+import { FiCalendar, FiClock, FiRefreshCw, FiStar, FiTrendingUp, FiBarChart2, FiGlobe, FiMapPin, FiHome, FiLayers, FiFileText, FiPlay, FiShare2, FiBookmark, FiHeart, FiMessageCircle, FiExternalLink, FiImage, FiArrowLeft } from 'react-icons/fi';
+import ChatBot from './ChatBot';
 
 // Styled Components
 const CNNContainer = styled.div`
@@ -20,10 +22,16 @@ const LoadingSpinner = styled.div`
   color: #666;
 `;
 
+const FiltersContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+`;
+
 const CategoryFilter = styled.div`
   display: flex;
   gap: 0.5rem;
-  margin-bottom: 2rem;
   flex-wrap: wrap;
 `;
 
@@ -45,23 +53,78 @@ const CategoryButton = styled.button`
   }
 `;
 
-const LoadMoreButton = styled.button`
-  background: #cc0000;
-  color: white;
-  border: none;
-  padding: 1rem 2rem;
-  border-radius: 4px;
-  font-size: 1rem;
+const DateFilter = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+`;
+
+const DateLabel = styled.label`
   font-weight: 600;
+  color: #333;
+  font-size: 0.9rem;
+`;
+
+const DateSelect = styled.select`
+  padding: 0.6rem 1rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.3s ease;
-  margin: 2rem auto;
-  display: block;
+  background: white;
+  color: #333;
+  min-width: 200px;
 
   &:hover {
-    background: #b30000;
-    transform: translateY(-2px);
+    border-color: #cc0000;
   }
+
+  &:focus {
+    outline: none;
+    border-color: #cc0000;
+    box-shadow: 0 0 0 3px rgba(204, 0, 0, 0.1);
+  }
+`;
+
+const PaginationContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 3rem 0;
+  flex-wrap: wrap;
+`;
+
+const PaginationButton = styled.button`
+  background: ${props => props.active ? '#cc0000' : 'white'};
+  color: ${props => props.active ? 'white' : '#333'};
+  border: 2px solid ${props => props.active ? '#cc0000' : '#e0e0e0'};
+  padding: 0.6rem 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: ${props => props.active ? '600' : '400'};
+  min-width: 40px;
+
+  &:hover:not(:disabled) {
+    background: ${props => props.active ? '#b30000' : '#f8f9fa'};
+    border-color: #cc0000;
+    color: ${props => props.active ? 'white' : '#cc0000'};
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const PaginationEllipsis = styled.span`
+  padding: 0.6rem 0.5rem;
+  color: #666;
+  font-weight: 600;
 `;
 
 // Nuevos componentes para el diseño mejorado
@@ -164,24 +227,32 @@ const SidebarGrid = styled.div`
 `;
 
 const DiarioCNN = () => {
+  const navigate = useNavigate();
   const [noticias, setNoticias] = useState([]);
+  const [noticiasFiltradas, setNoticiasFiltradas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('Todas');
+  const [fechaSeleccionada, setFechaSeleccionada] = useState('');
+  const [fechasDisponibles, setFechasDisponibles] = useState([]);
   const [mostrarDetalle, setMostrarDetalle] = useState(false);
   const [noticiaSeleccionada, setNoticiaSeleccionada] = useState(null);
-  const [noticiasCargadas, setNoticiasCargadas] = useState(12);
-  const [cargandoMas, setCargandoMas] = useState(false);
-
-  const categorias = ['Todas', 'Mundo', 'Deportes', 'Economía'];
+  const [paginaActual, setPaginaActual] = useState(1);
+  const [noticiasPorPagina] = useState(12);
 
   useEffect(() => {
     loadNoticiasCNN();
+    loadFechasDisponibles();
   }, []);
+
+  useEffect(() => {
+    aplicarFiltros();
+  }, [noticias, categoriaSeleccionada, fechaSeleccionada]);
 
   const loadNoticiasCNN = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:8000/noticias?diario=CNN en Español&limit=100');
+      // Cargar más noticias para tener suficiente para filtrar
+      const response = await fetch('http://localhost:8000/noticias?diario=CNN en Español&limit=1000');
       const data = await response.json();
       
       // Filtrar noticias de CNN en Español
@@ -195,6 +266,50 @@ const DiarioCNN = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadFechasDisponibles = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/noticias/fechas-disponibles/CNN en Español');
+      const data = await response.json();
+      if (data && data.fechas) {
+        // Extraer solo las fechas (el endpoint devuelve objetos con propiedad 'fecha')
+        const fechas = data.fechas.map(item => typeof item === 'string' ? item : item.fecha).filter(Boolean);
+        // Ordenar fechas de más reciente a más antigua
+        const fechasOrdenadas = fechas.sort((a, b) => new Date(b) - new Date(a));
+        setFechasDisponibles(fechasOrdenadas);
+      }
+    } catch (error) {
+      console.error('Error cargando fechas disponibles:', error);
+    }
+  };
+
+  const aplicarFiltros = () => {
+    let filtradas = [...noticias];
+
+    // Filtrar por categoría
+    if (categoriaSeleccionada !== 'Todas') {
+      filtradas = filtradas.filter(noticia => noticia.categoria === categoriaSeleccionada);
+    }
+
+    // Filtrar por fecha
+    if (fechaSeleccionada) {
+      filtradas = filtradas.filter(noticia => {
+        if (!noticia.fecha_publicacion) return false;
+        const fechaNoticia = new Date(noticia.fecha_publicacion).toISOString().split('T')[0];
+        return fechaNoticia === fechaSeleccionada;
+      });
+    }
+
+    // Ordenar por fecha de publicación (más recientes primero)
+    filtradas.sort((a, b) => {
+      const fechaA = new Date(a.fecha_publicacion || a.fecha_extraccion);
+      const fechaB = new Date(b.fecha_publicacion || b.fecha_extraccion);
+      return fechaB - fechaA;
+    });
+
+    setNoticiasFiltradas(filtradas);
+    setPaginaActual(1); // Resetear a primera página cuando cambian los filtros
   };
 
   const formatDate = (dateString) => {
@@ -217,12 +332,17 @@ const DiarioCNN = () => {
     setNoticiaSeleccionada(null);
   };
 
-  const handleCargarMas = () => {
-    setCargandoMas(true);
-    setTimeout(() => {
-      setNoticiasCargadas(prev => prev + 12);
-      setCargandoMas(false);
-    }, 1000);
+  // Calcular paginación
+  const totalPaginas = Math.ceil(noticiasFiltradas.length / noticiasPorPagina);
+  const indiceInicio = (paginaActual - 1) * noticiasPorPagina;
+  const indiceFin = indiceInicio + noticiasPorPagina;
+  const noticiasAMostrar = noticiasFiltradas.slice(indiceInicio, indiceFin);
+
+  const handleCambiarPagina = (nuevaPagina) => {
+    if (nuevaPagina >= 1 && nuevaPagina <= totalPaginas) {
+      setPaginaActual(nuevaPagina);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   const handleVerOriginal = () => {
@@ -276,12 +396,40 @@ const DiarioCNN = () => {
     return { hero, sidebar, medium, small, textOnly, remaining };
   };
 
-  // Filtrar noticias por categoría
-  const noticiasFiltradas = categoriaSeleccionada === 'Todas' 
-    ? noticias 
-    : noticias.filter(noticia => noticia.categoria === categoriaSeleccionada);
-
-  const noticiasAMostrar = noticiasFiltradas.slice(0, noticiasCargadas);
+  // Generar array de números de página para mostrar
+  const obtenerNumerosPagina = () => {
+    const paginas = [];
+    const maxPaginasVisibles = 7;
+    
+    if (totalPaginas <= maxPaginasVisibles) {
+      // Mostrar todas las páginas si son pocas
+      for (let i = 1; i <= totalPaginas; i++) {
+        paginas.push(i);
+      }
+    } else {
+      // Mostrar páginas con elipsis
+      if (paginaActual <= 3) {
+        // Al inicio
+        for (let i = 1; i <= 4; i++) paginas.push(i);
+        paginas.push('...');
+        paginas.push(totalPaginas);
+      } else if (paginaActual >= totalPaginas - 2) {
+        // Al final
+        paginas.push(1);
+        paginas.push('...');
+        for (let i = totalPaginas - 3; i <= totalPaginas; i++) paginas.push(i);
+      } else {
+        // En el medio
+        paginas.push(1);
+        paginas.push('...');
+        for (let i = paginaActual - 1; i <= paginaActual + 1; i++) paginas.push(i);
+        paginas.push('...');
+        paginas.push(totalPaginas);
+      }
+    }
+    
+    return paginas;
+  };
 
   // Si se debe mostrar el detalle de la noticia
   if (mostrarDetalle && noticiaSeleccionada) {
@@ -471,7 +619,36 @@ const DiarioCNN = () => {
         zIndex: 100,
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
       }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 2rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <button
+            onClick={() => navigate('/')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              background: 'rgba(255, 255, 255, 0.2)',
+              color: 'white',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              padding: '0.6rem 1.2rem',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+              fontWeight: '600',
+              fontFamily: 'Arial, sans-serif',
+              transition: 'all 0.3s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.background = 'rgba(255, 255, 255, 0.3)';
+              e.target.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+              e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+            }}
+          >
+            <FiArrowLeft style={{ fontSize: '1rem' }} />
+            Volver al Menú
+          </button>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <div style={{ 
               background: 'white', 
@@ -486,24 +663,57 @@ const DiarioCNN = () => {
             </div>
             <span style={{ color: 'white', fontSize: '1.5rem', fontWeight: '600', fontFamily: 'Arial, sans-serif' }}>en Español</span>
           </div>
+          <div style={{ width: '140px' }}></div> {/* Espaciador para centrar el logo */}
         </div>
       </div>
 
       {/* Layout principal */}
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
         
-        {/* Filtros de categoría */}
-        <CategoryFilter>
-          {categorias.map((categoria) => (
-            <CategoryButton
-              key={categoria}
-              active={categoriaSeleccionada === categoria}
-              onClick={() => setCategoriaSeleccionada(categoria)}
+        {/* Filtros */}
+        <FiltersContainer>
+          {/* Filtro de fecha */}
+          <DateFilter>
+            <DateLabel>
+              <FiCalendar style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} />
+              Filtrar por fecha:
+            </DateLabel>
+            <DateSelect
+              value={fechaSeleccionada}
+              onChange={(e) => setFechaSeleccionada(e.target.value)}
             >
-              {categoria}
-            </CategoryButton>
-          ))}
-        </CategoryFilter>
+              <option value="">Todas las fechas</option>
+              {fechasDisponibles.map((fecha) => (
+                <option key={fecha} value={fecha}>
+                  {formatDate(fecha)}
+                </option>
+              ))}
+            </DateSelect>
+            {fechaSeleccionada && (
+              <button
+                onClick={() => setFechaSeleccionada('')}
+                style={{
+                  background: '#f0f0f0',
+                  border: '1px solid #ddd',
+                  padding: '0.6rem 1rem',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem',
+                  color: '#666'
+                }}
+              >
+                Limpiar filtro
+              </button>
+            )}
+          </DateFilter>
+
+          {/* Información de resultados */}
+          <div style={{ fontSize: '0.9rem', color: '#666' }}>
+            Mostrando {noticiasAMostrar.length} de {noticiasFiltradas.length} noticias
+            {fechaSeleccionada && ` (filtradas por fecha)`}
+            {categoriaSeleccionada !== 'Todas' && ` (filtradas por categoría: ${categoriaSeleccionada})`}
+          </div>
+        </FiltersContainer>
 
         {/* Diseño jerárquico como CNN Español */}
         {noticiasAMostrar.length > 0 && (() => {
@@ -855,18 +1065,45 @@ const DiarioCNN = () => {
         })()}
 
 
-        {/* Botón cargar más */}
-        {noticiasAMostrar.length < noticiasFiltradas.length && (
-          <LoadMoreButton onClick={handleCargarMas} disabled={cargandoMas}>
-            {cargandoMas ? (
-              <>
-                <FiRefreshCw style={{ animation: 'spin 1s linear infinite', marginRight: '0.5rem' }} />
-                Cargando...
-              </>
-            ) : (
-              'Cargar más noticias'
-            )}
-          </LoadMoreButton>
+        {/* Paginación */}
+        {totalPaginas > 1 && (
+          <PaginationContainer>
+            <PaginationButton
+              onClick={() => handleCambiarPagina(paginaActual - 1)}
+              disabled={paginaActual === 1}
+            >
+              ← Anterior
+            </PaginationButton>
+
+            {obtenerNumerosPagina().map((pagina, index) => {
+              if (pagina === '...') {
+                return <PaginationEllipsis key={`ellipsis-${index}`}>...</PaginationEllipsis>;
+              }
+              return (
+                <PaginationButton
+                  key={pagina}
+                  active={paginaActual === pagina}
+                  onClick={() => handleCambiarPagina(pagina)}
+                >
+                  {pagina}
+                </PaginationButton>
+              );
+            })}
+
+            <PaginationButton
+              onClick={() => handleCambiarPagina(paginaActual + 1)}
+              disabled={paginaActual === totalPaginas}
+            >
+              Siguiente →
+            </PaginationButton>
+          </PaginationContainer>
+        )}
+
+        {/* Información de paginación */}
+        {totalPaginas > 1 && (
+          <div style={{ textAlign: 'center', color: '#666', fontSize: '0.9rem', marginTop: '-2rem', marginBottom: '2rem' }}>
+            Página {paginaActual} de {totalPaginas}
+          </div>
         )}
       </div>
 
@@ -877,6 +1114,7 @@ const DiarioCNN = () => {
           to { transform: rotate(360deg); }
         }
       `}</style>
+      <ChatBot context="cnn" />
     </CNNContainer>
   );
 };

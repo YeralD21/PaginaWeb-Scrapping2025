@@ -1,8 +1,95 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import Swal from 'sweetalert2';
+import styled from 'styled-components';
+import { FiArrowLeft } from 'react-icons/fi';
 import './SocialMediaFeed.css';
 
+// Styled Components para el diseño elegante similar a user-dashboard
+const AppContainer = styled.div`
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1f3a 0%, #2d3561 50%, #1a1f3a 100%);
+  display: flex;
+  flex-direction: column;
+`;
+
+const Header = styled.header`
+  background: rgba(26, 31, 58, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+  color: white;
+  padding: 1rem 2rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+`;
+
+const HeaderContent = styled.div`
+  max-width: 100%;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+`;
+
+const HeaderLeft = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+`;
+
+const HeaderTitle = styled.h1`
+  font-size: 1.5rem;
+  margin: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const HeaderSubtitle = styled.p`
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0.25rem 0 0 0;
+`;
+
+const BackButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+  color: white;
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-right: 1rem;
+
+  &:hover {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.3) 100%);
+    border-color: rgba(102, 126, 234, 0.5);
+    transform: translateY(-2px);
+  }
+`;
+
+const MainLayout = styled.div`
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+`;
+
 function SocialMediaFeed() {
+  const navigate = useNavigate();
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -83,17 +170,129 @@ function SocialMediaFeed() {
 
   const handleRefresh = async () => {
     setScraping(true);
+    setError(null);
+    
+    // Guardar conteo anterior para calcular diferencias
+    const previousCounts = { ...counts };
+    
     try {
       const scrapResponse = await axios.post('http://localhost:8000/scraping/social-media/ejecutar');
       console.log('Scraping result:', scrapResponse.data);
+      
+      const result = scrapResponse.data;
       
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       await fetchSocialNews();
       await fetchAllNewsForCounts();
+      
+      // Esperar un momento para que los conteos se actualicen
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Obtener estadísticas del backend (más confiables)
+      const savedByPlatform = result.saved_by_platform || {};
+      const newsByPlatform = result.news_by_platform || {};
+      
+      // Construir mensaje detallado SIEMPRE mostrando todas las redes sociales
+      let detailMessage = '';
+      const platformNames = {
+        'Twitter': '🐦 Twitter',
+        'Facebook': '📘 Facebook',
+        'Instagram': '📸 Instagram',
+        'YouTube': '▶️ YouTube'
+      };
+      
+      // Lista de todas las plataformas posibles
+      const allPlatforms = ['Twitter', 'Facebook', 'Instagram', 'YouTube'];
+      
+      // Usar estadísticas guardadas si están disponibles, sino usar extraídas
+      const platformStats = Object.keys(savedByPlatform).length > 0 ? savedByPlatform : newsByPlatform;
+      const statsType = Object.keys(savedByPlatform).length > 0 ? 'guardadas' : 'extraídas';
+      
+      // Construir mensaje con TODAS las plataformas, incluso si tienen 0
+      detailMessage = '<div style="text-align: left; margin-top: 1rem; background: #f8f9fa; padding: 1rem; border-radius: 8px;">';
+      detailMessage += `<strong style="color: #333; font-size: 1rem;">📊 Noticias ${statsType} por red social:</strong><br/><br/>`;
+      
+      // Ordenar plataformas por cantidad (mayor a menor), pero mostrar todas
+      const sortedPlatforms = allPlatforms
+        .map(platform => [platform, platformStats[platform] || 0])
+        .sort((a, b) => b[1] - a[1]);
+      
+      sortedPlatforms.forEach(([platform, count]) => {
+        const platformName = platformNames[platform] || platform;
+        const emoji = platform === 'Twitter' ? '🐦' : 
+                     platform === 'Facebook' ? '📘' : 
+                     platform === 'Instagram' ? '📸' : '▶️';
+        
+        // Resaltar si tiene noticias, mostrar en gris si es 0
+        const countColor = count > 0 ? '#28a745' : '#999';
+        const countStyle = count > 0 ? 'font-weight: bold;' : '';
+        
+        detailMessage += `
+          <div style="margin-bottom: 0.5rem; padding: 0.5rem; background: ${count > 0 ? '#e8f5e9' : '#f5f5f5'}; border-radius: 5px;">
+            ${emoji} <strong style="color: #333;">${platformName}:</strong> 
+            <span style="color: ${countColor}; ${countStyle}">${count} noticia${count !== 1 ? 's' : ''}</span>
+          </div>
+        `;
+      });
+      
+      detailMessage += '</div>';
+      
+      // Mostrar SweetAlert con estadísticas
+      if (result.success) {
+        const totalSaved = result.total_saved || 0;
+        const totalExtracted = result.total_extracted || 0;
+        
+        Swal.fire({
+          title: '✅ Noticias Actualizadas',
+          html: `
+            <div style="text-align: center;">
+              <h3 style="color: #28a745; margin-bottom: 1rem; font-size: 1.5rem;">
+                ${totalSaved} nueva${totalSaved !== 1 ? 's' : ''} noticia${totalSaved !== 1 ? 's' : ''} añadida${totalSaved !== 1 ? 's' : ''}
+              </h3>
+              ${detailMessage}
+              <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #dee2e6;">
+                <p style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">
+                  📥 <strong>Total extraído:</strong> ${totalExtracted} noticias
+                </p>
+                ${result.duplicates_detected > 0 ? `<p style="color: #ffc107; margin-top: 0.5rem;"><strong>⚠️ ${result.duplicates_detected} duplicados detectados</strong></p>` : ''}
+                <p style="color: #666; margin-top: 0.5rem; font-size: 0.85rem;">
+                  ⏱️ Tiempo de ejecución: ${result.duration_seconds || 0} segundos
+                </p>
+              </div>
+            </div>
+          `,
+          icon: 'success',
+          confirmButtonText: 'Aceptar',
+          confirmButtonColor: '#28a745',
+          width: '550px',
+          customClass: {
+            popup: 'swal2-popup-custom',
+            title: 'swal2-title-custom',
+            htmlContainer: 'swal2-html-container-custom'
+          }
+        });
+      } else {
+        Swal.fire({
+          title: '⚠️ Error al Actualizar',
+          text: result.error || 'Ocurrió un error al actualizar las noticias',
+          icon: 'error',
+          confirmButtonText: 'Aceptar',
+          confirmButtonColor: '#dc3545'
+        });
+      }
+      
     } catch (err) {
       console.error('Error scraping:', err);
       setError('Error al actualizar las noticias');
+      
+      Swal.fire({
+        title: '❌ Error',
+        text: err.response?.data?.detail || 'Error al actualizar las noticias. Por favor, intenta nuevamente.',
+        icon: 'error',
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#dc3545'
+      });
     } finally {
       setScraping(false);
     }
@@ -303,30 +502,44 @@ function SocialMediaFeed() {
   };
 
   return (
-    <div className={`social-media-container ${darkMode ? 'dark' : 'light'}`}>
+    <AppContainer>
       {/* Header */}
-      <header className="social-header">
-        <div className="header-content">
-          <div className="header-left">
-            <span className="header-icon">🌐</span>
+      <Header>
+        <HeaderContent>
+          <HeaderLeft>
+            <BackButton onClick={() => navigate('/')}>
+              <FiArrowLeft />
+              Volver
+            </BackButton>
+            <span style={{ fontSize: '2rem' }}>🌐</span>
             <div>
-              <h1 className="header-title">Scraping de Redes Sociales</h1>
-              <p className="header-subtitle">Noticias en tiempo real de Twitter, Facebook, Instagram y YouTube</p>
+              <HeaderTitle>Scraping de Redes Sociales</HeaderTitle>
+              <HeaderSubtitle>Noticias en tiempo real de Twitter, Facebook, Instagram y YouTube</HeaderSubtitle>
             </div>
-          </div>
-          <div className="header-actions">
+          </HeaderLeft>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
             <button 
               className="theme-toggle"
               onClick={() => setDarkMode(!darkMode)}
               title={darkMode ? 'Modo Claro' : 'Modo Oscuro'}
+              style={{
+                background: 'rgba(102, 126, 234, 0.2)',
+                border: '1px solid rgba(102, 126, 234, 0.3)',
+                color: 'white',
+                padding: '0.5rem 1rem',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '1.2rem',
+                transition: 'all 0.3s ease'
+              }}
             >
               {darkMode ? '☀️' : '🌙'}
             </button>
           </div>
-        </div>
-      </header>
+        </HeaderContent>
+      </Header>
 
-      <div className="main-layout">
+      <MainLayout>
         {/* Sidebar */}
         <aside className="sidebar">
           <button 
@@ -668,8 +881,8 @@ function SocialMediaFeed() {
             </>
           )}
         </main>
-      </div>
-    </div>
+      </MainLayout>
+    </AppContainer>
   );
 }
 

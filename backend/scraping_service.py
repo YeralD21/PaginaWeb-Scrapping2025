@@ -98,6 +98,14 @@ class ScrapingService:
             all_news = self.main_scraper.scrape_social_media()
             logger.info(f"📊 Total extraído de scrapers: {len(all_news)}")
             
+            # Contar noticias por red social ANTES de guardar
+            news_by_platform = {}
+            for news in all_news:
+                platform = news.get('diario', 'Unknown')
+                if platform not in news_by_platform:
+                    news_by_platform[platform] = 0
+                news_by_platform[platform] += 1
+            
             # Log detallado de lo que se extrajo
             if all_news:
                 for news in all_news[:3]:  # Mostrar las primeras 3
@@ -106,10 +114,22 @@ class ScrapingService:
                 logger.warning("⚠️ No se extrajeron noticias de ninguna red social")
             
             result['total_extracted'] = len(all_news)
+            result['news_by_platform'] = news_by_platform  # Agregar estadísticas por plataforma
             
             # Guardar en base de datos con nueva lógica
             save_result = self.save_news_to_database_enhanced(all_news)
             result.update(save_result)
+            
+            # Contar noticias guardadas por plataforma
+            saved_by_platform = {}
+            if 'saved_news' in save_result:
+                for news in save_result.get('saved_news', []):
+                    platform = news.get('diario', 'Unknown')
+                    if platform not in saved_by_platform:
+                        saved_by_platform[platform] = 0
+                    saved_by_platform[platform] += 1
+            
+            result['saved_by_platform'] = saved_by_platform  # Noticias guardadas por plataforma
             
             # Calcular duración
             duration = int((datetime.now() - start_time).total_seconds())
@@ -183,7 +203,8 @@ class ScrapingService:
             'total_saved': 0,
             'duplicates_detected': 0,
             'alerts_triggered': 0,
-            'errors': []
+            'errors': [],
+            'saved_news': []  # Lista de noticias guardadas para estadísticas
         }
         
         try:
@@ -258,6 +279,7 @@ class ScrapingService:
                         contenido=enhanced_news.get('contenido', ''),
                         enlace=enhanced_news.get('enlace', ''),
                         imagen_url=enhanced_news.get('imagen_url', ''),
+                        video_url=enhanced_news.get('video_url', ''),
                         categoria=enhanced_news['categoria'],
                         fecha_publicacion=fecha_publicacion,
                         fecha_extraccion=datetime.fromisoformat(enhanced_news['fecha_extraccion']),
@@ -293,6 +315,13 @@ class ScrapingService:
                         result['errors'].extend(alert_result['errors'])
                     
                     result['total_saved'] += 1
+                    
+                    # Guardar información de la noticia guardada para estadísticas
+                    result['saved_news'].append({
+                        'diario': news_item.get('diario', 'Unknown'),
+                        'titulo': news_item.get('titulo', ''),
+                        'categoria': news_item.get('categoria', '')
+                    })
                     
                 except Exception as e:
                     error_msg = f"Error procesando noticia '{news_item.get('titulo', 'Sin título')}': {str(e)}"

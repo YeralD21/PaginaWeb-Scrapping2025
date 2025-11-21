@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import styled, { keyframes } from 'styled-components';
 import { FiArrowLeft, FiCalendar, FiClock, FiExternalLink, FiFileText, FiTag, FiUser, FiHeart, FiTrendingUp, FiAlertTriangle, FiBookOpen, FiGlobe, FiMapPin, FiHash, FiShare2, FiEye, FiChevronDown, FiChevronUp, FiSun, FiMoon, FiLock } from 'react-icons/fi';
@@ -6,7 +6,80 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import SubscriptionModal from './Subscriptions/SubscriptionModal';
 import LoginModal from './Auth/LoginModal';
+import AdSense from './AdSense';
 import axios from 'axios';
+
+// Función para decodificar entidades HTML y corregir encoding
+function decodeHTMLEntities(text) {
+  if (!text) return '';
+  
+  // Crear un elemento temporal para decodificar HTML entities
+  const txt = document.createElement('textarea');
+  txt.innerHTML = text;
+  let decoded = txt.value;
+  
+  // Mapa completo de correcciones de encoding incorrecto
+  const encodingFixes = [
+    // Caracteres con Ć (encoding incorrecto común)
+    { bad: /Ć³/g, good: 'ó' },
+    { bad: /Ć©/g, good: 'é' },
+    { bad: /Ć¡/g, good: 'á' },
+    { bad: /Ć­/g, good: 'í' },
+    { bad: /Ćº/g, good: 'ú' },
+    { bad: /Ć±/g, good: 'ñ' },
+    { bad: /Ć'/g, good: 'Ñ' },
+    { bad: /Ć"/g, good: '¿' },
+    { bad: /Ć¿/g, good: '¿' },
+    { bad: /Ć¼/g, good: 'ü' },
+    { bad: /Ć"/g, good: 'á' },
+    // Caracteres con Ã (otro encoding incorrecto común)
+    { bad: /Ã³/g, good: 'ó' },
+    { bad: /Ã©/g, good: 'é' },
+    { bad: /Ã¡/g, good: 'á' },
+    { bad: /Ã­/g, good: 'í' },
+    { bad: /Ãº/g, good: 'ú' },
+    { bad: /Ã±/g, good: 'ñ' },
+    { bad: /Ã'/g, good: 'Ñ' },
+    { bad: /Ã"/g, good: '¿' },
+    { bad: /Ã¿/g, good: '¿' },
+    { bad: /Ã¼/g, good: 'ü' },
+    // Caracteres con Ā (encoding incorrecto adicional)
+    { bad: /Āæ/g, good: '¿' },
+    { bad: /ĀæQu/g, good: '¿Qu' }, // Caso específico "ĀæQu" -> "¿Qu"
+    { bad: /Ā/g, good: '' }, // Eliminar caracteres Ā sueltos
+    // Casos específicos de encoding doble incorrecto
+    { bad: /QuĆ©/g, good: 'Qué' },
+    { bad: /por quĆ©/g, good: 'por qué' },
+    { bad: /quĆ©/g, good: 'qué' },
+    // Otros problemas comunes
+    { bad: /â€™/g, good: "'" },
+    { bad: /â€œ/g, good: '"' },
+    { bad: /â€/g, good: '"' },
+    { bad: /â€"/g, good: '—' },
+    { bad: /â€"/g, good: '–' },
+  ];
+  
+  // Aplicar todas las correcciones
+  encodingFixes.forEach(({ bad, good }) => {
+    decoded = decoded.replace(bad, good);
+  });
+  
+  // Intentar decodificar como UTF-8 si aún hay problemas
+  try {
+    // Si hay caracteres que parecen estar mal codificados, intentar repararlos
+    if (decoded.includes('Ć') || decoded.includes('Ã') || decoded.includes('Ā')) {
+      // Intentar reparar encoding doble
+      decoded = decoded
+        .replace(/Ć/g, '')
+        .replace(/Ã/g, '')
+        .replace(/Ā/g, '');
+    }
+  } catch (e) {
+    console.warn('Error en decodificación:', e);
+  }
+  
+  return decoded.trim();
+}
 
 // Animaciones
 const fadeInUp = keyframes`
@@ -188,13 +261,18 @@ const BreadcrumbLink = styled.span`
 
 // Layout principal estilo La República
 const MainLayout = styled.div`
-  max-width: 1400px;
+  max-width: 1600px;
   margin: 0 auto;
   padding: 2rem;
   display: grid;
-  grid-template-columns: 1fr 350px;
+  grid-template-columns: 200px 1fr 350px;
   gap: 2rem;
   animation: ${fadeInUp} 0.8s ease-out;
+  
+  @media (max-width: 1400px) {
+    grid-template-columns: 1fr 350px;
+    max-width: 1400px;
+  }
   
   @media (max-width: 1200px) {
     grid-template-columns: 1fr 300px;
@@ -205,6 +283,34 @@ const MainLayout = styled.div`
     grid-template-columns: 1fr;
     gap: 2rem;
     padding: 1rem;
+  }
+`;
+
+const AdSidebar = styled.div`
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 120px;
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+  
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+  }
+  
+  @media (max-width: 1400px) {
+    display: none;
   }
 `;
 
@@ -853,6 +959,14 @@ function NoticiaDetalle() {
     navigate('/');
   };
 
+  // Callback para cerrar el modal de login
+  const handleLoginModalClose = useCallback(() => {
+    setShowLoginModal(false);
+    if (loginModalShownForPremiumRef && loginModalShownForPremiumRef.current !== undefined) {
+      loginModalShownForPremiumRef.current = false;
+    }
+  }, []);
+
   const formatDate = (dateString) => {
     if (!dateString) return 'Fecha no disponible';
     const date = new Date(dateString);
@@ -1039,12 +1153,17 @@ function NoticiaDetalle() {
       </Breadcrumb>
 
       <MainLayout>
+        {/* Sidebar de Anuncios - Lado Izquierdo */}
+        <AdSidebar>
+          <AdSense height="600px" />
+        </AdSidebar>
+        
         <ArticleMain>
           <ArticleHeader>
             <CategoryBadge>
               {noticia.categoria}
             </CategoryBadge>
-            <ArticleTitle>{noticia.titulo}</ArticleTitle>
+            <ArticleTitle>{decodeHTMLEntities(noticia.titulo)}</ArticleTitle>
             <DiarioName>📰 {noticia.diario_nombre}</DiarioName>
             <ArticleMeta>
               <MetaItem>
@@ -1092,11 +1211,62 @@ function NoticiaDetalle() {
             </BadgesContainer>
           </ArticleHeader>
 
-          {noticia.imagen_url && (
+          {/* Mostrar video si existe, sino mostrar imagen */}
+          {noticia.video_url && noticia.video_url.trim() !== '' ? (
+            <ArticleImageContainer>
+              <div style={{
+                width: '100%',
+                height: '100%',
+                position: 'relative',
+                background: '#000'
+              }}>
+                {(() => {
+                  let embedUrl = noticia.video_url;
+                  // Convertir URL de YouTube a embed si es necesario
+                  if (embedUrl.includes('youtube.com/watch') || embedUrl.includes('youtu.be/')) {
+                    const youtubeIdMatch = embedUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+                    if (youtubeIdMatch) {
+                      embedUrl = `https://www.youtube.com/embed/${youtubeIdMatch[1]}`;
+                    }
+                  }
+                  
+                  return (
+                    <iframe
+                      src={embedUrl}
+                      title={noticia.titulo || 'Video de noticia'}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        border: 'none',
+                        display: 'block'
+                      }}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  );
+                })()}
+                {/* Badge de video */}
+                <div style={{
+                  position: 'absolute',
+                  top: '1rem',
+                  left: '1rem',
+                  background: 'rgba(255, 0, 0, 0.9)',
+                  color: 'white',
+                  padding: '0.5rem 1rem',
+                  borderRadius: '4px',
+                  fontSize: '0.85rem',
+                  fontWeight: 'bold',
+                  zIndex: 10
+                }}>
+                  ▶ VIDEO
+                </div>
+              </div>
+            </ArticleImageContainer>
+          ) : noticia.imagen_url && noticia.imagen_url.trim() !== '' ? (
             <ArticleImageContainer>
               <ArticleImage imageUrl={noticia.imagen_url} />
             </ArticleImageContainer>
-          )}
+          ) : null}
 
           <ArticleContent>
             {noticia.resumen_auto && (
@@ -1106,7 +1276,7 @@ function NoticiaDetalle() {
                   Resumen Ejecutivo
                 </ResumenTitle>
                 <ResumenText>
-                  {noticia.resumen_auto}
+                  {decodeHTMLEntities(noticia.resumen_auto)}
                 </ResumenText>
               </ResumenCard>
             )}
@@ -1120,7 +1290,7 @@ function NoticiaDetalle() {
                 <ExpandableContent expanded={contentExpanded}>
                   <ContentText>
                     {noticia.contenido.split('\n').map((paragraph, index) => (
-                      paragraph.trim() && <p key={index}>{paragraph}</p>
+                      paragraph.trim() && <p key={index}>{decodeHTMLEntities(paragraph)}</p>
                     ))}
                   </ContentText>
                   <FadeOverlay show={isContentLong && !contentExpanded} />
@@ -1244,7 +1414,7 @@ function NoticiaDetalle() {
                       <RelatedNewsImageContainer>
                         <RelatedNewsImage 
                           src={relatedNoticia.imagen_url} 
-                          alt={relatedNoticia.titulo}
+                          alt={decodeHTMLEntities(relatedNoticia.titulo)}
                           onError={(e) => {
                             // Si la imagen falla al cargar, ocultarla
                             e.target.style.display = 'none';
@@ -1265,7 +1435,7 @@ function NoticiaDetalle() {
                           {relatedNoticia.categoria}
                         </RelatedNewsCategory>
                       </div>
-                      <RelatedNewsTitle>{relatedNoticia.titulo}</RelatedNewsTitle>
+                      <RelatedNewsTitle>{decodeHTMLEntities(relatedNoticia.titulo)}</RelatedNewsTitle>
                       <RelatedNewsMeta>
                         <span>{formatDate(relatedNoticia.fecha_publicacion)}</span>
                       </RelatedNewsMeta>
@@ -1285,10 +1455,7 @@ function NoticiaDetalle() {
       {/* Modal de Login */}
       {showLoginModal && (
         <LoginModal
-          onClose={() => {
-            setShowLoginModal(false);
-            loginModalShownForPremiumRef.current = false;
-          }}
+          onClose={handleLoginModalClose}
           onSwitchToRegister={() => {
             setShowLoginModal(false);
             navigate('/');

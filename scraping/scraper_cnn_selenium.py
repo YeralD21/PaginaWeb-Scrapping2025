@@ -205,11 +205,16 @@ class ScraperCNNSelenium:
                 logging.warning(f"Título inválido en {article_url}")
                 return None
             
-            # Extraer resumen
-            summary = self._extract_summary_selenium(soup)
+            # Extraer contenido completo
+            content = self._extract_content_selenium(soup)
             
-            # Extraer imagen
-            image_url = self._extract_image_selenium(soup)
+            # Extraer video primero (prioridad sobre imagen)
+            video_url = self._extract_video_selenium(soup, article_url)
+            
+            # Extraer imagen solo si no hay video
+            image_url = ''
+            if not video_url:
+                image_url = self._extract_image_selenium(soup)
             
             # Extraer fecha
             published_at = self._extract_date_selenium(soup, article_url)
@@ -221,12 +226,13 @@ class ScraperCNNSelenium:
             
             return {
                 'titulo': title,
-                'contenido': summary if summary else f"Noticia de {category} de CNN en Español.",
+                'contenido': content if content else f"Noticia de {category} de CNN en Español.",
                 'enlace': article_url,
-                'imagen_url': image_url,
+                'imagen_url': image_url or '',  # Usar string vacío si no hay imagen
+                'video_url': video_url or '',  # URL del video si existe
                 'categoria': category,
                 'diario': 'CNN en Español',
-                'fecha_publicacion': published_at or datetime.now().isoformat(),
+                'fecha_publicacion': published_at.date() if isinstance(published_at, datetime) else (datetime.fromisoformat(published_at).date() if published_at and isinstance(published_at, str) else datetime.now().date()),
                 'fecha_extraccion': datetime.now().isoformat()
             }
             
@@ -235,7 +241,7 @@ class ScraperCNNSelenium:
             return None
 
     def _extract_title_selenium(self, soup: BeautifulSoup) -> str:
-        """Extrae título del artículo"""
+        """Extrae título del artículo asegurando encoding UTF-8"""
         selectors = [
             'h1.pg-headline',
             'h1[data-testid="headline"]',
@@ -256,62 +262,238 @@ class ScraperCNNSelenium:
                         title = element.get_text(strip=True)
                     
                     if len(title) > 10:
-                        return self._clean_title(title)
+                        cleaned = self._clean_title(title)
+                        # Asegurar encoding UTF-8
+                        if isinstance(cleaned, bytes):
+                            cleaned = cleaned.decode('utf-8', errors='replace')
+                        cleaned = cleaned.strip().replace('\n', ' ').replace('\r', ' ')
+                        cleaned = ' '.join(cleaned.split())
+                        if cleaned:
+                            return cleaned
             else:
                 element = soup.select_one(selector)
                 if element:
                     title = element.get_text(strip=True)
                     if len(title) > 10:
-                        return self._clean_title(title)
+                        cleaned = self._clean_title(title)
+                        # Asegurar encoding UTF-8
+                        if isinstance(cleaned, bytes):
+                            cleaned = cleaned.decode('utf-8', errors='replace')
+                        cleaned = cleaned.strip().replace('\n', ' ').replace('\r', ' ')
+                        cleaned = ' '.join(cleaned.split())
+                        if cleaned:
+                            return cleaned
         
         return ""
 
-    def _extract_summary_selenium(self, soup: BeautifulSoup) -> str:
-        """Extrae resumen del artículo"""
-        selectors = [
-            'meta[property="og:description"]',
-            'meta[name="description"]',
-            '.pg-summary',
-            '.Article__subtitle',
-            '.summary',
-            '.excerpt',
-            '.lead'
+    def _extract_content_selenium(self, soup: BeautifulSoup) -> str:
+        """Extrae contenido completo del artículo (sin truncar)"""
+        # Selectores específicos para CNN en Español
+        content_selectors = [
+            'div.zn-body__paragraph',
+            'div.Article__content',
+            'div.pg-rail-tall__body',
+            'div.story-body',
+            'div.article-body',
+            'div.entry-content',
+            'div.post-content',
+            'div[class*="story"]',
+            'div[class*="article"]',
+            'div[class*="content"]',
+            'article',
+            'main article'
         ]
         
-        for selector in selectors:
-            if selector.startswith('meta'):
-                element = soup.select_one(selector)
-                if element and element.get('content'):
-                    summary = element['content'].strip()
-                    if 20 < len(summary) < 500:
-                        return summary
-            else:
-                element = soup.select_one(selector)
-                if element:
-                    summary = element.get_text(strip=True)
-                    if 20 < len(summary) < 500:
-                        return summary
+        # Intentar primero con meta tags para obtener descripción inicial
+        meta_description = None
+        for meta_selector in ['meta[property="og:description"]', 'meta[name="description"]']:
+            meta = soup.select_one(meta_selector)
+            if meta and meta.get('content'):
+                meta_description = meta['content'].strip()
+                if len(meta_description) > 20:
+                    break
         
-        # Primer párrafo
-        first_p = soup.select_one('.pg-rail-tall__body p, .Article__content p, article p')
+        # Buscar contenido completo en contenedores principales
+        full_content_paragraphs = []
+        for selector in content_selectors:
+            container = soup.select_one(selector)
+            if container:
+                # Buscar todos los párrafos dentro del contenedor
+                paragraphs = container.find_all('p')
+                if paragraphs:
+                    for p in paragraphs:
+                        text = p.get_text(strip=True)
+                        # Filtrar párrafos muy cortos o que parezcan navegación/publicidad
+                        if text and len(text) > 30 and not any(skip in text.lower() for skip in [
+                            'leer más', 'siguiente', 'anterior', 'compartir', 'comentar',
+                            'suscríbete', 'newsletter', 'síguenos', 'follow us', 'related',
+                            'relacionado', 'más noticias', 'more news', 'advertisement', 'publicidad'
+                        ]):
+                            # Evitar duplicados
+                            if text not in full_content_paragraphs:
+                                full_content_paragraphs.append(text)
+                    
+                    if full_content_paragraphs:
+                        break
+        
+        # Si encontramos párrafos completos, unirlos
+        if full_content_paragraphs:
+            full_content = '\n\n'.join(full_content_paragraphs)
+            # Si tenemos meta description y no está ya incluida, agregarla al inicio
+            if meta_description and meta_description not in full_content:
+                return f"{meta_description}\n\n{full_content}"
+            return full_content
+        
+        # Fallback: buscar todos los párrafos del artículo
+        if not full_content_paragraphs:
+            article_container = soup.select_one('article, main, .main-content, .content-wrapper')
+            if article_container:
+                all_paragraphs = article_container.find_all('p')
+                for p in all_paragraphs:
+                    text = p.get_text(strip=True)
+                    if text and len(text) > 50 and text not in full_content_paragraphs:
+                        if not any(skip in text.lower() for skip in [
+                            'leer más', 'siguiente', 'anterior', 'compartir', 'comentar',
+                            'suscríbete', 'newsletter', 'síguenos', 'follow us'
+                        ]):
+                            full_content_paragraphs.append(text)
+            
+            if full_content_paragraphs:
+                full_content = '\n\n'.join(full_content_paragraphs)
+                if meta_description and meta_description not in full_content:
+                    return f"{meta_description}\n\n{full_content}"
+                return full_content
+        
+        # Fallback: usar meta description si existe
+        if meta_description:
+            return meta_description
+        
+        # Último fallback: primer párrafo largo encontrado
+        first_p = soup.select_one('.pg-rail-tall__body p, .Article__content p, article p, main p')
         if first_p:
-            summary = first_p.get_text(strip=True)
-            if 20 < len(summary) < 500:
-                return summary
+            content = first_p.get_text(strip=True)
+            if len(content) > 50:
+                return content
         
         return ""
 
+    def _extract_video_selenium(self, soup: BeautifulSoup, article_url: str) -> str:
+        """Extrae URL de video de CNN si existe"""
+        try:
+            # MÉTODO 1: Meta tags para videos
+            video_meta_tags = [
+                ('meta', {'property': 'og:video'}),
+                ('meta', {'property': 'og:video:url'}),
+                ('meta', {'property': 'og:video:secure_url'}),
+                ('meta', {'name': 'twitter:player'}),
+                ('meta', {'itemprop': 'video'}),
+            ]
+            
+            for tag_name, attrs in video_meta_tags:
+                meta = soup.find(tag_name, attrs)
+                if meta:
+                    video_url = meta.get('content', '').strip()
+                    if video_url and ('video' in video_url.lower() or 'youtube' in video_url.lower() or 'cnn' in video_url.lower()):
+                        logging.info(f"✅ Video encontrado (meta) en {article_url[:60]}...: {video_url[:80]}...")
+                        return video_url
+            
+            # MÉTODO 2: Buscar iframes de video (YouTube, CNN Video Player, etc.)
+            iframe_selectors = [
+                'iframe[src*="youtube"]',
+                'iframe[src*="youtu.be"]',
+                'iframe[src*="cnn.com/video"]',
+                'iframe[src*="player"]',
+                'iframe[data-src*="youtube"]',
+                'iframe[data-src*="video"]',
+            ]
+            
+            for selector in iframe_selectors:
+                iframes = soup.select(selector)
+                for iframe in iframes:
+                    video_src = iframe.get('src') or iframe.get('data-src') or iframe.get('data-lazy-src')
+                    if video_src:
+                        # Extraer ID de YouTube si es un embed de YouTube
+                        if 'youtube.com/embed' in video_src or 'youtu.be' in video_src:
+                            youtube_id_match = re.search(r'(?:embed/|v/|youtu\.be/)([a-zA-Z0-9_-]{11})', video_src)
+                            if youtube_id_match:
+                                youtube_id = youtube_id_match.group(1)
+                                video_url = f"https://www.youtube.com/embed/{youtube_id}"
+                                logging.info(f"✅ Video de YouTube encontrado: {video_url}")
+                                return video_url
+                        elif 'cnn.com' in video_src or 'video' in video_src.lower():
+                            logging.info(f"✅ Video de CNN encontrado: {video_src}")
+                            return video_src
+            
+            # MÉTODO 3: Buscar elementos de video de CNN específicos
+            cnn_video_selectors = [
+                'div.video-container',
+                'div.cnn-video',
+                'div.media-video',
+                'div.video-player',
+                'div[class*="video"]',
+                'div[data-video-id]',
+                'div[data-video-url]',
+            ]
+            
+            for selector in cnn_video_selectors:
+                video_elements = soup.select(selector)
+                for video_elem in video_elements:
+                    # Buscar atributos de video
+                    video_id = video_elem.get('data-video-id') or video_elem.get('data-id')
+                    video_url_attr = video_elem.get('data-video-url') or video_elem.get('data-url')
+                    
+                    if video_id:
+                        # Construir URL de video de CNN
+                        video_url = f"https://www.cnn.com/video/data/3.0/video/{video_id}.html"
+                        logging.info(f"✅ Video ID encontrado: {video_url}")
+                        return video_url
+                    elif video_url_attr:
+                        logging.info(f"✅ Video URL encontrado: {video_url_attr}")
+                        return video_url_attr
+            
+            # MÉTODO 4: Buscar enlaces a videos en el contenido
+            video_links = soup.find_all('a', href=re.compile(r'(video|youtube|youtu\.be)', re.I))
+            for link in video_links[:3]:  # Revisar solo los primeros 3
+                href = link.get('href', '')
+                if href and ('video' in href.lower() or 'youtube' in href.lower()):
+                    if not href.startswith('http'):
+                        href = urljoin(self.base_url, href)
+                    logging.info(f"✅ Enlace de video encontrado: {href}")
+                    return href
+            
+            return ''
+            
+        except Exception as e:
+            logging.warning(f"Error extrayendo video de {article_url}: {e}")
+            return ''
+
     def _extract_image_selenium(self, soup: BeautifulSoup) -> str:
-        """Extrae imagen principal"""
-        # Meta tags primero
-        meta_img = soup.select_one('meta[property="og:image"]')
-        if meta_img and meta_img.get('content'):
-            img_url = meta_img['content']
-            if self._is_valid_image_url(img_url):
-                return self._normalize_image_url(img_url)
+        """Extrae imagen principal con validación estricta para evitar duplicados"""
+        # MÉTODO 1: Meta tags (más confiable)
+        meta_tags = [
+            ('meta', {'property': 'og:image'}),
+            ('meta', {'property': 'twitter:image'}),
+            ('meta', {'name': 'twitter:image'}),
+            ('meta', {'itemprop': 'image'})
+        ]
         
-        # Imágenes en el contenido
-        img_selectors = [
+        for tag_name, attrs in meta_tags:
+            meta = soup.find(tag_name, attrs)
+            if meta:
+                img_url = meta.get('content', '').strip()
+                if img_url and self._is_valid_image_url(img_url):
+                    normalized = self._normalize_image_url(img_url)
+                    if normalized:
+                        return normalized
+        
+        # MÉTODO 2: Selectores específicos de CNN
+        cnn_selectors = [
+            'div.image__picture img',
+            'div.media__image img',
+            'figure.media img',
+            'div.Article__media img',
+            'div.lead-media img',
+            'picture.image__picture img',
             '.pg-rail-tall__head img',
             '.Article__media img',
             '.hero-image img',
@@ -320,34 +502,91 @@ class ScraperCNNSelenium:
             '.pg-rail-tall__body img:first-of-type'
         ]
         
-        for selector in img_selectors:
-            img = soup.select_one(selector)
-            if img:
-                img_url = img.get('data-src') or img.get('src')
+        for selector in cnn_selectors:
+            imgs = soup.select(selector)
+            for img in imgs:
+                # Buscar en múltiples atributos
+                img_url = (
+                    img.get('data-src-full') or
+                    img.get('data-src-large') or
+                    img.get('data-src') or
+                    img.get('data-lazy-src') or
+                    img.get('data-original') or
+                    img.get('src')
+                )
+                
                 if img_url and self._is_valid_image_url(img_url):
-                    return self._normalize_image_url(img_url)
+                    # Verificar clases del img (evitar logos, etc.)
+                    img_classes = ' '.join(img.get('class', [])).lower()
+                    if any(bad in img_classes for bad in ['logo', 'icon', 'avatar']):
+                        continue
+                    
+                    normalized = self._normalize_image_url(img_url)
+                    if normalized:
+                        return normalized
         
-        return "No Image"
+        # MÉTODO 3: Buscar en elementos <picture>
+        pictures = soup.find_all('picture', limit=3)
+        for picture in pictures:
+            source = picture.find('source')
+            if source:
+                srcset = source.get('srcset', '')
+                if srcset:
+                    img_url = srcset.split(',')[-1].split(' ')[0].strip()
+                    if img_url and self._is_valid_image_url(img_url):
+                        normalized = self._normalize_image_url(img_url)
+                        if normalized:
+                            return normalized
+            
+            img = picture.find('img')
+            if img:
+                img_url = img.get('src') or img.get('data-src')
+                if img_url and self._is_valid_image_url(img_url):
+                    normalized = self._normalize_image_url(img_url)
+                    if normalized:
+                        return normalized
+        
+        return ""
 
-    def _extract_date_selenium(self, soup: BeautifulSoup, url: str) -> Optional[str]:
-        """Extrae fecha de publicación"""
-        # Meta tags
-        meta_date = soup.select_one('meta[property="article:published_time"]')
-        if meta_date and meta_date.get('content'):
-            return meta_date['content']
-        
-        # Elemento time
-        time_elem = soup.select_one('time[datetime]')
-        if time_elem and time_elem.get('datetime'):
-            return time_elem['datetime']
-        
-        # Extraer de URL
-        date_match = re.search(r'/(\d{4})/(\d{2})/(\d{2})/', url)
-        if date_match:
-            year, month, day = date_match.groups()
-            return f"{year}-{month}-{day}"
-        
-        return None
+    def _extract_date_selenium(self, soup: BeautifulSoup, url: str) -> Optional[datetime]:
+        """Extrae fecha de publicación como objeto datetime"""
+        try:
+            # Meta tags
+            meta_date = soup.select_one('meta[property="article:published_time"]')
+            if meta_date and meta_date.get('content'):
+                date_str = meta_date['content']
+                try:
+                    return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+                except:
+                    for fmt in ['%Y-%m-%dT%H:%M:%S', '%Y-%m-%d']:
+                        try:
+                            return datetime.strptime(date_str[:19], fmt)
+                        except:
+                            continue
+            
+            # Elemento time
+            time_elem = soup.select_one('time[datetime]')
+            if time_elem and time_elem.get('datetime'):
+                date_str = time_elem['datetime']
+                try:
+                    return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+                except:
+                    for fmt in ['%Y-%m-%dT%H:%M:%S', '%Y-%m-%d']:
+                        try:
+                            return datetime.strptime(date_str[:19], fmt)
+                        except:
+                            continue
+            
+            # Extraer de URL
+            date_match = re.search(r'/(\d{4})/(\d{2})/(\d{2})/', url)
+            if date_match:
+                year, month, day = map(int, date_match.groups())
+                return datetime(year, month, day)
+            
+            return None
+        except Exception as e:
+            logging.warning(f"Error extrayendo fecha: {e}")
+            return None
 
     def _determine_category(self, url: str) -> str:
         """Determina categoría desde URL"""
@@ -367,33 +606,63 @@ class ScraperCNNSelenium:
         return 'Sin categoría'
 
     def _is_valid_image_url(self, url: str) -> bool:
-        """Valida URL de imagen"""
-        if not url or url == "No Image":
+        """Valida URL de imagen con validación estricta para evitar duplicados"""
+        if not url or url == "No Image" or len(url) < 20:
             return False
         
-        invalid_patterns = ['logo', 'icon', 'avatar', 'placeholder', 'ad-', 'banner']
+        # CRÍTICO: Verificar si ya fue usada (evitar duplicados)
+        normalized_url = self._normalize_url_for_check(url)
+        if normalized_url in self.processed_images:
+            logging.debug(f"⚠️ Imagen ya usada anteriormente: {normalized_url[:60]}...")
+            return False
+        
+        invalid_patterns = [
+            'logo', 'icon', 'avatar', 'placeholder', 'ad-', 'banner',
+            'default', 'blank', '1x1', 'pixel', 'tracking', 'widget',
+            'social-', 'share-', 'thumbnail', '/static/', '/assets/'
+        ]
         url_lower = url.lower()
         
         for pattern in invalid_patterns:
             if pattern in url_lower:
                 return False
         
-        return any(ext in url_lower for ext in ['.jpg', '.jpeg', '.png', '.webp', '.gif']) or 'image' in url_lower
+        # Debe tener extensión válida o estar en CDN de CNN
+        valid_extensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif']
+        has_extension = any(ext in url_lower for ext in valid_extensions)
+        is_cdn = 'cdn.cnn.com' in url_lower or 'cloudfront' in url_lower or 'cnn.io' in url_lower
+        
+        return has_extension or is_cdn or 'image' in url_lower
+    
+    def _normalize_url_for_check(self, url: str) -> str:
+        """Normaliza URL para verificación de duplicados"""
+        if not url:
+            return ""
+        # Eliminar parámetros de query y fragmentos
+        return url.split('?')[0].split('#')[0]
 
     def _normalize_image_url(self, url: str) -> str:
-        """Normaliza URL de imagen"""
+        """Normaliza URL de imagen y marca como usada"""
         if not url:
-            return "No Image"
+            return ""
         
+        # Normalizar URL
         if url.startswith('//'):
             url = 'https:' + url
         elif url.startswith('/'):
             url = self.base_url + url
         
-        if url in self.processed_images:
-            return "No Image"
+        # Normalizar para verificación de duplicados
+        normalized = self._normalize_url_for_check(url)
         
-        self.processed_images.add(url)
+        # CRÍTICO: Verificar si ya fue usada
+        if normalized in self.processed_images:
+            logging.warning(f"⚠️ Imagen duplicada rechazada: {normalized[:60]}...")
+            return ""
+        
+        # Marcar como usada
+        self.processed_images.add(normalized)
+        logging.info(f"✅ Imagen única asignada: {normalized[:80]}...")
         return url
 
     def _clean_title(self, title: str) -> str:
@@ -440,6 +709,18 @@ class ScraperCNNSelenium:
         logging.info(f"✅ Sección {section_name} completada: {len(articles)} artículos")
         return articles
 
+    def get_mundo(self, max_articles: int = 15) -> List[Dict]:
+        """Extrae noticias de Mundo (compatible con sistema existente)"""
+        return self.scrape_section('mundo', max_articles)
+    
+    def get_deportes(self, max_articles: int = 15) -> List[Dict]:
+        """Extrae noticias de Deportes (compatible con sistema existente)"""
+        return self.scrape_section('deportes', max_articles)
+    
+    def get_economia(self, max_articles: int = 15) -> List[Dict]:
+        """Extrae noticias de Economía (compatible con sistema existente)"""
+        return self.scrape_section('economia', max_articles)
+    
     def get_all_news(self, max_articles_per_section: int = 15) -> List[Dict]:
         """Método principal compatible con el sistema existente"""
         self.processed_urls.clear()
@@ -457,15 +738,33 @@ class ScraperCNNSelenium:
                 except Exception as e:
                     logging.error(f"Error en sección {section_name}: {e}")
             
+            # Estadísticas de imágenes
+            with_images = sum(1 for n in all_news if n['imagen_url'])
+            image_urls = [n['imagen_url'] for n in all_news if n['imagen_url']]
+            unique_images = len(set(image_urls))
+            duplicates = len(image_urls) - unique_images
+            
             logging.info(f"🎉 Scraping completado: {len(all_news)} noticias totales")
+            logging.info(f"📊 Con imágenes: {with_images}/{len(all_news)}")
+            if duplicates > 0:
+                logging.warning(f"⚠️ ADVERTENCIA: {duplicates} imágenes duplicadas detectadas")
+            else:
+                logging.info(f"✅ Sin imágenes duplicadas - Todas las imágenes son únicas")
+            
             return all_news
             
         finally:
             self._close_driver()
 
 if __name__ == "__main__":
+    import sys
+    import io
+    # Configurar stdout para UTF-8 en Windows
+    if sys.platform == 'win32':
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    
     if not SELENIUM_AVAILABLE:
-        print("❌ Selenium no está instalado.")
+        print("ERROR: Selenium no esta instalado.")
         print("Para usar este scraper, instala Selenium:")
         print("pip install selenium")
         print("Y descarga ChromeDriver desde: https://chromedriver.chromium.org/")
@@ -473,12 +772,14 @@ if __name__ == "__main__":
     
     scraper = ScraperCNNSelenium()
     
-    print("🚀 Iniciando scraping con Selenium...")
+    print("Iniciando scraping con Selenium...")
     try:
         all_news = scraper.get_all_news(max_articles_per_section=10)
         
         # Estadísticas
-        print(f"\n📊 RESULTADOS:")
+        print(f"\n{'='*60}")
+        print(f"RESULTADOS")
+        print(f"{'='*60}")
         print(f"Total noticias: {len(all_news)}")
         
         categories = {}
@@ -486,24 +787,42 @@ if __name__ == "__main__":
         for news in all_news:
             cat = news['categoria']
             categories[cat] = categories.get(cat, 0) + 1
-            if news['imagen_url'] != 'No Image':
+            if news['imagen_url']:
                 images_count += 1
         
-        print(f"Con imágenes: {images_count}")
-        print(f"Sin imágenes: {len(all_news) - images_count}")
+        print(f"Con imagenes: {images_count}")
+        print(f"Sin imagenes: {len(all_news) - images_count}")
         
-        print("\n📈 Por categoría:")
+        print("\nPor categoria:")
         for cat, count in categories.items():
-            print(f"  {cat}: {count} noticias")
+            print(f"  - {cat}: {count} noticias")
+        
+        # Verificar duplicados de imágenes
+        image_urls = [n['imagen_url'] for n in all_news if n['imagen_url']]
+        duplicates = len(image_urls) - len(set(image_urls))
+        if duplicates > 0:
+            print(f"\nADVERTENCIA: {duplicates} imagenes duplicadas detectadas")
+            from collections import Counter
+            img_counts = Counter(image_urls)
+            print("\nImagenes duplicadas:")
+            for img_url, count in img_counts.items():
+                if count > 1:
+                    print(f"  - {img_url[:70]}... ({count} veces)")
+        else:
+            print(f"\nOK: Sin imagenes duplicadas - Todas las imagenes son unicas")
         
         # Ejemplos
-        print(f"\n📋 Ejemplos:")
-        for i, news in enumerate(all_news[:3]):
-            print(f"{i+1}. [{news['categoria']}] {news['titulo'][:60]}...")
-            print(f"   Imagen: {'Sí' if news['imagen_url'] != 'No Image' else 'No'}")
-            print(f"   URL: {news['enlace']}")
+        print(f"\nEjemplos:")
+        for i, news in enumerate(all_news[:5], 1):
+            print(f"{i}. [{news['categoria']}] {news['titulo'][:60]}...")
+            print(f"   Imagen: {'SI' if news['imagen_url'] else 'NO'}")
+            if news['imagen_url']:
+                print(f"   URL imagen: {news['imagen_url'][:70]}...")
+            print(f"   URL articulo: {news['enlace']}")
             print()
             
     except Exception as e:
-        print(f"❌ Error: {e}")
-        print("Asegúrate de tener ChromeDriver instalado y configurado correctamente.")
+        print(f"ERROR: {e}")
+        import traceback
+        traceback.print_exc()
+        print("\nAsegurate de tener ChromeDriver instalado y configurado correctamente.")

@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 import logging
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Set
 import sys
 import os
 import time
@@ -31,6 +31,9 @@ class ScraperCorreoOptimized:
         # Configurar logging
         logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
         self.logger = logging.getLogger(__name__)
+        
+        # Rastrear imágenes usadas para evitar duplicados
+        self.processed_images: Set[str] = set()
         
         # URLs válidas identificadas en el análisis
         self.valid_sections = [
@@ -144,9 +147,8 @@ class ScraperCorreoOptimized:
             # Unir los párrafos y limpiar
             full_content = '\n\n'.join(content_paragraphs)
             
-            # Limitar longitud para evitar contenido excesivo
-            if len(full_content) > 3000:
-                full_content = full_content[:3000] + "..."
+            # NO truncar aquí - guardar contenido completo para la página de detalle
+            # El truncado se hará en el frontend para las cards de la lista
             
             return full_content
             
@@ -258,18 +260,22 @@ class ScraperCorreoOptimized:
             if not link or not self.is_valid_article_url(link):
                 return None
             
-            # Extraer imagen
+            # Extraer imagen con prevención de duplicados
             imagen_url = self.extract_image(article_element)
             
-            # Extraer contenido básico del resumen
-            content = self.extract_basic_content(article_element)
+            # SIEMPRE extraer contenido completo del artículo para tener la descripción completa
+            self.logger.info(f"🔍 Extrayendo contenido completo de Diario Correo: {link}")
+            content = self.extract_article_content(link)
             
-            # Si no hay contenido básico, intentar extraer del artículo completo
+            # Si no se pudo extraer contenido completo, intentar con contenido básico como fallback
             if not content or len(content) < 50:
-                self.logger.info(f"🔍 Extrayendo contenido completo de Diario Correo: {link}")
-                content = self.extract_article_content(link)
+                self.logger.warning(f"⚠️ No se pudo extraer contenido completo, usando resumen básico: {link}")
+                content = self.extract_basic_content(article_element)
             
-            # Si aún no hay contenido, usar resumen básico
+            # NO truncar aquí - guardar contenido completo para la página de detalle
+            # El truncado se hará en el frontend para las cards de la lista (máximo 300 caracteres)
+            
+            # Si aún no hay contenido, usar mensaje por defecto
             if not content:
                 content = f"Noticia de {category} de Diario Correo. Para más información, visita el enlace completo."
             
@@ -323,13 +329,47 @@ class ScraperCorreoOptimized:
                     return href
         return ""
     
+    def _normalize_image_url(self, url: str) -> str:
+        """Normaliza URL de imagen para verificación de duplicados"""
+        if not url:
+            return ""
+        return url.split('?')[0].split('#')[0]
+    
+    def _is_image_already_used(self, img_url: str) -> bool:
+        """Verifica si una imagen ya fue usada"""
+        if not img_url:
+            return False
+        normalized = self._normalize_image_url(img_url)
+        return normalized in self.processed_images
+    
+    def _mark_image_as_used(self, img_url: str):
+        """Marca una imagen como usada"""
+        if img_url:
+            normalized = self._normalize_image_url(img_url)
+            self.processed_images.add(normalized)
+    
     def extract_image(self, element) -> Optional[str]:
-        """Extrae la imagen de un elemento usando el extractor mejorado"""
+        """Extrae la imagen de un elemento usando el extractor mejorado con prevención de duplicados"""
         # Obtener el enlace del artículo primero
         link = self.extract_link(element)
         if link:
             # Usar el extractor mejorado que obtiene la imagen del artículo individual
-            return extract_image_from_element(element, article_url=link, base_url=self.base_url, session=self.session)
+            self.logger.info(f"🖼️ Extrayendo imagen para: {link[:80]}...")
+            imagen_url = extract_image_from_element(element, article_url=link, base_url=self.base_url, session=self.session)
+            
+            if imagen_url:
+                # Verificar si la imagen ya fue usada (prevención de duplicados)
+                if self._is_image_already_used(imagen_url):
+                    self.logger.warning(f"⚠️ Imagen duplicada rechazada: {imagen_url[:80]}...")
+                    return None
+                
+                # Marcar como usada
+                self._mark_image_as_used(imagen_url)
+                self.logger.info(f"✅ Imagen única asignada: {imagen_url[:80]}...")
+            else:
+                self.logger.warning(f"⚠️ No se encontró imagen para: {link[:80]}...")
+            
+            return imagen_url
         return None
     
     def extract_basic_content(self, element) -> str:
@@ -419,6 +459,8 @@ class ScraperCorreoOptimized:
     
     def get_all_news(self) -> List[Dict]:
         """Obtiene todas las noticias de todas las secciones"""
+        # Limpiar imágenes procesadas al inicio para evitar duplicados entre ejecuciones
+        self.processed_images.clear()
         all_news = []
         
         # Obtener noticias de cada sección válida

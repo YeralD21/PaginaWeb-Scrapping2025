@@ -25,6 +25,7 @@ class Noticia(Base):
     contenido = Column(Text)
     enlace = Column(String(1000))
     imagen_url = Column(String(1000))
+    video_url = Column(String(1000))  # URL de video (YouTube, CNN Video, etc.)
     categoria = Column(String(100), nullable=False, index=True)
     fecha_publicacion = Column(DateTime)
     fecha_extraccion = Column(DateTime, default=datetime.utcnow, index=True)
